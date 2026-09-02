@@ -41,5 +41,8 @@ jobs:
       - name: Check formatting
         run: bun run format:check
 
+      - name: Audit unused project surface
+        run: bun run knip -- --no-exit-code --reporter compact
+
       - name: Build application
         run: bun run build

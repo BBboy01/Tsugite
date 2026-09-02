@@ -27,6 +27,7 @@ bun run test
 bunx tsc --noEmit --pretty false
 bun run lint
 bun run format:check
+bun run knip
 bun run build
 bun run test:e2e
 ```

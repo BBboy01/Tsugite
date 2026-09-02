@@ -3,26 +3,22 @@ import { ReloadIcon } from "@radix-ui/react-icons";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-
 import type { ProjectFile, ProjectSettings } from "@iris/shared";
-
-import { createPreviewDocument, runPreview, type PreviewOutput } from "../lib/preview-runner";
+import type { PreviewOutput } from "../lib/preview-runner";
 import {
-  WebContainerRuntime,
   type RuntimeError,
   type RuntimeEvent,
   type RuntimeState,
 } from "../lib/webcontainer-runtime";
 import { PreviewConsole } from "./preview-console";
 import { PreviewLoader } from "./preview-loader";
-
 type PreviewPaneProps = {
   file: ProjectFile;
   files: ProjectFile[];
   folders: string[];
   settings: ProjectSettings;
 };
-
+type WebContainerRuntimeInstance = import("../lib/webcontainer-runtime").WebContainerRuntime;
 export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps) {
   const { t } = useTranslation();
   const sectionRef = useRef<HTMLElement>(null);
@@ -35,7 +31,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
   const [previewLoadKey, setPreviewLoadKey] = useState(0);
   const [fallbackDocument, setFallbackDocument] = useState("");
   const [runKey, setRunKey] = useState(0);
-  const runtimeRef = useRef<WebContainerRuntime | undefined>(undefined);
+  const runtimeRef = useRef<WebContainerRuntimeInstance | undefined>(undefined);
   const runtimeStartedRef = useRef(false);
   const lastRunKeyRef = useRef(runKey);
   const lastRuntimeSettingsKeyRef = useRef("");
@@ -45,7 +41,6 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
   const stableRuntimeHandlerRef = useRef((event: RuntimeEvent) => runtimeEventRef.current(event));
   latestProjectRef.current = { files, folders };
   translateRef.current = t;
-
   useEffect(() => {
     const handleMessage = (event: MessageEvent<PreviewOutput & { source?: string }>) => {
       if (event.source !== iframeRef.current?.contentWindow || event.data.source !== "iris-preview")
@@ -59,29 +54,41 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
     window.addEventListener("message", handleMessage);
     return () => window.removeEventListener("message", handleMessage);
   }, []);
-
   useEffect(() => {
     return () => runtimeRef.current?.dispose();
   }, []);
 
   useEffect(() => {
     let cancelled = false;
-    const fallbackTimer = setTimeout(() => {
-      const result = runPreview(file.text.toString(), file.language);
-      if (cancelled) return;
-      if (result.error) {
-        setFallbackDocument("");
-        if (!files.some((item) => item.path === "package.json")) {
-          setOutputs([{ level: "error", message: result.error }]);
-          setRuntimeState("error");
-        }
-        return;
-      }
-      setFallbackDocument(createPreviewDocument(result.code ?? ""));
-    }, 250);
-
     const packageFile = files.find((item) => item.path === "package.json");
     if (!packageFile) {
+      const fallbackTimer = setTimeout(() => {
+        void (async () => {
+          try {
+            const { createPreviewDocument, runPreview } = await import("../lib/preview-runner");
+            if (cancelled) return;
+            const result = runPreview(file.text.toString(), file.language);
+            if (cancelled) return;
+            if (result.error) {
+              setFallbackDocument("");
+              setOutputs([{ level: "error", message: result.error }]);
+              setRuntimeState("error");
+              return;
+            }
+            setFallbackDocument(createPreviewDocument(result.code ?? ""));
+          } catch (error) {
+            if (cancelled) return;
+            setFallbackDocument("");
+            setOutputs([
+              {
+                level: "error",
+                message: error instanceof Error ? error.message : String(error),
+              },
+            ]);
+            setRuntimeState("error");
+          }
+        })();
+      }, 250);
       runtimeRef.current?.dispose();
       runtimeStartedRef.current = false;
       setRuntimeState("idle");
@@ -93,92 +100,94 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
         clearTimeout(fallbackTimer);
       };
     }
-
-    if (!runtimeRef.current) runtimeRef.current = new WebContainerRuntime();
-    const runtime = runtimeRef.current;
-    const onRuntimeEvent = (event: RuntimeEvent) => {
-      if (cancelled) return;
-      if (event.type === "output") {
-        setOutputs((current) => [...current, event].slice(-80));
-        return;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const setupRuntime = async () => {
+      if (!runtimeRef.current) {
+        const { WebContainerRuntime } = await import("../lib/webcontainer-runtime");
+        if (cancelled) return;
+        runtimeRef.current = new WebContainerRuntime();
       }
-      if (event.type === "server-ready") {
-        setPreviewLoaded(false);
-        setPreviewUrl(event.url);
-        return;
-      }
-      setRuntimeState(event.state);
-      setRuntimeError(event.error);
-      if (event.error) {
-        setPreviewLoaded(false);
-        setPreviewUrl(undefined);
-        setOutputs((current) =>
-          [
-            ...current,
-            {
-              level: "error" as const,
-              message: translateRef.current(`preview.runtime.${event.error}`),
-            },
-          ].slice(-80),
-        );
-      }
-    };
-    runtimeEventRef.current = onRuntimeEvent;
-
-    const timer = setTimeout(() => {
-      const runtimeSettingsKey = `${settings.packageManager}:${settings.autoInstall}:${settings.autoStartPreview}`;
-      if (!runtimeStartedRef.current) {
-        runtimeStartedRef.current = true;
-        lastRunKeyRef.current = runKey;
-        lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
-        setOutputs([]);
-        setRuntimeError(undefined);
-        void runtime
-          .start(files, folders, stableRuntimeHandlerRef.current, settings, {
-            forceStart: runKey > 0,
-          })
-          .then(() => {
-            const latest = latestProjectRef.current;
-            void runtime.sync(latest.files, latest.folders);
+      const runtime = runtimeRef.current;
+      if (!runtime || cancelled) return;
+      const onRuntimeEvent = (event: RuntimeEvent) => {
+        if (cancelled) return;
+        if (event.type === "output") {
+          setOutputs((current) => [...current, event].slice(-80));
+          return;
+        }
+        if (event.type === "server-ready") {
+          setPreviewLoaded(false);
+          setPreviewUrl(event.url);
+          return;
+        }
+        setRuntimeState(event.state);
+        setRuntimeError(event.error);
+        if (event.error) {
+          setPreviewLoaded(false);
+          setPreviewUrl(undefined);
+          setOutputs((current) =>
+            [
+              ...current,
+              {
+                level: "error" as const,
+                message: translateRef.current(`preview.runtime.${event.error}`),
+              },
+            ].slice(-80),
+          );
+        }
+      };
+      runtimeEventRef.current = onRuntimeEvent;
+      timer = setTimeout(() => {
+        const runtimeSettingsKey = `${settings.packageManager}:${settings.autoInstall}:${settings.autoStartPreview}`;
+        if (!runtimeStartedRef.current) {
+          runtimeStartedRef.current = true;
+          lastRunKeyRef.current = runKey;
+          lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
+          setOutputs([]);
+          setRuntimeError(undefined);
+          void runtime
+            .start(files, folders, stableRuntimeHandlerRef.current, settings, {
+              forceStart: runKey > 0,
+            })
+            .then(() => {
+              const latest = latestProjectRef.current;
+              void runtime.sync(latest.files, latest.folders);
+            });
+          return;
+        }
+        if (runtimeSettingsKey !== lastRuntimeSettingsKeyRef.current) {
+          lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
+          setOutputs([]);
+          setRuntimeError(undefined);
+          void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings);
+          return;
+        }
+        if (runKey !== lastRunKeyRef.current) {
+          lastRunKeyRef.current = runKey;
+          setOutputs([]);
+          setRuntimeError(undefined);
+          void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings, {
+            forceStart: true,
           });
-        return;
-      }
-
-      if (runtimeSettingsKey !== lastRuntimeSettingsKeyRef.current) {
-        lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
-        setOutputs([]);
-        setRuntimeError(undefined);
-        void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings);
-        return;
-      }
-
-      if (runKey !== lastRunKeyRef.current) {
-        lastRunKeyRef.current = runKey;
-        setOutputs([]);
-        setRuntimeError(undefined);
-        void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings, {
-          forceStart: true,
+          return;
+        }
+        void runtime.sync(files, folders).then(({ packageChanged }) => {
+          if (!packageChanged || cancelled) return;
+          setOutputs([]);
+          setRuntimeError(undefined);
+          void runtime.restart(
+            latestProjectRef.current.files,
+            latestProjectRef.current.folders,
+            stableRuntimeHandlerRef.current,
+            settings,
+          );
         });
-        return;
-      }
-
-      void runtime.sync(files, folders).then(({ packageChanged }) => {
-        if (!packageChanged || cancelled) return;
-        setOutputs([]);
-        setRuntimeError(undefined);
-        void runtime.restart(
-          latestProjectRef.current.files,
-          latestProjectRef.current.folders,
-          stableRuntimeHandlerRef.current,
-          settings,
-        );
-      });
-    }, 250);
-
+      }, 250);
+    };
+    void setupRuntime();
     return () => {
       cancelled = true;
-      clearTimeout(timer);
-      clearTimeout(fallbackTimer);
+      if (timer) clearTimeout(timer);
     };
   }, [
     file,
@@ -189,7 +198,6 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
     settings.autoStartPreview,
     settings.packageManager,
   ]);
-
   const runState =
     runtimeError || runtimeState === "error"
       ? "error"

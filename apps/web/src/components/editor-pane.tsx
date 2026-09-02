@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next";
 import { basicSetup } from "codemirror";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { tsFacet, tsHover, tsSync } from "@valtown/codemirror-ts";
 import { LoroExtensions } from "loro-codemirror";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import { UndoManager } from "loro-crdt";
@@ -19,8 +18,6 @@ import {
   supportsTypeScriptServices,
 } from "../lib/editor-language";
 import { shikiHighlight } from "../lib/shiki-highlighting";
-import { createEditorTypeScriptEnvironment } from "../lib/typescript-environment";
-import { renderTypeScriptHover } from "../lib/typescript-hover";
 import { getShikiTheme } from "../lib/workspace-theme";
 
 type EditorPaneProps = {
@@ -59,8 +56,15 @@ export function EditorPane({
       const source = file.text.toString();
       const language = getEditorLanguage(file.path, file.language);
       const typeScriptEnabled = supportsTypeScriptServices(language);
-      const environment = typeScriptEnabled
-        ? createEditorTypeScriptEnvironment(file.path, source)
+      const typeScriptServices = typeScriptEnabled
+        ? await Promise.all([
+            import("@valtown/codemirror-ts"),
+            import("../lib/typescript-environment"),
+            import("../lib/typescript-hover"),
+          ])
+        : undefined;
+      const environment = typeScriptServices
+        ? typeScriptServices[1].createEditorTypeScriptEnvironment(file.path, source)
         : undefined;
       if (disposed || !hostRef.current) return;
 
@@ -71,11 +75,13 @@ export function EditorPane({
             basicSetup,
             getEditorLanguageSupport(language),
             ...(settings.wordWrap ? [EditorView.lineWrapping] : []),
-            ...(environment
+            ...(environment && typeScriptServices
               ? [
-                  tsFacet.of({ env: environment, path: file.path }),
-                  tsSync(),
-                  tsHover({ renderTooltip: renderTypeScriptHover }),
+                  typeScriptServices[0].tsFacet.of({ env: environment, path: file.path }),
+                  typeScriptServices[0].tsSync(),
+                  typeScriptServices[0].tsHover({
+                    renderTooltip: typeScriptServices[2].renderTypeScriptHover,
+                  }),
                 ]
               : []),
             shikiHighlight(language, getShikiTheme(settings.theme)),

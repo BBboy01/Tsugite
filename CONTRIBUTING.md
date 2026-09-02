@@ -11,6 +11,7 @@ Before opening a pull request, run:
 bun run test
 bun run lint
 bun run format:check
+bun run knip
 bun run build
 bun run test:e2e
 ```
