@@ -1,0 +1,32 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "exclude": ["exports", "types"],
+  "workspaces": {
+    ".": {
+      "entry": [
+        "apps/web/src/main.tsx",
+        "apps/web/src/styles.css",
+        "apps/server/src/index.ts",
+        "apps/**/*.test.ts",
+        "apps/**/*.test.tsx",
+        "e2e/room.spec.ts",
+        "vite.config.ts",
+        "playwright.config.ts",
+        "commitlint.config.mjs",
+        "lint-staged.config.mjs"
+      ],
+      "project": [
+        "apps/**/*.{ts,tsx}",
+        "apps/**/*.css",
+        "e2e/**/*.ts",
+        "*.config.{ts,mjs}",
+        "commitlint.config.mjs",
+        "lint-staged.config.mjs"
+      ]
+    },
+    "packages/shared": {
+      "entry": ["src/index.ts", "src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
+    }
+  }
+}
