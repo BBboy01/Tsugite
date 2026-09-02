@@ -1,0 +1,63 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
+  "dependencyDashboard": true,
+  "automerge": false,
+  "separateMajorMinor": true,
+  "timezone": "Asia/Shanghai",
+  "schedule": ["before 5am on monday"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 2,
+  "rangeStrategy": "bump",
+  "labels": ["dependencies", "renovate"],
+  "packageRules": [
+    {
+      "description": "Group Bun and build tool updates",
+      "groupName": "bun toolchain",
+      "matchPackageNames": [
+        "@tailwindcss/vite",
+        "@vitejs/plugin-react",
+        "oxfmt",
+        "oxlint",
+        "rolldown",
+        "tailwindcss",
+        "vite",
+        "vite-plugin-wasm"
+      ]
+    },
+    {
+      "description": "Group React editor updates",
+      "groupName": "react editor stack",
+      "matchPackageNames": [
+        "@codemirror/**",
+        "@radix-ui/**",
+        "@react-symbols/icons",
+        "@types/react",
+        "@types/react-dom",
+        "codemirror",
+        "loro-codemirror",
+        "motion",
+        "react",
+        "react-dom",
+        "react-aria-components",
+        "shiki"
+      ]
+    },
+    {
+      "description": "Group collaboration and runtime updates",
+      "groupName": "collaboration runtime",
+      "matchPackageNames": [
+        "@elysiajs/cors",
+        "@faker-js/faker",
+        "elysia",
+        "loro-crdt",
+        "@webcontainer/api"
+      ]
+    },
+    {
+      "description": "Keep major updates separate",
+      "matchUpdateTypes": ["major"],
+      "automerge": false
+    }
+  ]
+}

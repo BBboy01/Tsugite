@@ -20,5 +20,5 @@
     "jsx": "react-jsx",
     "types": ["bun"]
   },
-  "include": ["apps", "packages", "vite.config.ts"]
+  "include": ["apps", "packages", "vite.config.ts", "playwright.config.ts", "e2e"]
 }

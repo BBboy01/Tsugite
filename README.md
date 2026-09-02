@@ -23,8 +23,10 @@ WebContainer requires a cross-origin isolated page. The included Vite configurat
 ## Checks
 
 ```bash
-bun test
+bun run test
 bunx tsc --noEmit --pretty false
 bun run lint
 bun run format:check
+bun run build
+bun run test:e2e
 ```
