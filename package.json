@@ -10,11 +10,16 @@
   "scripts": {
     "dev:web": "vite --config vite.config.ts",
     "dev:server": "bun run apps/server/src/index.ts",
-    "test": "bun test",
+    "build": "vite build --config vite.config.ts",
+    "preview": "vite preview --config vite.config.ts",
+    "test": "bun test apps packages",
+    "test:e2e": "playwright test",
+    "commitlint": "commitlint",
+    "prepare": "simple-git-hooks",
     "typecheck": "tsc --noEmit",
-    "format": "oxfmt --write package.json tsconfig.json vite.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src",
-    "format:check": "oxfmt --check package.json tsconfig.json vite.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src",
-    "lint": "oxlint apps/web/src apps/server/src packages/shared/src"
+    "format": "oxfmt --write package.json tsconfig.json vite.config.ts playwright.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src e2e",
+    "format:check": "oxfmt --check package.json tsconfig.json vite.config.ts playwright.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src e2e",
+    "lint": "oxlint apps/web/src apps/server/src packages/shared/src e2e playwright.config.ts && tsc --noEmit"
   },
   "dependencies": {
     "@babel/standalone": "latest",
@@ -59,20 +64,25 @@
     "typescript-legacy": "npm:typescript@5.9.3"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.2",
+    "@commitlint/config-conventional": "^21.2.2",
     "@tailwindcss/vite": "^4.3.3",
     "@types/bun": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@vitejs/plugin-react": "latest",
-    "esbuild": "^0.28.2",
+    "lint-staged": "^17.4.1",
     "oxfmt": "^0.65.0",
     "oxlint": "^1.80.0",
     "playwright": "^1.62.1",
-    "rollup": "^4.62.5",
+    "simple-git-hooks": "^2.14.0",
     "tailwindcss": "^4.3.3",
     "typescript": "7.0.2",
     "vite": "latest",
-    "vite-plugin-top-level-await": "^1.6.0",
     "vite-plugin-wasm": "^3.6.0"
+  },
+  "simple-git-hooks": {
+    "pre-commit": "bunx --no-install lint-staged && bun run typecheck",
+    "commit-msg": "bunx --no-install commitlint --edit \"$1\""
   }
 }

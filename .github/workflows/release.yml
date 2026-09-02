@@ -1,0 +1,90 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*.*.*"
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Publish GitHub release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          fetch-depth: 0
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version-file: .bun-version
+
+      - name: Install dependencies
+        run: bun ci
+        env:
+          SKIP_INSTALL_SIMPLE_GIT_HOOKS: "1"
+
+      - name: Validate release tag
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          bun -e 'const expected = Bun.env.RELEASE_TAG?.replace(/^v/, ""); const packageJson = await Bun.file("package.json").json(); if (packageJson.version !== expected) { console.error(`Tag ${Bun.env.RELEASE_TAG} does not match package version ${packageJson.version}`); process.exit(1); }'
+
+      - name: Run tests
+        run: bun run test
+
+      - name: Run lint
+        run: bun run lint
+
+      - name: Check formatting
+        run: bun run format:check
+
+      - name: Build application
+        run: bun run build
+
+      - name: Package build output
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          mkdir -p release-artifacts
+          tar -czf "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" -C apps/web/dist .
+          shasum -a 256 "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" > "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz.sha256"
+
+      - name: Attest build provenance
+        uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
+        with:
+          subject-path: release-artifacts/tsugite-${{ github.ref_name }}.tar.gz
+
+      - name: Generate release notes
+        id: git-cliff
+        uses: orhun/git-cliff-action@3d96a18cc4ec17e9dc69ddcc424ccafaf1f78ce2 # v4
+        with:
+          version: v2.13.1
+          config: cliff.toml
+          args: --latest --strip header
+          github_token: ${{ github.token }}
+        env:
+          OUTPUT: RELEASE_NOTES.md
+          GITHUB_REPO: ${{ github.repository }}
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Tsugite ${{ github.ref_name }}
+          body_path: RELEASE_NOTES.md
+          files: |
+            release-artifacts/tsugite-${{ github.ref_name }}.tar.gz
+            release-artifacts/tsugite-${{ github.ref_name }}.tar.gz.sha256
+          draft: false
+          prerelease: ${{ contains(github.ref_name, '-') }}

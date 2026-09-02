@@ -4,5 +4,9 @@ dist/
 .worktrees/
 .superpowers/
 coverage/
+playwright-report/
+test-results/
+release-artifacts/
 *.log
 .DS_Store
+RELEASE_NOTES.md

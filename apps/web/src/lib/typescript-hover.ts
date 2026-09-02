@@ -1,6 +1,8 @@
 import type { HoverInfo } from "@valtown/codemirror-ts";
 import type { EditorView, TooltipView } from "@codemirror/view";
 
+type DisplayPart = { text: string };
+
 export const renderTypeScriptHover = (info: HoverInfo, _editorView: EditorView): TooltipView => {
   const dom = document.createElement("div");
   dom.className = "iris-ts-hover";
@@ -8,12 +10,14 @@ export const renderTypeScriptHover = (info: HoverInfo, _editorView: EditorView):
   if (info.quickInfo?.displayParts?.length) {
     const signature = document.createElement("code");
     signature.className = "iris-ts-hover-signature";
-    signature.textContent = info.quickInfo.displayParts.map((part) => part.text).join("");
+    signature.textContent = info.quickInfo.displayParts
+      .map((part: DisplayPart) => part.text)
+      .join("");
     dom.append(signature);
   }
 
   const documentation = info.quickInfo?.documentation
-    ?.map((part) => part.text)
+    ?.map((part: DisplayPart) => part.text)
     .join("")
     .trim();
   if (documentation) {
