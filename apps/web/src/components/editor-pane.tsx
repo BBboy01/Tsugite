@@ -1,0 +1,228 @@
+import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
+import { basicSetup } from "codemirror";
+import { EditorState } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
+import { tsFacet, tsHover, tsSync } from "@valtown/codemirror-ts";
+import { LoroExtensions } from "loro-codemirror";
+import { Cross2Icon } from "@radix-ui/react-icons";
+import { UndoManager } from "loro-crdt";
+import type { LoroDoc } from "loro-crdt";
+
+import type { ProjectFile, ProjectSettings } from "@iris/shared";
+
+import { getEditorTabLabels } from "../lib/editor-tabs";
+import { FileTypeIcon } from "../lib/file-icon";
+import {
+  getEditorLanguage,
+  getEditorLanguageSupport,
+  supportsTypeScriptServices,
+} from "../lib/editor-language";
+import { shikiHighlight } from "../lib/shiki-highlighting";
+import { createEditorTypeScriptEnvironment } from "../lib/typescript-environment";
+import { renderTypeScriptHover } from "../lib/typescript-hover";
+import { getShikiTheme } from "../lib/workspace-theme";
+
+type EditorPaneProps = {
+  doc: LoroDoc;
+  file: ProjectFile;
+  tabs: ProjectFile[];
+  settings: ProjectSettings;
+  onSelectTab: (path: string) => void;
+  onCloseTab: (path: string) => void;
+  onCursorChange: (cursor: { anchor: number; head: number }) => void;
+};
+
+export function EditorPane({
+  doc,
+  file,
+  tabs,
+  settings,
+  onSelectTab,
+  onCloseTab,
+  onCursorChange,
+}: EditorPaneProps) {
+  const { t } = useTranslation();
+  const hostRef = useRef<HTMLDivElement>(null);
+  const cursorChangeRef = useRef(onCursorChange);
+  const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
+  cursorChangeRef.current = onCursorChange;
+
+  useEffect(() => {
+    if (!hostRef.current) return;
+
+    let disposed = false;
+    let view: EditorView | undefined;
+    const undoManager = new UndoManager(doc, {});
+
+    const setupEditor = async () => {
+      const source = file.text.toString();
+      const language = getEditorLanguage(file.path, file.language);
+      const typeScriptEnabled = supportsTypeScriptServices(language);
+      const environment = typeScriptEnabled
+        ? createEditorTypeScriptEnvironment(file.path, source)
+        : undefined;
+      if (disposed || !hostRef.current) return;
+
+      view = new EditorView({
+        state: EditorState.create({
+          doc: source,
+          extensions: [
+            basicSetup,
+            getEditorLanguageSupport(language),
+            ...(settings.wordWrap ? [EditorView.lineWrapping] : []),
+            ...(environment
+              ? [
+                  tsFacet.of({ env: environment, path: file.path }),
+                  tsSync(),
+                  tsHover({ renderTooltip: renderTypeScriptHover }),
+                ]
+              : []),
+            shikiHighlight(language, getShikiTheme(settings.theme)),
+            LoroExtensions(doc, undefined, undoManager, () => file.text),
+            EditorView.updateListener.of((update) => {
+              if (!update.selectionSet) return;
+              const selection = update.state.selection.main;
+              cursorChangeRef.current({
+                anchor: selection.anchor,
+                head: selection.head,
+              });
+            }),
+            editorTheme(settings),
+          ],
+        }),
+        parent: hostRef.current,
+      });
+    };
+
+    void setupEditor();
+
+    return () => {
+      disposed = true;
+      view?.destroy();
+      undoManager.free();
+    };
+  }, [
+    doc,
+    file.id,
+    file.language,
+    settings.fontFamily,
+    settings.fontSize,
+    settings.theme,
+    settings.wordWrap,
+  ]);
+
+  return (
+    <section
+      className="flex min-w-0 min-h-0 flex-1 flex-col bg-[var(--editor-surface)]"
+      aria-label={t("files.editing", { path: file.path })}
+    >
+      <div className="editor-toolbar glass-toolbar flex h-12 min-w-0 flex-none items-center px-4 max-[760px]:h-11 max-[760px]:px-3">
+        <div
+          className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          role="tablist"
+          aria-label={t("editor.openFiles")}
+        >
+          <div className="flex min-w-max items-center gap-1">
+            {tabs.map((tab, index) => {
+              const active = tab.path === file.path;
+              return (
+                <div
+                  className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
+                    active
+                      ? "bg-[color-mix(in_srgb,var(--accent)_18%,var(--editor-surface))] text-iris-ink shadow-[0_1px_2px_rgba(75,67,45,0.06)]"
+                      : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
+                  }`}
+                  key={tab.id}
+                >
+                  <button
+                    className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit outline-none transition-none max-[760px]:max-w-[180px] max-[760px]:px-2"
+                    type="button"
+                    role="tab"
+                    aria-selected={active}
+                    title={tab.path}
+                    onClick={() => onSelectTab(tab.path)}
+                  >
+                    <FileTypeIcon
+                      path={tab.path}
+                      className="shrink-0 text-[var(--accent)]"
+                      width="12"
+                      height="12"
+                    />
+                    <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
+                      {tabLabels[index]}
+                    </span>
+                    {active && (
+                      <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[9px] text-[var(--accent-deep)]">
+                        +2
+                      </span>
+                    )}
+                  </button>
+                  <button
+                    className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                    type="button"
+                    aria-label={t("editor.closeFile", { path: tab.path })}
+                    title={t("editor.closeFile", { path: tab.path })}
+                    onClick={() => onCloseTab(tab.path)}
+                  >
+                    <Cross2Icon width="13" height="13" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+      <div className="min-h-0 flex-1 [&_.cm-editor]:h-full" ref={hostRef} />
+    </section>
+  );
+}
+
+function editorTheme(settings: ProjectSettings) {
+  return EditorView.theme({
+    "&": {
+      height: "100%",
+      color: "var(--ink)",
+      backgroundColor: "var(--editor-surface)",
+      fontFamily: `'${settings.fontFamily}', 'IBM Plex Mono', ui-monospace, monospace`,
+      fontSize: `${settings.fontSize}px`,
+    },
+    "&.cm-focused": {
+      outline: "none",
+    },
+    ".cm-scroller": {
+      overflow: "auto",
+      fontFamily: "inherit",
+      lineHeight: "1.75",
+      padding: "0 0 32px",
+    },
+    ".cm-cursor, .cm-dropCursor": {
+      borderLeft: "2px solid var(--accent)",
+      marginLeft: "-1px",
+    },
+    ".cm-content": {
+      caretColor: "var(--accent)",
+      padding: "0 28px 0 0",
+    },
+    ".cm-content span": {
+      color: "inherit",
+    },
+    ".cm-gutters": {
+      border: "none",
+      backgroundColor: "transparent",
+      color: "var(--muted)",
+      minWidth: "56px",
+      padding: "0 12px 0 0",
+    },
+    ".cm-activeLineGutter": {
+      backgroundColor: "transparent",
+      color: "var(--accent)",
+    },
+    ".cm-activeLine": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 8%, transparent)",
+    },
+    ".cm-selectionBackground, ::selection": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
+    },
+  });
+}

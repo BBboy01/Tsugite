@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f3f0e4" />
+    <link rel="icon" href="/tsugite-mark.svg" type="image/svg+xml" />
+    <title>Tsugite multiplayer editor</title>
+    <style>
+      :root {
+        background: #f5f5f7;
+        color: #343438;
+      }
+      html,
+      body {
+        min-width: 320px;
+        min-height: 100%;
+        margin: 0;
+        background: #f5f5f7;
+      }
+      #app {
+        min-height: 100vh;
+      }
+      #app-boot {
+        position: fixed;
+        inset: 0;
+        z-index: 100;
+        display: grid;
+        place-items: center;
+        background: #f5f5f7;
+        color: #6e6e73;
+        font:
+          500 12px/1 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      .app-boot-content {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .app-boot-mark {
+        display: block;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        object-fit: cover;
+      }
+      .app-boot-dots {
+        display: flex;
+        gap: 4px;
+        margin-top: 8px;
+      }
+      .app-boot-dots span {
+        width: 5px;
+        height: 5px;
+        border-radius: 999px;
+        background: #ae6854;
+        animation: app-boot-bounce 0.8s ease-in-out infinite;
+      }
+      .app-boot-dots span:nth-child(2) {
+        animation-delay: 0.12s;
+      }
+      .app-boot-dots span:nth-child(3) {
+        animation-delay: 0.24s;
+      }
+      @keyframes app-boot-bounce {
+        0%,
+        60%,
+        100% {
+          opacity: 0.3;
+          transform: translateY(0) scale(0.8);
+        }
+        30% {
+          opacity: 1;
+          transform: translateY(-4px) scale(1.1);
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root,
+        body,
+        #app-boot {
+          background: #1c1c1e;
+          color: #98989f;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        .app-boot-dots span {
+          animation: none;
+          opacity: 0.7;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app">
+      <div id="app-boot" role="status" aria-label="Loading Tsugite">
+        <div>
+          <div class="app-boot-content">
+            <img class="app-boot-mark" src="/tsugite-mark.svg" alt="" aria-hidden="true" />
+            <strong>Tsugite</strong>
+          </div>
+          <div class="app-boot-dots" aria-hidden="true">
+            <span></span><span></span><span></span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

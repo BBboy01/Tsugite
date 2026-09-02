@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">Tsugite</title>
+  <desc id="desc">Two offset pieces joined into a quiet T-shaped mark.</desc>
+  <rect width="64" height="64" rx="15" fill="#e9e3d6"/>
+  <path d="M12 14h20v9h-5v8h9v9H27v10H12V40h6v-9h-6z" fill="#2d3a34"/>
+  <path d="M52 50H32v-9h5v-8h-9v-9h9V14h15v10h-6v9h6z" fill="#ae6854"/>
+  <path d="M31 23h6v9h-9v9h-5v-9h8z" fill="#e9e3d6"/>
+</svg>
