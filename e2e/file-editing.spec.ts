@@ -20,6 +20,7 @@ test.describe("file and editor actions", () => {
   test("keeps the initial room socket open through development remounts", async ({
     page,
   }, testInfo) => {
+    test.setTimeout(90_000);
     const socketWarnings: string[] = [];
     page.on("console", (message) => {
       if (message.type() === "warning" && message.text().includes("WebSocket connection")) {
@@ -31,10 +32,9 @@ test.describe("file and editor actions", () => {
       waitUntil: "domcontentloaded",
     });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-    await expect(page.locator('iframe[title^="Preview of "]')).toHaveAttribute(
-      "sandbox",
-      "allow-scripts",
-    );
+    const preview = page.locator('iframe[title^="Preview of "]');
+    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 60_000 });
+    await expect(preview).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
     await page.waitForTimeout(1_000);
 
     expect(socketWarnings).toEqual([]);

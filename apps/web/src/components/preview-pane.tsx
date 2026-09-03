@@ -9,6 +9,7 @@ import {
   type RuntimeError,
   type RuntimeEvent,
   type RuntimeState,
+  isStoragePartitioningErrorUrl,
 } from "../lib/webcontainer-runtime";
 import { getLatestPreviewError } from "../lib/preview-error-model";
 import { PreviewConsole } from "./preview-console";
@@ -240,6 +241,22 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       : runtimeState === "starting"
         ? t("preview.starting")
         : t("app.waitingPreview");
+  const handlePreviewLoad = () => {
+    if (previewUrl && isStoragePartitioningErrorUrl(previewUrl)) {
+      const message = translateRef.current("preview.runtime.storage-partitioning-required");
+      setPreviewLoaded(false);
+      setRuntimeState("error");
+      setRuntimeError("storage-partitioning-required");
+      setPreviewBuildError(message);
+      setOutputs((current) =>
+        current.some((output) => output.message === message)
+          ? current
+          : [...current, { level: "error" as const, message }].slice(-80),
+      );
+      return;
+    }
+    window.setTimeout(() => setPreviewLoaded(true), 900);
+  };
 
   return (
     <motion.section
@@ -289,9 +306,9 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           title={`Preview of ${file.path}`}
           src={previewUrl}
           srcDoc={previewUrl ? undefined : fallbackDocument}
-          sandbox={previewUrl ? "allow-scripts allow-same-origin" : "allow-scripts"}
+          sandbox="allow-scripts allow-same-origin"
           className="block h-full min-h-[260px] w-full border-0 bg-white shadow-none"
-          onLoad={() => window.setTimeout(() => setPreviewLoaded(true), 900)}
+          onLoad={handlePreviewLoad}
         />
         <AnimatePresence initial={false}>
           {showPreviewLoader ? (

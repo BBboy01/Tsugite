@@ -137,6 +137,8 @@ const resources = {
       "preview.runtime.start-failed": "The preview server failed to start.",
       "preview.runtime.cross-origin-isolation-required":
         "WebContainer needs cross-origin isolation.",
+      "preview.runtime.storage-partitioning-required":
+        "Chrome blocked WebContainer storage partitioning. Enable chrome://flags/#third-party-storage-partitioning or allow third-party storage for *.webcontainer.io and *.webcontainer-api.io, then reload.",
       "preview.runtime.runtime-unavailable": "WebContainer is unavailable in this browser.",
       "editor.openFiles": "Open files",
       "editor.closeFile": "Close {{path}}",
@@ -270,6 +272,8 @@ const resources = {
       "preview.runtime.install-failed": "pnpm install 失败。",
       "preview.runtime.start-failed": "预览服务器启动失败。",
       "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨源隔离。",
+      "preview.runtime.storage-partitioning-required":
+        "Chrome 阻止了 WebContainer 的存储分区。请在 chrome://flags/#third-party-storage-partitioning 中启用存储分区，或允许 *.webcontainer.io 和 *.webcontainer-api.io 使用第三方存储，然后重新加载页面。",
       "preview.runtime.runtime-unavailable": "当前浏览器无法使用 WebContainer。",
       "editor.openFiles": "已打开文件",
       "editor.closeFile": "关闭 {{path}}",
@@ -403,6 +407,8 @@ const resources = {
       "preview.runtime.install-failed": "pnpm install 失敗。",
       "preview.runtime.start-failed": "預覽伺服器啟動失敗。",
       "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨來源隔離。",
+      "preview.runtime.storage-partitioning-required":
+        "Chrome 阻止了 WebContainer 的儲存分區。請在 chrome://flags/#third-party-storage-partitioning 中啟用儲存分區，或允許 *.webcontainer.io 和 *.webcontainer-api.io 使用第三方儲存，然後重新載入頁面。",
       "preview.runtime.runtime-unavailable": "目前瀏覽器無法使用 WebContainer。",
       "editor.openFiles": "已開啟檔案",
       "editor.closeFile": "關閉 {{path}}",
@@ -541,6 +547,8 @@ const resources = {
       "preview.runtime.start-failed": "プレビューサーバーの起動に失敗しました。",
       "preview.runtime.cross-origin-isolation-required":
         "WebContainer にはクロスオリジン分離が必要です。",
+      "preview.runtime.storage-partitioning-required":
+        "Chrome が WebContainer のストレージパーティショニングをブロックしました。chrome://flags/#third-party-storage-partitioning で有効にするか、*.webcontainer.io と *.webcontainer-api.io のサードパーティストレージを許可してから、ページを再読み込みしてください。",
       "preview.runtime.runtime-unavailable": "このブラウザーでは WebContainer を利用できません。",
       "editor.openFiles": "開いているファイル",
       "editor.closeFile": "{{path}} を閉じる",

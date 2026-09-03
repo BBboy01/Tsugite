@@ -191,12 +191,17 @@ test.describe("room shell", () => {
   });
 
   test("shows syntax errors in preview instead of a blank frame", async ({ page }, testInfo) => {
-    test.setTimeout(90_000);
+    test.setTimeout(120_000);
     await page.goto(
       "/room/e2e-preview-syntax-" + testInfo.workerIndex + "-" + testInfo.repeatEachIndex,
       { waitUntil: "domcontentloaded" },
     );
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator('iframe[title^="Preview of "]')).toHaveAttribute(
+      "src",
+      /^https?:\/\//,
+      { timeout: 90_000 },
+    );
 
     const editor = page.locator(".cm-content");
     await editor.click();

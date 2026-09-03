@@ -12,6 +12,7 @@ export type RuntimeSettings = {
 };
 export type RuntimeError =
   | "cross-origin-isolation-required"
+  | "storage-partitioning-required"
   | "invalid-package-json"
   | "missing-package-json"
   | "missing-preview-script"
@@ -63,6 +64,7 @@ export class WebContainerRuntime {
   private bootPromise: Promise<RuntimeContainer> | undefined;
   private process: RuntimeProcess | undefined;
   private unsubscribeReady: (() => void) | undefined;
+  private unsubscribeError: (() => void) | undefined;
   private snapshot: Snapshot = { files: new Map(), folders: new Set() };
   private listener: ((event: RuntimeEvent) => void) | undefined;
   private generation = 0;
@@ -189,6 +191,8 @@ export class WebContainerRuntime {
     this.stopProcess();
     this.unsubscribeReady?.();
     this.unsubscribeReady = undefined;
+    this.unsubscribeError?.();
+    this.unsubscribeError = undefined;
     this.container?.teardown();
     this.container = undefined;
     this.bootPromise = undefined;
@@ -215,17 +219,36 @@ export class WebContainerRuntime {
     generation: number,
   ): Promise<void> {
     this.emit({ type: "state", state: "starting" });
-    let ready = false;
+    let settled = false;
     let resolveReady: (() => void) | undefined;
     const readyPromise = new Promise<void>((resolve) => {
       resolveReady = resolve;
     });
     this.unsubscribeReady?.();
+    this.unsubscribeError?.();
     this.unsubscribeReady = container.on("server-ready", (port, url) => {
-      if (generation !== this.generation || ready) return;
-      ready = true;
+      if (generation !== this.generation || settled) return;
+      if (isStoragePartitioningErrorUrl(url)) {
+        settled = true;
+        this.emit({ type: "state", state: "error", error: "storage-partitioning-required" });
+        resolveReady?.();
+        return;
+      }
+      settled = true;
       this.emit({ type: "server-ready", port, url });
       this.emit({ type: "state", state: "ready" });
+      resolveReady?.();
+    });
+    this.unsubscribeError = (
+      container as unknown as {
+        on: (event: "error", listener: (error: { message: string }) => void) => () => void;
+      }
+    ).on("error", (error) => {
+      if (generation !== this.generation || settled) return;
+      const runtimeError = getRuntimeError(error);
+      if (runtimeError !== "storage-partitioning-required") return;
+      settled = true;
+      this.emit({ type: "state", state: "error", error: runtimeError });
       resolveReady?.();
     });
 
@@ -233,7 +256,7 @@ export class WebContainerRuntime {
     this.process = process;
     void consumeOutput(process, this.listener);
     const exit = process.exit.then(() => {
-      if (generation === this.generation && !ready) {
+      if (generation === this.generation && !settled) {
         this.emit({ type: "state", state: "error", error: "start-failed" });
       }
     });
@@ -254,7 +277,11 @@ function defaultBoot(): Promise<RuntimeContainer> {
   if (typeof window !== "undefined" && !window.crossOriginIsolated) {
     return Promise.reject(new Error("cross-origin-isolation-required"));
   }
-  return WebContainer.boot() as unknown as Promise<RuntimeContainer>;
+  return WebContainer.boot({ forwardPreviewErrors: true }) as unknown as Promise<RuntimeContainer>;
+}
+
+export function isStoragePartitioningErrorUrl(url: string): boolean {
+  return /localservice@sw-install-error/i.test(url);
 }
 
 function createSnapshot(files: ProjectFile[], folders: string[]): Snapshot {
@@ -301,9 +328,23 @@ function toContainerPath(path: string): string {
   return `/${path}`;
 }
 
-function getRuntimeError(error: unknown): RuntimeError {
-  if (error instanceof Error && isRuntimeError(error.message)) return error.message;
+export function getRuntimeError(error: unknown): RuntimeError {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof error.message === "string"
+        ? error.message
+        : undefined;
+  if (message && isStoragePartitioningErrorMessage(message)) return "storage-partitioning-required";
+  if (message && isRuntimeError(message)) return message;
   return "runtime-unavailable";
+}
+
+function isStoragePartitioningErrorMessage(message: string): boolean {
+  return /storage[ -]partition(?:ing)?|third[- ]party storage/i.test(message);
 }
 
 function getInstallCommand(packageManager: PackageManager): [string, string[]] {
@@ -315,6 +356,7 @@ function getInstallCommand(packageManager: PackageManager): [string, string[]] {
 function isRuntimeError(value: string): value is RuntimeError {
   return [
     "cross-origin-isolation-required",
+    "storage-partitioning-required",
     "invalid-package-json",
     "missing-package-json",
     "missing-preview-script",
