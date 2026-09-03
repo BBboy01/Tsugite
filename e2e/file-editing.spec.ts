@@ -33,7 +33,7 @@ test.describe("file and editor actions", () => {
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
     await expect(page.locator('iframe[title^="Preview of "]')).toHaveAttribute(
       "sandbox",
-      "allow-scripts",
+      "allow-scripts allow-same-origin",
     );
     await page.waitForTimeout(1_000);
 

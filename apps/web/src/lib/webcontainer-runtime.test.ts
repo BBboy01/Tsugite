@@ -4,6 +4,8 @@ import type { ProjectFile } from "@iris/shared";
 
 import {
   WebContainerRuntime,
+  getRuntimeError,
+  isStoragePartitioningErrorUrl,
   type RuntimeContainer,
   type RuntimeEvent,
   type RuntimeProcess,
@@ -32,7 +34,7 @@ function fakeProcess(exitCode = 0): RuntimeProcess {
   };
 }
 
-function fakeContainer() {
+function fakeContainer(readyUrl = "http://localhost:4173") {
   const events = new Map<string, (port: number, url: string) => void>();
   const calls = {
     mount: [] as unknown[],
@@ -57,8 +59,7 @@ function fakeContainer() {
     },
     async spawn(command, args) {
       calls.spawn.push([command, ...args]);
-      if (args[0] === "run")
-        queueMicrotask(() => events.get("server-ready")?.(4173, "http://localhost:4173"));
+      if (args[0] === "run") queueMicrotask(() => events.get("server-ready")?.(4173, readyUrl));
       return fakeProcess();
     },
     on(event, listener) {
@@ -164,4 +165,37 @@ test("can skip automatic install and preview startup until a manual run", async 
 
   await runtime.restart(files, [], () => {}, settings, { forceStart: true });
   expect(fake.calls.spawn).toEqual([["pnpm", "run", "dev"]]);
+});
+
+test("recognizes storage partitioning failures from WebContainer", () => {
+  expect(getRuntimeError(new Error("Enable Storage Partitioning to run this preview"))).toBe(
+    "storage-partitioning-required",
+  );
+  expect(
+    isStoragePartitioningErrorUrl(
+      "https://project.local-corp.webcontainer-api.io/.localservice@sw-install-error.abc.html",
+    ),
+  ).toBe(true);
+  expect(isStoragePartitioningErrorUrl("https://project.local-corp.webcontainer-api.io/")).toBe(
+    false,
+  );
+});
+
+test("stops preview startup when the server-ready URL is a storage error page", async () => {
+  const fake = fakeContainer(
+    "https://project.local-corp.webcontainer-api.io/.localservice@sw-install-error.abc.html",
+  );
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const events: RuntimeEvent[] = [];
+
+  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
+    events.push(event),
+  );
+
+  expect(events).toContainEqual({
+    type: "state",
+    state: "error",
+    error: "storage-partitioning-required",
+  });
+  expect(events.some((event) => event.type === "server-ready")).toBe(false);
 });
