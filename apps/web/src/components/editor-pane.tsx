@@ -5,12 +5,12 @@ import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
 import { Cross2Icon } from "@radix-ui/react-icons";
-import { UndoManager } from "loro-crdt";
 import type { LoroDoc } from "loro-crdt";
 
 import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
 
 import { getEditorTabLabels } from "../lib/editor-tabs";
+import { useEditorUndoManager } from "../lib/editor-undo";
 import { FileTypeIcon } from "../lib/file-icon";
 import { deferredLoroUndoKeymap, groupedLoroUndo } from "../lib/loro-undo-keymap";
 import {
@@ -54,6 +54,7 @@ export function EditorPane({
   const viewRef = useRef<EditorView | null>(null);
   const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
+  const undoManager = useEditorUndoManager(doc, file.id);
   const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
   cursorChangeRef.current = onCursorChange;
   remoteMembersRef.current = remoteMembers;
@@ -63,8 +64,6 @@ export function EditorPane({
 
     let disposed = false;
     let view: EditorView | undefined;
-    const undoManager = new UndoManager(doc, {});
-
     const setupEditor = async () => {
       const source = file.text.toString();
       const language = getEditorLanguage(file.path, file.language);
@@ -135,7 +134,6 @@ export function EditorPane({
       disposed = true;
       view?.destroy();
       if (viewRef.current === view) viewRef.current = null;
-      undoManager.free();
     };
   }, [
     doc,
@@ -146,6 +144,7 @@ export function EditorPane({
     settings.fontSize,
     settings.theme,
     settings.wordWrap,
+    undoManager,
   ]);
 
   useEffect(() => {

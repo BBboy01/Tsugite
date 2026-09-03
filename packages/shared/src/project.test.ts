@@ -134,3 +134,66 @@ test("copies and deletes a file while preserving its source", () => {
   expect(getFileByPath(doc, "src/new.ts")).toBeUndefined();
   expect(getFileByPath(doc, copied.path)?.text.toString()).toContain("value");
 });
+
+test("rejects file and folder paths that conflict with existing entries", () => {
+  const fileParent = new LoroDoc();
+  createFile(fileParent, "README.md", "javascript");
+  expect(() => createFolder(fileParent, "README.md/docs")).toThrow(
+    "A file already exists at README.md",
+  );
+  expect(() => createFile(fileParent, "README.md/docs.ts", "typescript")).toThrow(
+    "A file already exists at README.md",
+  );
+
+  const folderPath = new LoroDoc();
+  createFolder(folderPath, "src");
+  expect(() => createFile(folderPath, "src", "typescript")).toThrow(
+    "A folder already exists at src",
+  );
+
+  const fileRename = createFile(folderPath, "src/entry.ts", "typescript");
+  expect(() => renameFile(folderPath, fileRename.id, "src")).toThrow(
+    "A folder already exists at src",
+  );
+
+  const folderRename = new LoroDoc();
+  createFolder(folderRename, "src");
+  createFile(folderRename, "README.md", "javascript");
+  expect(() => renameFolder(folderRename, "src", "README.md/docs")).toThrow(
+    "A file already exists at README.md",
+  );
+
+  const inferredFolder = new LoroDoc();
+  createFile(inferredFolder, "src/main.ts", "typescript");
+  inferredFolder.getMap("folders").delete("src");
+  expect(() => createFile(inferredFolder, "src", "typescript")).toThrow(
+    "A folder already exists at src",
+  );
+});
+
+test("rejects malformed paths without rejecting valid dotted filenames", () => {
+  const doc = new LoroDoc();
+  for (const path of ["", "src/", "src//main.ts", "src/./main.ts", "src/../main.ts"]) {
+    expect(() => createFile(doc, path, "typescript")).toThrow(
+      "File path must be a relative non-empty path",
+    );
+  }
+
+  expect(createFile(doc, "src/version..ts", "typescript").path).toBe("src/version..ts");
+});
+
+test("skips folder names when choosing a copied file path", () => {
+  const doc = new LoroDoc();
+  const source = createFile(doc, "src/example.ts", "typescript", "export {};");
+  createFolder(doc, "src/example copy.ts");
+
+  expect(copyFile(doc, source.id).path).toBe("src/example copy 2.ts");
+});
+
+test("rejects renaming a folder that no longer exists", () => {
+  const doc = new LoroDoc();
+
+  expect(() => renameFolder(doc, "src", "lib")).toThrow("Folder does not exist");
+  expect(() => renameFolder(doc, "src", "src")).toThrow("Folder does not exist");
+  expect(listFolders(doc)).toEqual([]);
+});

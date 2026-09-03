@@ -211,7 +211,6 @@ export function createProjectDoc(): LoroDoc {
   settings.set("packageManager", DEFAULT_SETTINGS.packageManager);
   settings.set("autoInstall", DEFAULT_SETTINGS.autoInstall);
   settings.set("autoStartPreview", DEFAULT_SETTINGS.autoStartPreview);
-
   for (const file of DEFAULT_FILES) {
     createFile(doc, file.path, file.language, file.source);
   }
@@ -230,20 +229,16 @@ export function createFile(
   source = "",
 ): ProjectFile {
   const normalizedPath = normalizePath(path);
+  assertPathAvailable(doc, normalizedPath);
   const fileId = crypto.randomUUID();
   const files = doc.getMap("files");
   const filePaths = doc.getMap("filePaths");
-  if (filePaths.get(normalizedPath)) {
-    throw new Error(`A file already exists at ${normalizedPath}`);
-  }
   const metadata = files.ensureMergeableMap(fileId);
-
   metadata.set("path", normalizedPath);
   metadata.set("language", language);
   metadata.set("kind", "file");
   filePaths.set(normalizedPath, fileId);
   ensureParentFolders(doc, normalizedPath);
-
   const text = doc.getText(`file:${fileId}`);
   if (source) {
     text.insert(0, source);
@@ -268,10 +263,7 @@ export function renameFile(doc: LoroDoc, fileId: string, nextPath: string): Proj
   }
   const previousPath = metadata.get("path") as string | undefined;
 
-  const existingFileId = filePaths.get(normalizedPath) as string | undefined;
-  if (existingFileId && existingFileId !== fileId) {
-    throw new Error(`A file already exists at ${normalizedPath}`);
-  }
+  assertPathAvailable(doc, normalizedPath, fileId);
 
   if (previousPath && previousPath !== normalizedPath) {
     filePaths.delete(previousPath);
@@ -285,13 +277,8 @@ export function renameFile(doc: LoroDoc, fileId: string, nextPath: string): Proj
 
 export function createFolder(doc: LoroDoc, path: string): string {
   const normalizedPath = normalizePath(path);
-  if (doc.getMap("filePaths").get(normalizedPath)) {
-    throw new Error(`A file already exists at ${normalizedPath}`);
-  }
+  assertPathAvailable(doc, normalizedPath);
   const folders = doc.getMap("folders");
-  if (folders.get(normalizedPath)) {
-    throw new Error(`A folder already exists at ${normalizedPath}`);
-  }
   folders.set(normalizedPath, true);
   ensureParentFolders(doc, normalizedPath);
   return normalizedPath;
@@ -300,18 +287,14 @@ export function createFolder(doc: LoroDoc, path: string): string {
 export function renameFolder(doc: LoroDoc, path: string, nextPath: string): string {
   const normalizedPath = normalizePath(path);
   const normalizedNextPath = normalizePath(nextPath);
+  if (!hasFolderPath(doc, normalizedPath)) {
+    throw new Error("Folder does not exist");
+  }
   if (normalizedPath === normalizedNextPath) return normalizedPath;
   if (normalizedNextPath.startsWith(`${normalizedPath}/`)) {
     throw new Error("A folder cannot be moved inside itself");
   }
-  if (doc.getMap("filePaths").get(normalizedNextPath)) {
-    throw new Error(`A file already exists at ${normalizedNextPath}`);
-  }
-
-  const folderPaths = listFolders(doc);
-  if (folderPaths.includes(normalizedNextPath)) {
-    throw new Error(`A folder already exists at ${normalizedNextPath}`);
-  }
+  assertPathAvailable(doc, normalizedNextPath);
 
   const files = listFiles(doc).filter((file) => file.path.startsWith(`${normalizedPath}/`));
   const folders = doc.getMap("folders");
@@ -434,9 +417,32 @@ function readFile(doc: LoroDoc, fileId: string): ProjectFile {
   };
 }
 
+function assertPathAvailable(doc: LoroDoc, path: string, allowedFileId?: string): void {
+  const filePaths = doc.getMap("filePaths");
+  const existingFileId = filePaths.get(path) as string | undefined;
+  if (existingFileId && existingFileId !== allowedFileId) {
+    throw new Error(`A file already exists at ${path}`);
+  }
+
+  if (hasFolderPath(doc, path)) {
+    throw new Error(`A folder already exists at ${path}`);
+  }
+
+  const segments = path.split("/");
+  for (let index = 1; index < segments.length; index += 1) {
+    const parentPath = segments.slice(0, index).join("/");
+    if (filePaths.get(parentPath)) {
+      throw new Error(`A file already exists at ${parentPath}`);
+    }
+  }
+}
+
 function normalizePath(path: string): string {
   const normalized = path.trim().replace(/^\/+/, "");
-  if (!normalized || normalized.includes("..")) {
+  if (
+    !normalized ||
+    normalized.split("/").some((segment) => !segment || segment === "." || segment === "..")
+  ) {
     throw new Error("File path must be a relative non-empty path");
   }
   return normalized;
@@ -474,11 +480,19 @@ function getCopyPath(doc: LoroDoc, path: string): string {
   const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : "";
   let copyIndex = 1;
   let candidate = `${directory}${stem} copy${extension}`;
-  while (doc.getMap("filePaths").get(candidate)) {
+  while (doc.getMap("filePaths").get(candidate) || hasFolderPath(doc, candidate)) {
     copyIndex += 1;
     candidate = `${directory}${stem} copy ${copyIndex}${extension}`;
   }
   return candidate;
+}
+
+function hasFolderPath(doc: LoroDoc, path: string): boolean {
+  const filePaths = doc.getMap("filePaths");
+  return Boolean(
+    doc.getMap("folders").get(path) ||
+    filePaths.keys().some((filePath) => filePath.startsWith(`${path}/`)),
+  );
 }
 
 export function isProjectFileMap(value: unknown): value is LoroMap {

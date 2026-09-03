@@ -289,7 +289,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           title={`Preview of ${file.path}`}
           src={previewUrl}
           srcDoc={previewUrl ? undefined : fallbackDocument}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox={previewUrl ? "allow-scripts allow-same-origin" : "allow-scripts"}
           className="block h-full min-h-[260px] w-full border-0 bg-white shadow-none"
           onLoad={() => window.setTimeout(() => setPreviewLoaded(true), 900)}
         />
