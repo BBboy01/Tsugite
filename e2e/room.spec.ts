@@ -34,6 +34,49 @@ test.describe("room shell", () => {
     await expect(page.getByRole("button", { name: "main.tsx", exact: true })).toBeVisible();
   });
 
+  test("keeps the CodeMirror search panel aligned with the editor theme", async ({ page }) => {
+    await page.goto("/room/e2e-search-theme", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+
+    await page.locator(".cm-content").press("ControlOrMeta+f");
+    const searchPanel = page.locator(".cm-panel.cm-search");
+    await expect(searchPanel).toBeVisible();
+
+    const styles = await searchPanel.evaluate((panel) => {
+      const editor = panel.closest(".cm-editor");
+      const input = panel.querySelector<HTMLInputElement>(".cm-textfield");
+      const button = panel.querySelector<HTMLButtonElement>('button[name="next"]');
+      const label = panel.querySelector<HTMLLabelElement>("label");
+      const checkbox = label?.querySelector<HTMLInputElement>('input[type="checkbox"]');
+      if (!editor || !input || !button || !label || !checkbox) {
+        throw new Error("Search panel did not mount its editor controls");
+      }
+      const accentProbe = document.createElement("span");
+      accentProbe.style.color = "var(--accent-deep)";
+      panel.append(accentProbe);
+      const accentDeepColor = getComputedStyle(accentProbe).color;
+      accentProbe.remove();
+      const labelRect = label.getBoundingClientRect();
+      const checkboxRect = checkbox.getBoundingClientRect();
+      return {
+        panelColor: getComputedStyle(panel).color,
+        editorColor: getComputedStyle(editor).color,
+        inputColor: getComputedStyle(input).color,
+        inputBackground: getComputedStyle(input).backgroundColor,
+        buttonColor: getComputedStyle(button).color,
+        accentDeepColor,
+        labelCenter: labelRect.top + labelRect.height / 2,
+        checkboxCenter: checkboxRect.top + checkboxRect.height / 2,
+      };
+    });
+
+    expect(styles.panelColor).toBe(styles.editorColor);
+    expect(styles.inputColor).toBe(styles.editorColor);
+    expect(styles.inputBackground).not.toBe("rgb(255, 255, 255)");
+    expect(styles.buttonColor).toBe(styles.accentDeepColor);
+    expect(Math.abs(styles.labelCenter - styles.checkboxCenter)).toBeLessThan(1);
+  });
+
   test("renders a collaborator cursor, name, and selection", async ({ browser }) => {
     const firstContext = await browser.newContext();
     const secondContext = await browser.newContext();
