@@ -309,3 +309,53 @@ test("preserves a collaborator cursor when a presence update only changes identi
     cursor: { anchor: 2, head: 4 },
   });
 });
+
+test("clears stale cursor data from an explicit reconnect snapshot", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  socket.open();
+  socket.message(
+    JSON.stringify({
+      type: "presence:list",
+      members: [
+        {
+          userId: "two",
+          displayName: "Jun",
+          color: "#7389b7",
+          selectedPath: "src/main.tsx",
+          cursor: { anchor: 2, head: 4 },
+        },
+      ],
+    }),
+  );
+  socket.message(
+    JSON.stringify({
+      type: "presence:list",
+      members: [
+        {
+          userId: "two",
+          displayName: "Jun",
+          color: "#7389b7",
+          selectedPath: null,
+          cursor: null,
+        },
+      ],
+    }),
+  );
+
+  expect(client.members).toEqual([
+    {
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+      selectedPath: undefined,
+      cursor: null,
+    },
+  ]);
+});

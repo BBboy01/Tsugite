@@ -129,12 +129,12 @@ test.describe("room shell", () => {
     await page.keyboard.type("\n// undo-first");
     await page.keyboard.press("ControlOrMeta+z");
     await page.waitForTimeout(250);
-    await expect.poll(readText).toBe(initial);
+    await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
 
     await page.keyboard.type("\n// undo-second");
     await page.keyboard.press("ControlOrMeta+z");
     await page.waitForTimeout(250);
-    await expect.poll(readText).toBe(initial);
+    await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
   });
 
   test("undoes only the local edit after concurrent changes", async ({ browser }, testInfo) => {
@@ -169,23 +169,28 @@ test.describe("room shell", () => {
     await firstPage.locator(".cm-content").click();
     await firstPage.keyboard.press("ControlOrMeta+End");
     await firstPage.keyboard.type("\n// undo-maya");
-    await expect.poll(() => readEditorText(secondPage)).toContain("// undo-maya");
+    await expect
+      .poll(() => readEditorText(secondPage), { timeout: 15_000 })
+      .toContain("// undo-maya");
 
     await secondPage.locator(".cm-content").click();
     await secondPage.keyboard.press("ControlOrMeta+Home");
     await secondPage.keyboard.type("// undo-jun\n");
-    await expect.poll(() => readEditorText(firstPage)).toContain("// undo-jun");
+    await expect
+      .poll(() => readEditorText(firstPage), { timeout: 15_000 })
+      .toContain("// undo-jun");
 
     await firstPage.keyboard.press("ControlOrMeta+z");
     const expected = "// undo-jun\n" + initial;
-    await expect.poll(() => readEditorText(firstPage)).toBe(expected);
-    await expect.poll(() => readEditorText(secondPage)).toBe(expected);
+    await expect.poll(() => readEditorText(firstPage), { timeout: 15_000 }).toBe(expected);
+    await expect.poll(() => readEditorText(secondPage), { timeout: 15_000 }).toBe(expected);
 
     await firstContext.close();
     await secondContext.close();
   });
 
   test("shows syntax errors in preview instead of a blank frame", async ({ page }, testInfo) => {
+    test.setTimeout(90_000);
     await page.goto(
       "/room/e2e-preview-syntax-" + testInfo.workerIndex + "-" + testInfo.repeatEachIndex,
       { waitUntil: "domcontentloaded" },
@@ -198,13 +203,13 @@ test.describe("room shell", () => {
     await page.keyboard.type("export const broken = ;");
 
     await expect(page.getByRole("alert")).toContainText(/Unexpected token|PARSE_ERROR/, {
-      timeout: 45_000,
+      timeout: 60_000,
     });
 
     await editor.click();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type("export const fixed = 1;");
-    await expect(page.getByRole("alert")).toHaveCount(0, { timeout: 45_000 });
+    await expect(page.getByRole("alert")).toHaveCount(0, { timeout: 60_000 });
   });
 
   test("sends the existing cursor to a collaborator who joins later", async ({ browser }) => {

@@ -313,8 +313,9 @@ function mergePresenceMember(
   return {
     ...previous,
     ...incoming,
-    selectedPath: incoming.selectedPath ?? previous?.selectedPath,
-    cursor: incoming.cursor === undefined ? previous?.cursor : incoming.cursor,
+    selectedPath:
+      "selectedPath" in incoming ? (incoming.selectedPath ?? undefined) : previous?.selectedPath,
+    cursor: "cursor" in incoming ? incoming.cursor : previous?.cursor,
   };
 }
 

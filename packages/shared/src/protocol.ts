@@ -9,7 +9,7 @@ export type PresenceMember = {
   userId: string;
   displayName: string;
   color: string;
-  selectedPath?: string;
+  selectedPath?: string | null;
   cursor?: { anchor: number; head: number } | null;
 };
 

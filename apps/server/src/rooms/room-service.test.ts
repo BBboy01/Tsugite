@@ -29,7 +29,15 @@ test("joins a room with a snapshot and presence list", () => {
   expect(first.messages[1]).toBeInstanceOf(Uint8Array);
   expect(JSON.parse(String(first.messages[2]))).toEqual({
     type: "presence:list",
-    members: [{ userId: "one", displayName: "Maya", color: "#d88961" }],
+    members: [
+      {
+        userId: "one",
+        displayName: "Maya",
+        color: "#d88961",
+        selectedPath: null,
+        cursor: null,
+      },
+    ],
   });
 });
 

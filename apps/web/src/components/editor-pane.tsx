@@ -139,6 +139,7 @@ export function EditorPane({
   }, [
     doc,
     file.id,
+    file.path,
     file.language,
     settings.fontFamily,
     settings.fontSize,
