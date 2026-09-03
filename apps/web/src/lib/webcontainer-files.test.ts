@@ -48,3 +48,12 @@ test("returns stable errors for invalid package metadata or missing scripts", ()
   expect(selectPreviewScript("not json")).toEqual({ error: "invalid-package-json" });
   expect(selectPreviewScript('{"name":"iris-room"}')).toEqual({ error: "missing-preview-script" });
 });
+
+test("rejects dot path segments while preserving dotted filenames", () => {
+  expect(() => buildFileSystemTree([projectFile("src/./main.ts", "")], [])).toThrow(
+    "File path must be a relative non-empty path",
+  );
+  expect(buildFileSystemTree([projectFile("src/version..ts", "")], [])).toEqual({
+    src: { directory: { "version..ts": { file: { contents: "" } } } },
+  });
+});

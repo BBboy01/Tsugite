@@ -28,6 +28,7 @@ import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
 import { WorkspaceLayout } from "./components/workspace-layout";
 import { closeEditorTab, openEditorTab } from "./lib/editor-tabs";
+import { WORKSPACE_CHANGE_ORIGIN } from "./lib/editor-undo";
 import { isDarkWorkspaceTheme } from "./lib/workspace-theme";
 import { RoomClient, getIdentity } from "./lib/room-client";
 import {
@@ -47,13 +48,22 @@ export function AppShell({ roomId }: AppShellProps) {
   const [openTabPaths, setOpenTabPaths] = useState(["src/main.tsx"]);
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel | null>(null);
   const presenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const previousFilePathsRef = useRef(new Map<string, string>());
 
   useEffect(() => {
+    if (disconnectTimer.current) {
+      clearTimeout(disconnectTimer.current);
+      disconnectTimer.current = null;
+    }
     const unsubscribe = client.subscribe(() => setRevision((value) => value + 1));
     client.connect();
     return () => {
       unsubscribe();
-      client.disconnect();
+      disconnectTimer.current = setTimeout(() => {
+        client.disconnect();
+        disconnectTimer.current = null;
+      }, 0);
       if (presenceTimer.current) clearTimeout(presenceTimer.current);
     };
   }, [client]);
@@ -70,9 +80,29 @@ export function AppShell({ roomId }: AppShellProps) {
   useEffect(() => {
     if (files.length === 0) return;
     const availablePaths = new Set(files.map((file) => file.path));
-    const nextTabs = openTabPaths.filter((path) => availablePaths.has(path));
-    if (nextTabs.length !== openTabPaths.length) setOpenTabPaths(nextTabs);
-    if (selectedPath && availablePaths.has(selectedPath)) return;
+    const currentFilePaths = new Map(files.map((file) => [file.id, file.path]));
+    const renamedPaths = new Map<string, string>();
+    for (const [fileId, previousPath] of previousFilePathsRef.current) {
+      const nextPath = currentFilePaths.get(fileId);
+      if (nextPath && nextPath !== previousPath) renamedPaths.set(previousPath, nextPath);
+    }
+    previousFilePathsRef.current = currentFilePaths;
+
+    const nextTabs = openTabPaths
+      .map((path) => renamedPaths.get(path) ?? path)
+      .filter((path) => availablePaths.has(path));
+    if (
+      nextTabs.length !== openTabPaths.length ||
+      nextTabs.some((path, index) => path !== openTabPaths[index])
+    ) {
+      setOpenTabPaths(nextTabs);
+    }
+
+    const renamedSelectedPath = renamedPaths.get(selectedPath) ?? selectedPath;
+    if (renamedSelectedPath && availablePaths.has(renamedSelectedPath)) {
+      if (renamedSelectedPath !== selectedPath) setSelectedPath(renamedSelectedPath);
+      return;
+    }
     const nextPath = nextTabs[0] ?? "";
     if (nextPath !== selectedPath) setSelectedPath(nextPath);
   }, [files, openTabPaths, selectedPath]);
@@ -98,7 +128,7 @@ export function AppShell({ roomId }: AppShellProps) {
     value: ProjectSettings[K],
   ) => {
     setSharedSetting(client.doc, key, value);
-    client.doc.commit();
+    client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
   };
 
   const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
@@ -110,7 +140,7 @@ export function AppShell({ roomId }: AppShellProps) {
         `export const name = '${nextPath.split("/").at(-1)}'`,
       );
       activateFile(file.path);
-      client.doc.commit();
+      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
     } catch (error) {
       return error instanceof Error ? error.message : "Unable to create file";
@@ -120,7 +150,7 @@ export function AppShell({ roomId }: AppShellProps) {
   const handleAddFolder = (_target: FileTreeTarget, nextPath: string): string | undefined => {
     try {
       createFolder(client.doc, nextPath);
-      client.doc.commit();
+      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
     } catch (error) {
       return error instanceof Error ? error.message : "Unable to create folder";
@@ -153,7 +183,7 @@ export function AppShell({ roomId }: AppShellProps) {
           setSelectedPath(`${nextPath}${selectedPath.slice(currentPath.length)}`);
         }
       }
-      client.doc.commit();
+      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
     } catch (error) {
       return error instanceof Error ? error.message : "Unable to rename item";
@@ -163,7 +193,7 @@ export function AppShell({ roomId }: AppShellProps) {
   const handleCopy = (file: ProjectFile) => {
     try {
       const copied = copyFile(client.doc, file.id);
-      client.doc.commit();
+      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       activateFile(copied.path);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Unable to duplicate file");
@@ -193,7 +223,7 @@ export function AppShell({ roomId }: AppShellProps) {
       setOpenTabPaths(nextPaths);
       if (selectedPath.startsWith(`${path}/`)) setSelectedPath(nextSelectedPath);
     }
-    client.doc.commit();
+    client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
   };
 
   const handleCursorChange = (cursor: { anchor: number; head: number }) => {

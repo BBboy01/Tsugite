@@ -75,7 +75,10 @@ function ensureDirectory(tree: FileSystemTree, path: string): FileSystemTree {
 
 function normalizeRelativePath(path: string): string {
   const normalized = path.trim().replace(/^\/+/, "");
-  if (!normalized || normalized.split("/").some((segment) => !segment || segment === "..")) {
+  if (
+    !normalized ||
+    normalized.split("/").some((segment) => !segment || segment === "." || segment === "..")
+  ) {
     throw new Error("File path must be a relative non-empty path");
   }
   return normalized;
