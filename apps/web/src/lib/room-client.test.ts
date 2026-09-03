@@ -90,6 +90,73 @@ test("updates presence and status events", () => {
   client.disconnect();
 });
 
+test("replays the initial cursor when presence is sent before the socket opens", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  client.sendPresence("src/main.tsx", { anchor: 3, head: 3 });
+  socket.open();
+
+  expect(socket.sent.at(-1)).toContain('"selectedPath":"src/main.tsx"');
+  expect(socket.sent.at(-1)).toContain('"cursor":{"anchor":3,"head":3}');
+});
+
+test("clears the cursor when switching files without an editor focus", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  socket.open();
+  client.sendPresence("src/main.tsx", { anchor: 4, head: 4 });
+  client.sendPresence("README.md");
+
+  expect(socket.sent.at(-1)).toContain('"selectedPath":"README.md"');
+  expect(socket.sent.at(-1)).toContain('"cursor":null');
+});
+
+test("clears a collaborator cursor when the server explicitly removes it", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  socket.open();
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+      selectedPath: "src/main.tsx",
+      cursor: { anchor: 4, head: 4 },
+    }),
+  );
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+      selectedPath: "README.md",
+      cursor: null,
+    }),
+  );
+
+  expect(client.members[0]?.cursor).toBeNull();
+});
+
 test("creates a guest identity without asking for a display name", () => {
   faker.seed(2026);
   const expectedName = faker.internet.username();
@@ -144,4 +211,101 @@ test("accepts a custom avatar color", () => {
 
   expect(client.updateColor("#24a9a0")).toBe(true);
   expect(client.identity.color).toBe("#24a9a0");
+});
+
+test("preserves known collaborator cursors when a refreshed presence list is partial", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  socket.open();
+  socket.message(
+    JSON.stringify({
+      type: "presence:list",
+      members: [
+        {
+          userId: "two",
+          displayName: "Jun",
+          color: "#7389b7",
+          selectedPath: "src/main.tsx",
+          cursor: { anchor: 2, head: 4 },
+        },
+        {
+          userId: "three",
+          displayName: "Sora",
+          color: "#5d9f8c",
+          selectedPath: "src/main.tsx",
+          cursor: { anchor: 6, head: 6 },
+        },
+      ],
+    }),
+  );
+  socket.message(
+    JSON.stringify({
+      type: "presence:list",
+      members: [
+        { userId: "two", displayName: "Jun", color: "#7389b7" },
+        { userId: "three", displayName: "Sora", color: "#5d9f8c" },
+      ],
+    }),
+  );
+
+  expect(client.members).toEqual([
+    {
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+      selectedPath: "src/main.tsx",
+      cursor: { anchor: 2, head: 4 },
+    },
+    {
+      userId: "three",
+      displayName: "Sora",
+      color: "#5d9f8c",
+      selectedPath: "src/main.tsx",
+      cursor: { anchor: 6, head: 6 },
+    },
+  ]);
+});
+
+test("preserves a collaborator cursor when a presence update only changes identity", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+
+  client.connect();
+  socket.open();
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+      selectedPath: "src/main.tsx",
+      cursor: { anchor: 2, head: 4 },
+    }),
+  );
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun Park",
+      color: "#7389b7",
+    }),
+  );
+
+  expect(client.members[0]).toMatchObject({
+    userId: "two",
+    displayName: "Jun Park",
+    color: "#7389b7",
+    selectedPath: "src/main.tsx",
+    cursor: { anchor: 2, head: 4 },
+  });
 });

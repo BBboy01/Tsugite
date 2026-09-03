@@ -14,10 +14,13 @@ export const presenceSchema = t.Object({
   color: t.String({ pattern: "^#[0-9a-fA-F]{6}$" }),
   selectedPath: t.Optional(t.String({ maxLength: 240 })),
   cursor: t.Optional(
-    t.Object({
-      anchor: t.Number({ minimum: 0 }),
-      head: t.Number({ minimum: 0 }),
-    }),
+    t.Union([
+      t.Object({
+        anchor: t.Number({ minimum: 0 }),
+        head: t.Number({ minimum: 0 }),
+      }),
+      t.Null(),
+    ]),
   ),
 });
 
@@ -51,6 +54,7 @@ export function isPresencePayload(value: unknown): value is PresencePayload {
     /^#[0-9a-fA-F]{6}$/.test(candidate.color) &&
     (candidate.selectedPath === undefined || candidate.selectedPath.length <= 240) &&
     (candidate.cursor === undefined ||
+      candidate.cursor === null ||
       (Number.isFinite(candidate.cursor.anchor) &&
         Number.isFinite(candidate.cursor.head) &&
         candidate.cursor.anchor >= 0 &&

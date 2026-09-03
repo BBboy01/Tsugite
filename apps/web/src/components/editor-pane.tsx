@@ -8,16 +8,22 @@ import { Cross2Icon } from "@radix-ui/react-icons";
 import { UndoManager } from "loro-crdt";
 import type { LoroDoc } from "loro-crdt";
 
-import type { ProjectFile, ProjectSettings } from "@iris/shared";
+import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
 
 import { getEditorTabLabels } from "../lib/editor-tabs";
 import { FileTypeIcon } from "../lib/file-icon";
+import { deferredLoroUndoKeymap } from "../lib/loro-undo-keymap";
 import {
   getEditorLanguage,
   getEditorLanguageSupport,
   supportsTypeScriptServices,
 } from "../lib/editor-language";
 import { shikiHighlight } from "../lib/shiki-highlighting";
+import {
+  getRemoteSelections,
+  remotePresenceExtension,
+  updateRemotePresence,
+} from "../lib/remote-presence";
 import { getShikiTheme } from "../lib/workspace-theme";
 
 type EditorPaneProps = {
@@ -28,6 +34,8 @@ type EditorPaneProps = {
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
   onCursorChange: (cursor: { anchor: number; head: number }) => void;
+  remoteMembers: readonly PresenceMember[];
+  currentUserId: string;
 };
 
 export function EditorPane({
@@ -38,12 +46,17 @@ export function EditorPane({
   onSelectTab,
   onCloseTab,
   onCursorChange,
+  remoteMembers,
+  currentUserId,
 }: EditorPaneProps) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
+  const viewRef = useRef<EditorView | null>(null);
+  const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
   const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
   cursorChangeRef.current = onCursorChange;
+  remoteMembersRef.current = remoteMembers;
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -85,9 +98,13 @@ export function EditorPane({
                 ]
               : []),
             shikiHighlight(language, getShikiTheme(settings.theme)),
+            remotePresenceExtension(),
+            deferredLoroUndoKeymap(undoManager),
             LoroExtensions(doc, undefined, undoManager, () => file.text),
             EditorView.updateListener.of((update) => {
-              if (!update.selectionSet) return;
+              if ((!update.selectionSet && !update.focusChanged) || !update.view.hasFocus) {
+                return;
+              }
               const selection = update.state.selection.main;
               cursorChangeRef.current({
                 anchor: selection.anchor,
@@ -99,6 +116,16 @@ export function EditorPane({
         }),
         parent: hostRef.current,
       });
+      viewRef.current = view;
+      updateRemotePresence(
+        view,
+        getRemoteSelections(
+          remoteMembersRef.current,
+          currentUserId,
+          file.path,
+          view.state.doc.length,
+        ),
+      );
     };
 
     void setupEditor();
@@ -106,6 +133,7 @@ export function EditorPane({
     return () => {
       disposed = true;
       view?.destroy();
+      if (viewRef.current === view) viewRef.current = null;
       undoManager.free();
     };
   }, [
@@ -117,6 +145,15 @@ export function EditorPane({
     settings.theme,
     settings.wordWrap,
   ]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view) return;
+    updateRemotePresence(
+      view,
+      getRemoteSelections(remoteMembers, currentUserId, file.path, view.state.doc.length),
+    );
+  }, [currentUserId, file.path, remoteMembers]);
 
   return (
     <section
@@ -229,6 +266,41 @@ function editorTheme(settings: ProjectSettings) {
     },
     ".cm-selectionBackground, ::selection": {
       backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
+    },
+    ".cm-remote-selection": {
+      backgroundColor: "color-mix(in srgb, var(--remote-color) 24%, transparent)",
+    },
+    ".cm-remote-cursor": {
+      position: "relative",
+      display: "inline-block",
+      width: "0",
+      height: "1.75em",
+      verticalAlign: "text-bottom",
+      borderLeft: "2px solid var(--remote-color)",
+      pointerEvents: "none",
+      zIndex: "3",
+    },
+    ".cm-remote-cursor-label": {
+      position: "absolute",
+      left: "-1px",
+      bottom: "calc(100% - 2px)",
+      zIndex: "4",
+      display: "block",
+      maxWidth: "160px",
+      overflow: "hidden",
+      padding: "3px 5px",
+      borderRadius: "4px",
+      color: "var(--editor-surface)",
+      backgroundColor: "var(--remote-color)",
+      fontFamily: "var(--mono-font)",
+      fontSize: "9px",
+      lineHeight: "1",
+      whiteSpace: "nowrap",
+      textOverflow: "ellipsis",
+      transform: "translateY(-2px)",
+    },
+    ".cm-content .cm-remote-cursor-label": {
+      color: "var(--editor-surface)",
     },
   });
 }

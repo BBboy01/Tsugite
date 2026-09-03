@@ -10,7 +10,7 @@ export type PresenceMember = {
   displayName: string;
   color: string;
   selectedPath?: string;
-  cursor?: { anchor: number; head: number };
+  cursor?: { anchor: number; head: number } | null;
 };
 
 export type PresenceMessage = PresenceMember & {

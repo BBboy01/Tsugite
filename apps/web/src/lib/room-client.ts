@@ -61,7 +61,7 @@ export class RoomClient {
   private statusValue: ConnectionStatus = "offline";
   private membersValue: PresenceMember[] = [];
   private selectedPath: string | undefined;
-  private cursor: { anchor: number; head: number } | undefined;
+  private cursor: { anchor: number; head: number } | null | undefined;
 
   constructor(options: RoomClientOptions) {
     this.roomId = options.roomId;
@@ -100,6 +100,9 @@ export class RoomClient {
       const join: JoinMessage = { type: "join", ...this.identity };
       socket.send(encodeJsonMessage(join));
       this.flushQueue();
+      if (this.selectedPath !== undefined || this.cursor !== undefined) {
+        this.sendPresence();
+      }
     };
     socket.onmessage = (event) => this.handleMessage(event.data);
     socket.onerror = () => {
@@ -122,11 +125,13 @@ export class RoomClient {
     this.socket = null;
   }
 
-  sendPresence(selectedPath?: string, cursor?: { anchor: number; head: number }): void {
-    if (this.socket?.readyState !== OPEN) return;
-
-    if (selectedPath !== undefined) this.selectedPath = selectedPath;
+  sendPresence(selectedPath?: string, cursor?: { anchor: number; head: number } | null): void {
+    if (selectedPath !== undefined) {
+      this.selectedPath = selectedPath;
+      if (cursor === undefined) this.cursor = null;
+    }
     if (cursor !== undefined) this.cursor = cursor;
+    if (this.socket?.readyState !== OPEN) return;
 
     const message: PresenceMessage = {
       type: "presence",
@@ -188,7 +193,10 @@ export class RoomClient {
         this.handleReady(message as ServerReadyMessage);
         break;
       case "presence:list":
-        this.membersValue = (message as PresenceListMessage).members;
+        this.membersValue = mergePresenceList(
+          this.membersValue,
+          (message as PresenceListMessage).members,
+        );
         this.emit({ type: "presence", members: this.membersValue });
         break;
       case "presence":
@@ -206,9 +214,11 @@ export class RoomClient {
   }
 
   private upsertMember(member: PresenceMember): void {
+    const previous = this.membersValue.find((item) => item.userId === member.userId);
+    const nextMember = mergePresenceMember(previous, member);
     this.membersValue = [
-      ...this.membersValue.filter((item) => item.userId !== member.userId),
-      member,
+      ...this.membersValue.filter((item) => item.userId !== nextMember.userId),
+      nextMember,
     ];
     this.emit({ type: "presence", members: this.membersValue });
   }
@@ -286,6 +296,26 @@ function persistIdentity(identity: RoomIdentity): void {
   if (typeof window !== "undefined") {
     window.localStorage.setItem(IDENTITY_STORAGE_KEY, JSON.stringify(identity));
   }
+}
+
+function mergePresenceList(
+  previous: readonly PresenceMember[],
+  incoming: readonly PresenceMember[],
+): PresenceMember[] {
+  const previousById = new Map(previous.map((member) => [member.userId, member]));
+  return incoming.map((member) => mergePresenceMember(previousById.get(member.userId), member));
+}
+
+function mergePresenceMember(
+  previous: PresenceMember | undefined,
+  incoming: PresenceMember,
+): PresenceMember {
+  return {
+    ...previous,
+    ...incoming,
+    selectedPath: incoming.selectedPath ?? previous?.selectedPath,
+    cursor: incoming.cursor === undefined ? previous?.cursor : incoming.cursor,
+  };
 }
 
 function toUint8Array(data: ArrayBuffer | Uint8Array): Uint8Array {
