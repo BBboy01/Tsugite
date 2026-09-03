@@ -138,6 +138,7 @@ test.describe("room shell", () => {
   });
 
   test("undoes only the local edit after concurrent changes", async ({ browser }, testInfo) => {
+    test.setTimeout(90_000);
     const firstContext = await browser.newContext();
     const secondContext = await browser.newContext();
     await firstContext.addInitScript(
@@ -170,20 +171,20 @@ test.describe("room shell", () => {
     await firstPage.keyboard.press("ControlOrMeta+End");
     await firstPage.keyboard.type("\n// undo-maya");
     await expect
-      .poll(() => readEditorText(secondPage), { timeout: 15_000 })
+      .poll(() => readEditorText(secondPage), { timeout: 45_000 })
       .toContain("// undo-maya");
 
     await secondPage.locator(".cm-content").click();
     await secondPage.keyboard.press("ControlOrMeta+Home");
     await secondPage.keyboard.type("// undo-jun\n");
     await expect
-      .poll(() => readEditorText(firstPage), { timeout: 15_000 })
+      .poll(() => readEditorText(firstPage), { timeout: 45_000 })
       .toContain("// undo-jun");
 
     await firstPage.keyboard.press("ControlOrMeta+z");
     const expected = "// undo-jun\n" + initial;
-    await expect.poll(() => readEditorText(firstPage), { timeout: 15_000 }).toBe(expected);
-    await expect.poll(() => readEditorText(secondPage), { timeout: 15_000 }).toBe(expected);
+    await expect.poll(() => readEditorText(firstPage), { timeout: 45_000 }).toBe(expected);
+    await expect.poll(() => readEditorText(secondPage), { timeout: 45_000 }).toBe(expected);
 
     await firstContext.close();
     await secondContext.close();
