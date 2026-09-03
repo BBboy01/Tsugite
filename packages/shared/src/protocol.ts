@@ -9,8 +9,8 @@ export type PresenceMember = {
   userId: string;
   displayName: string;
   color: string;
-  selectedPath?: string;
-  cursor?: { anchor: number; head: number };
+  selectedPath?: string | null;
+  cursor?: { anchor: number; head: number } | null;
 };
 
 export type PresenceMessage = PresenceMember & {

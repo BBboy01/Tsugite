@@ -44,6 +44,8 @@ export class RoomService {
       userId: message.userId,
       displayName: message.displayName.trim(),
       color: message.color,
+      selectedPath: null,
+      cursor: null,
     };
     const client: RoomClient = { roomId, socket, presence };
 

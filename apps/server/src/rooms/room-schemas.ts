@@ -12,12 +12,15 @@ export const presenceSchema = t.Object({
   userId: t.String({ minLength: 1, maxLength: 80 }),
   displayName: t.String({ minLength: 1, maxLength: 32 }),
   color: t.String({ pattern: "^#[0-9a-fA-F]{6}$" }),
-  selectedPath: t.Optional(t.String({ maxLength: 240 })),
+  selectedPath: t.Optional(t.Union([t.String({ maxLength: 240 }), t.Null()])),
   cursor: t.Optional(
-    t.Object({
-      anchor: t.Number({ minimum: 0 }),
-      head: t.Number({ minimum: 0 }),
-    }),
+    t.Union([
+      t.Object({
+        anchor: t.Number({ minimum: 0 }),
+        head: t.Number({ minimum: 0 }),
+      }),
+      t.Null(),
+    ]),
   ),
 });
 
@@ -49,8 +52,11 @@ export function isPresencePayload(value: unknown): value is PresencePayload {
     typeof candidate.displayName === "string" &&
     typeof candidate.color === "string" &&
     /^#[0-9a-fA-F]{6}$/.test(candidate.color) &&
-    (candidate.selectedPath === undefined || candidate.selectedPath.length <= 240) &&
+    (candidate.selectedPath === undefined ||
+      candidate.selectedPath === null ||
+      candidate.selectedPath.length <= 240) &&
     (candidate.cursor === undefined ||
+      candidate.cursor === null ||
       (Number.isFinite(candidate.cursor.anchor) &&
         Number.isFinite(candidate.cursor.head) &&
         candidate.cursor.anchor >= 0 &&

@@ -10,7 +10,9 @@ import {
   type RuntimeEvent,
   type RuntimeState,
 } from "../lib/webcontainer-runtime";
+import { getLatestPreviewError } from "../lib/preview-error-model";
 import { PreviewConsole } from "./preview-console";
+import { PreviewError } from "./preview-error";
 import { PreviewLoader } from "./preview-loader";
 type PreviewPaneProps = {
   file: ProjectFile;
@@ -30,6 +32,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
   const [previewLoaded, setPreviewLoaded] = useState(false);
   const [previewLoadKey, setPreviewLoadKey] = useState(0);
   const [fallbackDocument, setFallbackDocument] = useState("");
+  const [previewBuildError, setPreviewBuildError] = useState<string>();
   const [runKey, setRunKey] = useState(0);
   const runtimeRef = useRef<WebContainerRuntimeInstance | undefined>(undefined);
   const runtimeStartedRef = useRef(false);
@@ -60,6 +63,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
 
   useEffect(() => {
     let cancelled = false;
+    setPreviewBuildError(undefined);
     const packageFile = files.find((item) => item.path === "package.json");
     if (!packageFile) {
       const fallbackTimer = setTimeout(() => {
@@ -72,6 +76,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
             if (result.error) {
               setFallbackDocument("");
               setOutputs([{ level: "error", message: result.error }]);
+              setPreviewBuildError(result.error);
               setRuntimeState("error");
               return;
             }
@@ -85,6 +90,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
                 message: error instanceof Error ? error.message : String(error),
               },
             ]);
+            setPreviewBuildError(error instanceof Error ? error.message : String(error));
             setRuntimeState("error");
           }
         })();
@@ -93,6 +99,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       runtimeStartedRef.current = false;
       setRuntimeState("idle");
       setRuntimeError(undefined);
+      setPreviewBuildError(undefined);
       setPreviewLoaded(false);
       setPreviewUrl(undefined);
       return () => {
@@ -113,6 +120,10 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
         if (cancelled) return;
         if (event.type === "output") {
           setOutputs((current) => [...current, event].slice(-80));
+          if (event.level === "error") {
+            setPreviewBuildError(event.message);
+            setRuntimeState("error");
+          }
           return;
         }
         if (event.type === "server-ready") {
@@ -125,6 +136,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
         if (event.error) {
           setPreviewLoaded(false);
           setPreviewUrl(undefined);
+          setPreviewBuildError(translateRef.current("preview.runtime." + event.error));
           setOutputs((current) =>
             [
               ...current,
@@ -145,6 +157,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
           setOutputs([]);
           setRuntimeError(undefined);
+          setPreviewBuildError(undefined);
           void runtime
             .start(files, folders, stableRuntimeHandlerRef.current, settings, {
               forceStart: runKey > 0,
@@ -159,6 +172,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
           setOutputs([]);
           setRuntimeError(undefined);
+          setPreviewBuildError(undefined);
           void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings);
           return;
         }
@@ -166,6 +180,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           lastRunKeyRef.current = runKey;
           setOutputs([]);
           setRuntimeError(undefined);
+          setPreviewBuildError(undefined);
           void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings, {
             forceStart: true,
           });
@@ -175,6 +190,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
           if (!packageChanged || cancelled) return;
           setOutputs([]);
           setRuntimeError(undefined);
+          setPreviewBuildError(undefined);
           void runtime.restart(
             latestProjectRef.current.files,
             latestProjectRef.current.folders,
@@ -209,6 +225,9 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
             ? "paused"
             : "idle";
   const headerLabel = previewUrl ?? t(`preview.${runState === "idle" ? "ready" : runState}`);
+  const previewErrorMessage = previewBuildError
+    ? (getLatestPreviewError(outputs) ?? previewBuildError)
+    : undefined;
   const showPreviewLoader =
     !runtimeError &&
     (runtimeState === "installing" ||
@@ -246,6 +265,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
               setPreviewLoaded(false);
               setPreviewLoadKey((value) => value + 1);
               setRunKey((value) => value + 1);
+              setPreviewBuildError(undefined);
             }}
             aria-label={t("preview.run")}
             title={t("preview.run")}
@@ -289,6 +309,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
             </motion.div>
           ) : null}
         </AnimatePresence>
+        {previewErrorMessage ? <PreviewError message={previewErrorMessage} /> : null}
       </div>
       <PreviewConsole
         outputs={outputs}

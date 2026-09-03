@@ -78,8 +78,13 @@ export function AppShell({ roomId }: AppShellProps) {
   }, [files, openTabPaths, selectedPath]);
 
   const activateFile = (path: string) => {
+    if (presenceTimer.current) {
+      clearTimeout(presenceTimer.current);
+      presenceTimer.current = null;
+    }
     setOpenTabPaths((current) => openEditorTab(current, path));
     setSelectedPath(path);
+    client.sendPresence(path);
   };
 
   const handleCloseTab = (path: string) => {
@@ -238,7 +243,6 @@ export function AppShell({ roomId }: AppShellProps) {
                 selectedPath={selectedPath}
                 onSelect={(path) => {
                   activateFile(path);
-                  client.sendPresence(path);
                   setMobilePanel(null);
                 }}
                 onCreateFile={handleAddFile}
@@ -265,6 +269,8 @@ export function AppShell({ roomId }: AppShellProps) {
                   onSelectTab={activateFile}
                   onCloseTab={handleCloseTab}
                   onCursorChange={handleCursorChange}
+                  remoteMembers={client.members}
+                  currentUserId={client.identity.userId}
                 />
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center font-iris-mono text-xs leading-6 text-iris-muted">
