@@ -12,7 +12,7 @@ import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared"
 
 import { getEditorTabLabels } from "../lib/editor-tabs";
 import { FileTypeIcon } from "../lib/file-icon";
-import { deferredLoroUndoKeymap } from "../lib/loro-undo-keymap";
+import { deferredLoroUndoKeymap, groupedLoroUndo } from "../lib/loro-undo-keymap";
 import {
   getEditorLanguage,
   getEditorLanguageSupport,
@@ -100,6 +100,7 @@ export function EditorPane({
             shikiHighlight(language, getShikiTheme(settings.theme)),
             remotePresenceExtension(),
             deferredLoroUndoKeymap(undoManager),
+            groupedLoroUndo(undoManager),
             LoroExtensions(doc, undefined, undoManager, () => file.text),
             EditorView.updateListener.of((update) => {
               if ((!update.selectionSet && !update.focusChanged) || !update.view.hasFocus) {
