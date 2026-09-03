@@ -171,6 +171,9 @@ test("recognizes storage partitioning failures from WebContainer", () => {
   expect(getRuntimeError(new Error("Enable Storage Partitioning to run this preview"))).toBe(
     "storage-partitioning-required",
   );
+  expect(getRuntimeError({ message: "Enable Storage Partitioning to run this preview" })).toBe(
+    "storage-partitioning-required",
+  );
   expect(
     isStoragePartitioningErrorUrl(
       "https://project.local-corp.webcontainer-api.io/.localservice@sw-install-error.abc.html",

@@ -329,10 +329,17 @@ function toContainerPath(path: string): string {
 }
 
 export function getRuntimeError(error: unknown): RuntimeError {
-  if (error instanceof Error) {
-    if (isStoragePartitioningErrorMessage(error.message)) return "storage-partitioning-required";
-    if (isRuntimeError(error.message)) return error.message;
-  }
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === "object" &&
+          error !== null &&
+          "message" in error &&
+          typeof error.message === "string"
+        ? error.message
+        : undefined;
+  if (message && isStoragePartitioningErrorMessage(message)) return "storage-partitioning-required";
+  if (message && isRuntimeError(message)) return message;
   return "runtime-unavailable";
 }
 
