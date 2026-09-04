@@ -252,6 +252,11 @@ export function EditorPane({
                     type="button"
                     role="tab"
                     aria-selected={active}
+                    aria-label={
+                      collaboratorCount > 0
+                        ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`
+                        : tab.path
+                    }
                     title={tab.path}
                     onClick={() => onSelectTab(tab.path)}
                   >

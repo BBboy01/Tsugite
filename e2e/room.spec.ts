@@ -227,6 +227,9 @@ test.describe("room shell", () => {
     await expect(firstPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
       timeout: 15_000,
     });
+    await expect(
+      firstPage.getByRole("tab", { name: "index.html, 1 collaborators in this file" }),
+    ).toBeVisible();
     await expect(secondPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
       timeout: 15_000,
     });
