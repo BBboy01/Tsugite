@@ -101,7 +101,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #073642;
   --ink: #586e75;
-  --muted: #657b83;
+  --muted: var(--ink);
   --divider: rgba(88, 110, 117, 0.24);
   --accent: #268bd2;
   --accent-deep: #2aa198;
@@ -120,7 +120,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #4c4f69;
   --ink: #5c5f77;
-  --muted: #7c7f93;
+  --muted: var(--ink);
   --divider: rgba(76, 79, 105, 0.18);
   --accent: #1e66f5;
   --accent-deep: #7287fd;
@@ -158,7 +158,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #eee8d5;
   --ink: #839496;
-  --muted: #657b83;
+  --muted: var(--ink);
   --divider: rgba(131, 148, 150, 0.2);
   --accent: #2aa198;
   --accent-deep: #268bd2;
@@ -177,7 +177,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #c0caf5;
   --ink: #a9b1d6;
-  --muted: #787c99;
+  --muted: var(--ink);
   --divider: rgba(192, 202, 245, 0.16);
   --accent: #7aa2f7;
   --accent-deep: #bb9af7;
@@ -215,7 +215,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #cdd6f4;
   --ink: #bac2de;
-  --muted: #7f849c;
+  --muted: var(--ink);
   --divider: rgba(205, 214, 244, 0.16);
   --accent: #cba6f7;
   --accent-deep: #89b4fa;
@@ -272,7 +272,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #abb2bf;
   --ink: #9da5b4;
-  --muted: #636d83;
+  --muted: var(--ink);
   --divider: rgba(171, 178, 191, 0.16);
   --accent: #61afef;
   --accent-deep: #c678dd;
@@ -310,7 +310,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #d3c6aa;
   --ink: #c5bda5;
-  --muted: #859289;
+  --muted: var(--ink);
   --divider: rgba(211, 198, 170, 0.16);
   --accent: #a7c080;
   --accent-deep: #83c092;
@@ -329,7 +329,7 @@
   --rail: var(--rail-surface);
   --ink-strong: #dcd7ba;
   --ink: #c8c093;
-  --muted: #727169;
+  --muted: var(--ink);
   --divider: rgba(220, 215, 186, 0.16);
   --accent: #7e9cd8;
   --accent-deep: #957fb8;
@@ -371,21 +371,16 @@
   }
 
   .status-label {
-    color: #34c759;
+    color: var(--ink-strong);
   }
 
   .live-dot[data-status="connecting"],
-  .live-dot[data-status="reconnecting"],
-  .status-label[data-status="connecting"],
-  .status-label[data-status="reconnecting"] {
+  .live-dot[data-status="reconnecting"] {
     --status-color: #ff9f0a;
-    color: var(--status-color);
   }
 
-  .live-dot[data-status="offline"],
-  .status-label[data-status="offline"] {
+  .live-dot[data-status="offline"] {
     --status-color: #ff3b30;
-    color: var(--status-color);
   }
 
   @keyframes status-breathe {
@@ -454,6 +449,12 @@
     color: var(--muted);
     font-family: inherit;
     white-space: pre-wrap;
+  }
+}
+
+@media (max-width: 759px) {
+  .mobile-input-zoom-safe [data-slot="input-group-control"] {
+    font-size: 16px;
   }
 }
 

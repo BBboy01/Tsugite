@@ -55,9 +55,9 @@ export function CurrentUserCard({
           aria-label={t("user.changeAvatarColor")}
           title={t("user.changeAvatarColor")}
           whileHover={{ scale: 1.02 }}
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.96 }}
         >
-          <span className="font-iris-mono text-[10px] font-semibold tracking-[-0.03em]">
+          <span className="font-iris-mono text-[10px] font-semibold">
             {getInitials(displayName)}
           </span>
         </motion.summary>
@@ -74,7 +74,7 @@ export function CurrentUserCard({
             >
               {AVATAR_COLORS.map((option) => (
                 <motion.button
-                  className={`grid h-6 w-6 cursor-pointer place-items-center rounded-full border-2 border-transparent text-white hover:border-iris-strong focus-visible:border-iris-strong focus-visible:outline-none ${option === color ? "border-iris-strong" : ""}`}
+                  className={`grid h-6 w-6 cursor-pointer place-items-center rounded-full border-2 border-transparent text-white hover:border-iris-strong focus-visible:border-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${option === color ? "border-iris-strong" : ""}`}
                   key={option}
                   type="button"
                   style={{ backgroundColor: option }}
@@ -85,7 +85,7 @@ export function CurrentUserCard({
                     if (colorMenuRef.current) colorMenuRef.current.open = false;
                   }}
                   whileHover={{ scale: 1.14 }}
-                  whileTap={{ scale: 0.9 }}
+                  whileTap={{ scale: 0.96 }}
                 >
                   {option === color && <CheckIcon width="12" height="12" />}
                 </motion.button>
@@ -112,7 +112,7 @@ export function CurrentUserCard({
 
       <div className="min-w-0 flex-1">
         <input
-          className="w-full min-w-0 rounded-[5px] border border-transparent bg-transparent px-1 py-0.5 font-iris-mono text-[10px] leading-tight text-iris-strong outline-2 outline-transparent outline-offset-1 transition-[border-color,outline-color] duration-150 hover:border-iris-divider focus:border-[var(--accent)] focus:outline-[color-mix(in_srgb,var(--accent)_28%,transparent)]"
+          className="w-full min-w-0 rounded-[5px] border border-transparent bg-transparent px-1 py-0.5 font-iris-mono text-base leading-tight text-iris-strong outline-2 outline-transparent outline-offset-1 transition-[border-color,outline-color] duration-150 hover:border-iris-divider focus:border-[var(--accent)] focus:outline-[color-mix(in_srgb,var(--accent)_28%,transparent)] min-[760px]:text-[10px]"
           value={draftName}
           maxLength={32}
           aria-label={t("user.editName")}

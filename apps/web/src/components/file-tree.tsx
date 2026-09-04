@@ -102,12 +102,6 @@ export function FileTree({
     setContextTarget(null);
   };
 
-  const targetLabel = contextTarget
-    ? contextTarget.type === "file"
-      ? contextTarget.file.path
-      : contextTarget.path
-    : t("files.project");
-
   const openPathDialog = (mode: FileDialogMode, target: FileTreeTarget) => {
     const targetPath = target ? (target.type === "file" ? target.file.path : target.path) : "";
     const directory = getDialogDirectory(target);
@@ -171,6 +165,13 @@ export function FileTree({
                 nodes={tree}
                 selectedPath={selectedPath}
                 collapsedFolders={collapsedFolders}
+                contextTarget={
+                  contextTarget
+                    ? contextTarget.type === "file"
+                      ? { type: "file", id: contextTarget.file.id }
+                      : contextTarget
+                    : null
+                }
                 onSelect={onSelect}
                 onToggleFolder={toggleFolder}
               />
@@ -194,9 +195,6 @@ export function FileTree({
           <ContextMenu.Content
             className={`theme-${settings.theme} glass-popover z-40 min-w-[190px] rounded-[9px] border border-iris-divider bg-iris-preview p-1.5 font-iris-mono text-[11px] leading-[1.2] text-iris-ink shadow-[0_14px_30px_rgba(65,66,45,0.16)]`}
           >
-            <ContextMenu.Label className="max-w-[260px] truncate px-2 py-1.5 text-iris-muted">
-              {targetLabel}
-            </ContextMenu.Label>
             <ContextMenu.Item
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
               onSelect={() => openPathDialog("create-file", contextTarget)}
