@@ -39,12 +39,12 @@ export function GlobalHeader({
     >
       <IconButton asChild variant="ghost" color="gray" radius="medium">
         <motion.button
-          className="mobile-panel-trigger hidden h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-iris-divider bg-transparent text-iris-muted hover:bg-white/42 hover:text-iris-strong focus-visible:bg-white/42 focus-visible:text-iris-strong max-[760px]:grid"
+          className="mobile-panel-trigger hidden h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-iris-divider bg-transparent text-iris-muted hover:bg-white/42 hover:text-iris-strong focus-visible:bg-white/42 focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] max-[760px]:grid"
           type="button"
           onClick={onOpenFiles}
           aria-label={t("header.toggleFiles")}
           title={t("header.toggleFiles")}
-          whileTap={{ scale: 0.94 }}
+          whileTap={{ scale: 0.96 }}
         >
           <ColumnsIcon width="17" height="17" />
         </motion.button>
@@ -58,16 +58,16 @@ export function GlobalHeader({
           aria-hidden="true"
         />
         <div className="flex min-w-0 flex-col justify-center leading-none">
-          <strong className="font-sans text-[17px] font-semibold text-iris-strong">
+          <h1 className="m-0 font-sans text-[17px] font-semibold text-iris-strong">
             {t("app.name")}
-          </strong>
+          </h1>
           <span className="mt-1 font-iris-mono text-[9px] leading-none tracking-[0.08em] text-iris-muted">
             {t("app.version")}
           </span>
         </div>
       </div>
 
-      <div className="flex min-w-0 flex-1 items-center justify-end gap-[18px] max-[760px]:flex">
+      <div className="relative flex min-w-0 flex-1 items-center justify-end gap-[18px] max-[760px]:justify-center">
         <PresenceStack
           currentUserId={currentUserId}
           members={members}
@@ -78,12 +78,12 @@ export function GlobalHeader({
 
       <IconButton asChild variant="ghost" color="gray" radius="medium">
         <motion.button
-          className="mobile-panel-trigger hidden h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-iris-divider bg-transparent text-iris-muted hover:bg-white/42 hover:text-iris-strong focus-visible:bg-white/42 focus-visible:text-iris-strong max-[760px]:grid"
+          className="mobile-panel-trigger hidden h-9 w-9 shrink-0 place-items-center rounded-[9px] border border-iris-divider bg-transparent text-iris-muted hover:bg-white/42 hover:text-iris-strong focus-visible:bg-white/42 focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] max-[760px]:grid"
           type="button"
           onClick={onOpenPreview}
           aria-label={t("header.togglePreview")}
           title={t("header.togglePreview")}
-          whileTap={{ scale: 0.94 }}
+          whileTap={{ scale: 0.96 }}
         >
           <LayoutIcon width="17" height="17" />
         </motion.button>

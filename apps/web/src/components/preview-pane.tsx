@@ -137,13 +137,16 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
         if (event.error) {
           setPreviewLoaded(false);
           setPreviewUrl(undefined);
-          setPreviewBuildError(translateRef.current("preview.runtime." + event.error));
+          const runtimeMessage = translateRef.current(`preview.runtime.${event.error}`, {
+            manager: settings.packageManager,
+          });
+          setPreviewBuildError(runtimeMessage);
           setOutputs((current) =>
             [
               ...current,
               {
                 level: "error" as const,
-                message: translateRef.current(`preview.runtime.${event.error}`),
+                message: runtimeMessage,
               },
             ].slice(-80),
           );
@@ -276,7 +279,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
         </span>
         <IconButton asChild variant="ghost" color="gray" radius="medium">
           <motion.button
-            className="box-border grid h-4 w-4 place-items-center rounded-[4px] border border-transparent bg-transparent p-0 text-iris-muted transition-colors duration-150 hover:text-iris-strong focus-visible:text-iris-strong active:scale-[0.97]"
+            className="box-border grid h-6 w-6 place-items-center rounded-[4px] border border-transparent bg-transparent p-0 text-iris-muted transition-colors duration-150 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] active:scale-[0.96]"
             type="button"
             onClick={() => {
               setPreviewLoaded(false);
@@ -289,11 +292,11 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
             style={{
               backgroundColor: "transparent",
               boxSizing: "border-box",
-              height: "16px",
+              height: "24px",
               padding: 0,
-              width: "16px",
+              width: "24px",
             }}
-            whileTap={{ scale: 0.92 }}
+            whileTap={{ scale: 0.96 }}
           >
             <ReloadIcon width="11" height="11" />
           </motion.button>

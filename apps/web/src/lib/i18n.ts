@@ -133,7 +133,7 @@ const resources = {
       "preview.runtime.invalid-package-json": "package.json is invalid.",
       "preview.runtime.missing-package-json": "package.json is missing.",
       "preview.runtime.missing-preview-script": "Add a dev or start script to package.json.",
-      "preview.runtime.install-failed": "pnpm install failed.",
+      "preview.runtime.install-failed": "{{manager}} install failed.",
       "preview.runtime.start-failed": "The preview server failed to start.",
       "preview.runtime.cross-origin-isolation-required":
         "WebContainer needs cross-origin isolation.",
@@ -269,7 +269,7 @@ const resources = {
       "preview.runtime.invalid-package-json": "package.json 无效。",
       "preview.runtime.missing-package-json": "缺少 package.json。",
       "preview.runtime.missing-preview-script": "请在 package.json 中添加 dev 或 start 脚本。",
-      "preview.runtime.install-failed": "pnpm install 失败。",
+      "preview.runtime.install-failed": "{{manager}} install 失败。",
       "preview.runtime.start-failed": "预览服务器启动失败。",
       "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨源隔离。",
       "preview.runtime.storage-partitioning-required":
@@ -404,7 +404,7 @@ const resources = {
       "preview.runtime.invalid-package-json": "package.json 無效。",
       "preview.runtime.missing-package-json": "缺少 package.json。",
       "preview.runtime.missing-preview-script": "請在 package.json 中加入 dev 或 start 指令。",
-      "preview.runtime.install-failed": "pnpm install 失敗。",
+      "preview.runtime.install-failed": "{{manager}} install 失敗。",
       "preview.runtime.start-failed": "預覽伺服器啟動失敗。",
       "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨來源隔離。",
       "preview.runtime.storage-partitioning-required":
@@ -543,7 +543,7 @@ const resources = {
       "preview.runtime.missing-package-json": "package.json がありません。",
       "preview.runtime.missing-preview-script":
         "package.json に dev または start スクリプトを追加してください。",
-      "preview.runtime.install-failed": "pnpm install に失敗しました。",
+      "preview.runtime.install-failed": "{{manager}} install に失敗しました。",
       "preview.runtime.start-failed": "プレビューサーバーの起動に失敗しました。",
       "preview.runtime.cross-origin-isolation-required":
         "WebContainer にはクロスオリジン分離が必要です。",

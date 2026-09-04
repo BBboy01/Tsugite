@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Cross2Icon, FilePlusIcon, Pencil1Icon, PlusIcon } from "@radix-ui/react-icons";
-import { Button, IconButton } from "@radix-ui/themes";
+import { IconButton } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
 
@@ -97,7 +97,7 @@ export function FileTreeDialog({
               <input
                 ref={inputRef}
                 id="file-tree-path"
-                className="w-full rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] outline-offset-1 placeholder:text-iris-muted"
+                className="w-full rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 font-iris-mono text-base normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] outline-offset-1 placeholder:text-iris-muted min-[760px]:text-xs"
                 value={path}
                 onChange={(event) => setPath(event.target.value)}
                 autoComplete="off"
@@ -117,13 +117,19 @@ export function FileTreeDialog({
             )}
             <div className="flex justify-end gap-2">
               <Dialog.Close asChild>
-                <Button type="button" variant="soft" color="gray" size="2">
+                <button
+                  type="button"
+                  className="h-8 min-w-[68px] cursor-pointer appearance-none rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_76%,transparent)] px-3 font-iris-mono text-[11px] leading-none !text-iris-muted shadow-none transition-[background-color,border-color,color,transform] duration-150 hover:border-[color-mix(in_srgb,var(--accent)_24%,var(--divider))] hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] hover:!text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] active:translate-y-px"
+                >
                   {t("dialog.cancel")}
-                </Button>
+                </button>
               </Dialog.Close>
-              <Button type="submit" color="blue" size="2">
+              <button
+                type="submit"
+                className="h-8 min-w-[68px] cursor-pointer appearance-none rounded-lg border border-[color-mix(in_srgb,var(--accent)_38%,var(--divider))] bg-[color-mix(in_srgb,var(--accent)_16%,var(--canvas))] px-3 font-iris-mono text-[11px] font-medium leading-none !text-[var(--accent-deep)] shadow-[0_1px_2px_color-mix(in_srgb,var(--accent)_14%,transparent)] transition-[background-color,border-color,color,box-shadow,transform] duration-150 hover:border-[color-mix(in_srgb,var(--accent)_58%,var(--divider))] hover:bg-[color-mix(in_srgb,var(--accent)_24%,var(--canvas))] hover:!text-iris-strong hover:shadow-[0_2px_6px_color-mix(in_srgb,var(--accent)_18%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] active:translate-y-px"
+              >
                 {isRename ? t("dialog.rename") : t("dialog.create")}
-              </Button>
+              </button>
             </div>
           </form>
         </Dialog.Content>

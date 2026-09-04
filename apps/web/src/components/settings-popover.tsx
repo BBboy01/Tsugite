@@ -43,7 +43,7 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
           type="button"
           aria-label={t("settings.open")}
           title={t("settings.open")}
-          whileTap={{ scale: 0.97 }}
+          whileTap={{ scale: 0.96 }}
         >
           <GearIcon width="14" height="14" />
         </motion.button>
@@ -74,7 +74,7 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
               <nav className="grid gap-1 max-[760px]:flex max-[760px]:min-w-max">
                 {sections.map(({ id, icon: Icon, label }) => (
                   <button
-                    className={`flex h-9 items-center gap-2 rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 ${section === id ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
+                    className={`flex h-9 items-center gap-2 rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${section === id ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
                     key={id}
                     type="button"
                     aria-current={section === id ? "page" : undefined}
@@ -211,7 +211,7 @@ function SettingSelect({
     <label className="flex min-w-0 items-center justify-between gap-4 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted">
       <span className="shrink-0">{label}</span>
       <select
-        className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 text-xs normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] outline-offset-1"
+        className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 text-base normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] outline-offset-1 min-[760px]:text-xs"
         value={value}
         onChange={(event) => onChange(event.target.value)}
       >

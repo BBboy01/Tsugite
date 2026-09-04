@@ -31,8 +31,8 @@ export function PresenceStack({ members, currentUserId, roomId, status }: Presen
         <span className="status-label" data-status={status}>
           {statusLabel}
         </span>
-        <span>/</span>
-        <span>{roomId}</span>
+        <span className="max-[760px]:hidden">/</span>
+        <span className="max-[760px]:hidden">{roomId}</span>
       </div>
       <div
         className="relative"
@@ -66,7 +66,7 @@ export function PresenceStack({ members, currentUserId, roomId, status }: Presen
             <AnimatePresence initial={false}>
               {orderedMembers.slice(0, 6).map((member) => (
                 <motion.span
-                  className="-ml-[7px] grid h-[26px] w-[26px] place-items-center rounded-full border-2 border-iris-canvas font-iris-mono text-[9px] leading-none tracking-[-0.04em] text-white shadow-[0_1px_3px_rgba(38,49,41,0.14)]"
+                  className="-ml-[7px] grid h-[26px] w-[26px] place-items-center rounded-full border-2 border-iris-canvas font-iris-mono text-[9px] leading-none text-white shadow-[0_1px_3px_rgba(38,49,41,0.14)]"
                   style={{ background: member.color }}
                   title={member.displayName}
                   key={member.userId}

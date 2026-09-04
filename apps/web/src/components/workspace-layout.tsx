@@ -42,7 +42,7 @@ export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps
     () => ({ files, editor, preview }) satisfies Record<WorkspacePanelId, ReactNode>,
     [editor, files, preview],
   );
-  const desktop = containerWidth > 760;
+  const desktop = containerWidth >= 760;
   const showCollapsedFilesButton = desktop && filesCollapsed;
   const filesShown = !filesCollapsed;
   const resizableWidth = containerWidth;

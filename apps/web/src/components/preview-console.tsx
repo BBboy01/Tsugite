@@ -92,7 +92,7 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
 
       <div className="flex h-6 flex-none items-center justify-between px-2 font-iris-mono text-[9px] leading-none text-iris-muted">
         <button
-          className="flex h-full items-center gap-1 bg-transparent p-0 text-inherit hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-none"
+          className="flex h-full items-center gap-1 bg-transparent p-0 text-inherit hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
           type="button"
           aria-expanded={!collapsed}
           aria-label={t(collapsed ? "preview.console.expand" : "preview.console.collapse")}
@@ -126,7 +126,7 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
           </Select.Root>
           {outputs.length > 0 ? (
             <button
-              className="grid h-5 w-5 place-items-center rounded-[3px] border-0 bg-transparent p-0 text-iris-muted transition-colors hover:bg-[color-mix(in_srgb,var(--preview-surface)_82%,var(--ink))] hover:text-iris-strong focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-iris-accent"
+              className="grid h-6 w-6 place-items-center rounded-[3px] border-0 bg-transparent p-0 text-iris-muted transition-colors hover:bg-[color-mix(in_srgb,var(--preview-surface)_82%,var(--ink))] hover:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
               type="button"
               aria-label={t("preview.clearOutput")}
               title={t("preview.clearOutput")}

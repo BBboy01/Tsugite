@@ -180,7 +180,7 @@ export function EditorPane({
                   key={tab.id}
                 >
                   <button
-                    className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit outline-none transition-none max-[760px]:max-w-[180px] max-[760px]:px-2"
+                    className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit transition-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] max-[760px]:max-w-[180px] max-[760px]:px-2"
                     type="button"
                     role="tab"
                     aria-selected={active}
@@ -196,11 +196,6 @@ export function EditorPane({
                     <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
                       {tabLabels[index]}
                     </span>
-                    {active && (
-                      <span className="grid h-[18px] w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[9px] text-[var(--accent-deep)]">
-                        +2
-                      </span>
-                    )}
                   </button>
                   <button
                     className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
