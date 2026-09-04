@@ -1,8 +1,8 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { basicSetup } from "codemirror";
-import { EditorState } from "@codemirror/state";
-import { EditorView } from "@codemirror/view";
+import { Compartment, EditorState, RangeSet, RangeSetBuilder, StateField } from "@codemirror/state";
+import { EditorView, GutterMarker, lineNumberMarkers } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
 import { Cross2Icon } from "@radix-ui/react-icons";
 import type { LoroDoc } from "loro-crdt";
@@ -13,6 +13,7 @@ import { getEditorTabLabels } from "../lib/editor-tabs";
 import { useEditorUndoManager } from "../lib/editor-undo";
 import { FileTypeIcon } from "../lib/file-icon";
 import { deferredLoroUndoKeymap, groupedLoroUndo } from "../lib/loro-undo-keymap";
+import { getFileCollaboratorCount } from "../lib/presence";
 import {
   getEditorLanguage,
   getEditorLanguageSupport,
@@ -25,6 +26,44 @@ import {
   updateRemotePresence,
 } from "../lib/remote-presence";
 import { getShikiTheme } from "../lib/workspace-theme";
+
+class RelativeLineNumberMarker extends GutterMarker {
+  constructor(private readonly number: string) {
+    super();
+  }
+
+  eq(other: GutterMarker): boolean {
+    return other instanceof RelativeLineNumberMarker && other.number === this.number;
+  }
+
+  toDOM(): Text {
+    return document.createTextNode(this.number);
+  }
+}
+
+const relativeLineNumberMarkers = StateField.define<RangeSet<GutterMarker>>({
+  create: buildRelativeLineNumberMarkers,
+  update(markers, transaction) {
+    return transaction.docChanged || transaction.selection
+      ? buildRelativeLineNumberMarkers(transaction.state)
+      : markers;
+  },
+  provide: (field) => lineNumberMarkers.from(field),
+});
+
+function buildRelativeLineNumberMarkers(state: EditorState): RangeSet<GutterMarker> {
+  const currentLine = state.doc.lineAt(state.selection.main.head).number;
+  const markers = new RangeSetBuilder<GutterMarker>();
+
+  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
+    const line = state.doc.line(lineNumber);
+    const displayNumber =
+      lineNumber === currentLine ? lineNumber : Math.abs(lineNumber - currentLine);
+    markers.add(line.from, line.from, new RelativeLineNumberMarker(String(displayNumber)));
+  }
+
+  return markers.finish();
+}
 
 type EditorPaneProps = {
   doc: LoroDoc;
@@ -52,11 +91,14 @@ export function EditorPane({
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
+  const relativeLineNumbersCompartmentRef = useRef<Compartment | null>(null);
+  const relativeLineNumbersRef = useRef(settings.relativeLineNumbers);
   const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
   const undoManager = useEditorUndoManager(doc, file.id);
   const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
   cursorChangeRef.current = onCursorChange;
+  relativeLineNumbersRef.current = settings.relativeLineNumbers;
   remoteMembersRef.current = remoteMembers;
 
   useEffect(() => {
@@ -64,6 +106,7 @@ export function EditorPane({
 
     let disposed = false;
     let view: EditorView | undefined;
+    let relativeLineNumbersCompartment: Compartment | undefined;
     const setupEditor = async () => {
       const source = file.text.toString();
       const language = getEditorLanguage(file.path, file.language);
@@ -80,11 +123,16 @@ export function EditorPane({
         : undefined;
       if (disposed || !hostRef.current) return;
 
+      relativeLineNumbersCompartment = new Compartment();
+      relativeLineNumbersCompartmentRef.current = relativeLineNumbersCompartment;
       view = new EditorView({
         state: EditorState.create({
           doc: source,
           extensions: [
             basicSetup,
+            relativeLineNumbersCompartment.of(
+              relativeLineNumbersRef.current ? relativeLineNumberMarkers : [],
+            ),
             getEditorLanguageSupport(language),
             ...(settings.wordWrap ? [EditorView.lineWrapping] : []),
             ...(environment && typeScriptServices
@@ -134,6 +182,9 @@ export function EditorPane({
       disposed = true;
       view?.destroy();
       if (viewRef.current === view) viewRef.current = null;
+      if (relativeLineNumbersCompartmentRef.current === relativeLineNumbersCompartment) {
+        relativeLineNumbersCompartmentRef.current = null;
+      }
     };
   }, [
     doc,
@@ -146,6 +197,18 @@ export function EditorPane({
     settings.wordWrap,
     undoManager,
   ]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    const compartment = relativeLineNumbersCompartmentRef.current;
+    if (!view || !compartment) return;
+
+    view.dispatch({
+      effects: compartment.reconfigure(
+        settings.relativeLineNumbers ? relativeLineNumberMarkers : [],
+      ),
+    });
+  }, [settings.relativeLineNumbers]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -170,6 +233,11 @@ export function EditorPane({
           <div className="flex min-w-max items-center gap-1">
             {tabs.map((tab, index) => {
               const active = tab.path === file.path;
+              const collaboratorCount = getFileCollaboratorCount(
+                remoteMembers,
+                currentUserId,
+                tab.path,
+              );
               return (
                 <div
                   className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
@@ -184,6 +252,11 @@ export function EditorPane({
                     type="button"
                     role="tab"
                     aria-selected={active}
+                    aria-label={
+                      collaboratorCount > 0
+                        ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`
+                        : tab.path
+                    }
                     title={tab.path}
                     onClick={() => onSelectTab(tab.path)}
                   >
@@ -196,6 +269,16 @@ export function EditorPane({
                     <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
                       {tabLabels[index]}
                     </span>
+                    {collaboratorCount > 0 && (
+                      <span
+                        className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] px-1 font-iris-mono text-[9px] leading-none text-[var(--accent-deep)]"
+                        data-collaborator-badge={tab.path}
+                        title={t("editor.collaboratorsInFile", { count: collaboratorCount })}
+                        aria-hidden="true"
+                      >
+                        +{collaboratorCount}
+                      </span>
+                    )}
                   </button>
                   <button
                     className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
@@ -306,7 +389,7 @@ function editorTheme(settings: ProjectSettings) {
     },
     ".cm-gutters": {
       border: "none",
-      backgroundColor: "transparent",
+      backgroundColor: "var(--editor-surface)",
       color: "var(--muted)",
       minWidth: "56px",
       padding: "0 12px 0 0",

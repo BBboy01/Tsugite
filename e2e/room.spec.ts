@@ -77,6 +77,84 @@ test.describe("room shell", () => {
     expect(Math.abs(styles.labelCenter - styles.checkboxCenter)).toBeLessThan(1);
   });
 
+  test("shows relative line numbers when enabled in editor settings", async ({ page }) => {
+    await page.goto(`/room/e2e-relative-line-numbers-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+
+    const editor = page.locator(".cm-content");
+    await editor.click();
+    await page.keyboard.press("ControlOrMeta+Home");
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("ArrowDown");
+
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Editor", exact: true }).click();
+    const relativeLineNumbers = page.getByRole("switch", { name: "Relative line numbers" });
+    await expect(relativeLineNumbers).toBeVisible();
+    if ((await relativeLineNumbers.getAttribute("aria-checked")) !== "true") {
+      await relativeLineNumbers.click();
+    }
+    await page.getByRole("button", { name: "Close settings" }).click();
+
+    const lineNumbers = page.locator(".cm-lineNumbers .cm-gutterElement");
+    const readVisibleLineNumbers = () =>
+      lineNumbers.evaluateAll((elements) =>
+        elements
+          .filter((element) => (element as HTMLElement).style.height !== "0px")
+          .map((element) => element.textContent ?? "")
+          .slice(0, 8),
+      );
+
+    await expect.poll(readVisibleLineNumbers).toEqual(["2", "1", "3", "1", "2", "3", "4", "5"]);
+
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Editor", exact: true }).click();
+    const relativeLineNumbersAfterEnable = page.getByRole("switch", {
+      name: "Relative line numbers",
+    });
+    await expect(relativeLineNumbersAfterEnable).toHaveAttribute("aria-checked", "true");
+    await relativeLineNumbersAfterEnable.click();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await expect.poll(readVisibleLineNumbers).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"]);
+  });
+
+  test("keeps the line-number gutter opaque while scrolling long lines", async ({ page }) => {
+    await page.goto("/room/e2e-gutter-background", { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+
+    const content = page.locator(".cm-content");
+    await content.click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.insertText(`const longLine = "${"x".repeat(420)}";`);
+
+    const styles = await page.locator(".cm-editor").evaluate((editor) => {
+      const scroller = editor.querySelector<HTMLElement>(".cm-scroller");
+      const gutters = editor.querySelector<HTMLElement>(".cm-gutters");
+      if (!scroller || !gutters) {
+        throw new Error("CodeMirror scrolling elements did not mount");
+      }
+
+      scroller.scrollLeft = Math.min(300, scroller.scrollWidth - scroller.clientWidth);
+      scroller.dispatchEvent(new Event("scroll", { bubbles: true }));
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const gutterRect = gutters.getBoundingClientRect();
+      return {
+        scrollWidth: scroller.scrollWidth,
+        clientWidth: scroller.clientWidth,
+        gutterBackground: getComputedStyle(gutters).backgroundColor,
+        scrollerLeft: scrollerRect.left,
+        gutterLeft: gutterRect.left,
+      };
+    });
+
+    expect(styles.scrollWidth).toBeGreaterThan(styles.clientWidth);
+    expect(styles.gutterBackground).not.toMatch(/transparent|rgba\(0, 0, 0, 0\)/);
+    expect(Math.abs(styles.gutterLeft - styles.scrollerLeft)).toBeLessThan(1);
+  });
+
   test("renders a collaborator cursor, name, and selection", async ({ browser }) => {
     const firstContext = await browser.newContext();
     const secondContext = await browser.newContext();
@@ -145,6 +223,24 @@ test.describe("room shell", () => {
 
     await firstPage.getByRole("button", { name: "index.html", exact: true }).click();
     await secondPage.getByRole("button", { name: "index.html", exact: true }).click();
+
+    await expect(firstPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
+      timeout: 15_000,
+    });
+    await expect(
+      firstPage.getByRole("tab", { name: "index.html, 1 collaborators in this file" }),
+    ).toBeVisible();
+    await expect(secondPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
+      timeout: 15_000,
+    });
+
+    await secondPage.getByRole("button", { name: "main.tsx", exact: true }).click();
+    await expect(firstPage.locator("[data-collaborator-badge='index.html']")).toHaveCount(0, {
+      timeout: 15_000,
+    });
+    await expect(secondPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
+      timeout: 15_000,
+    });
 
     await expect(secondPage.locator(".cm-remote-cursor-label")).toHaveCount(0, {
       timeout: 2_000,
