@@ -1,5 +1,17 @@
+import type { PresenceMember } from "@iris/shared";
+
 export function isPresenceCurrentUser(memberId: string, currentUserId: string): boolean {
   return memberId === currentUserId;
+}
+
+export function getFileCollaboratorCount(
+  members: readonly Pick<PresenceMember, "userId" | "selectedPath">[],
+  currentUserId: string,
+  selectedPath: string,
+): number {
+  return members.filter(
+    (member) => member.userId !== currentUserId && member.selectedPath === selectedPath,
+  ).length;
 }
 
 export function prioritizeCurrentUser<T extends { userId: string }>(

@@ -154,6 +154,12 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
                       checked={settings.wordWrap}
                       onCheckedChange={(checked) => onChange("wordWrap", checked)}
                     />
+                    <SettingSwitch
+                      label={t("settings.relativeLineNumbers")}
+                      description={t("settings.relativeLineNumbersDescription")}
+                      checked={settings.relativeLineNumbers}
+                      onCheckedChange={(checked) => onChange("relativeLineNumbers", checked)}
+                    />
                   </div>
                 )}
 

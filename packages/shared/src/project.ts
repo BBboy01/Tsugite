@@ -28,6 +28,7 @@ export type ProjectSettings = {
   fontFamily: string;
   fontSize: number;
   wordWrap: boolean;
+  relativeLineNumbers: boolean;
   packageManager: PackageManager;
   autoInstall: boolean;
   autoStartPreview: boolean;
@@ -46,6 +47,7 @@ const DEFAULT_SETTINGS: ProjectSettings = {
   fontFamily: "JetBrains Mono",
   fontSize: 14,
   wordWrap: false,
+  relativeLineNumbers: false,
   packageManager: "pnpm",
   autoInstall: true,
   autoStartPreview: true,
@@ -208,6 +210,7 @@ export function createProjectDoc(): LoroDoc {
   settings.set("fontFamily", DEFAULT_SETTINGS.fontFamily);
   settings.set("fontSize", DEFAULT_SETTINGS.fontSize);
   settings.set("wordWrap", DEFAULT_SETTINGS.wordWrap);
+  settings.set("relativeLineNumbers", DEFAULT_SETTINGS.relativeLineNumbers);
   settings.set("packageManager", DEFAULT_SETTINGS.packageManager);
   settings.set("autoInstall", DEFAULT_SETTINGS.autoInstall);
   settings.set("autoStartPreview", DEFAULT_SETTINGS.autoStartPreview);
@@ -377,6 +380,7 @@ export function readSettings(doc: LoroDoc): ProjectSettings {
     fontFamily: String(settings.get("fontFamily") ?? DEFAULT_SETTINGS.fontFamily),
     fontSize: readFontSize(settings.get("fontSize")),
     wordWrap: settings.get("wordWrap") === true,
+    relativeLineNumbers: settings.get("relativeLineNumbers") === true,
     packageManager: isPackageManager(packageManager)
       ? packageManager
       : DEFAULT_SETTINGS.packageManager,

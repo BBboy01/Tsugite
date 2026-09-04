@@ -47,6 +47,7 @@ test("bootstraps the shared project with files and settings", () => {
     fontFamily: "JetBrains Mono",
     fontSize: 14,
     wordWrap: false,
+    relativeLineNumbers: false,
     packageManager: "pnpm",
     autoInstall: true,
     autoStartPreview: true,
@@ -69,6 +70,7 @@ test("merges file text and settings through a Loro update", () => {
     fontFamily: "IBM Plex Mono",
     fontSize: 14,
     wordWrap: false,
+    relativeLineNumbers: false,
     packageManager: "pnpm",
     autoInstall: true,
     autoStartPreview: true,
@@ -94,6 +96,16 @@ test("shares editor font size and wrapping settings", () => {
 
   expect(readSettings(second).fontSize).toBe(18);
   expect(readSettings(second).wordWrap).toBe(true);
+});
+
+test("shares relative line number settings", () => {
+  const first = createProjectDoc();
+  first.getMap("settings").set("relativeLineNumbers", true);
+
+  const second = new LoroDoc();
+  second.import(first.export({ mode: "snapshot" }));
+
+  expect(readSettings(second).relativeLineNumbers).toBe(true);
 });
 
 test("creates and renames a file without changing its stable id", () => {
