@@ -13,6 +13,8 @@ type GlobalHeaderProps = {
   roomId: string;
   members: PresenceMember[];
   status: ConnectionStatus;
+  followingUserId: string | null;
+  onFollowMember: (userId: string) => void;
   onOpenFiles: () => void;
   onOpenPreview: () => void;
 };
@@ -25,6 +27,8 @@ export function GlobalHeader({
   roomId,
   members,
   status,
+  followingUserId,
+  onFollowMember,
   onOpenFiles,
   onOpenPreview,
 }: GlobalHeaderProps) {
@@ -73,6 +77,8 @@ export function GlobalHeader({
           members={members}
           roomId={roomId}
           status={status}
+          followingUserId={followingUserId}
+          onFollowMember={onFollowMember}
         />
       </div>
 
