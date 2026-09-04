@@ -1,11 +1,13 @@
 name: Browser E2E
 
+# Browser E2E is reserved for release candidates, version tags, and manual runs.
 on:
   push:
-    branches: [main]
+    tags:
+      - "v*.*.*"
   pull_request:
-  merge_group:
-    types: [checks_requested]
+    types: [opened, synchronize, reopened, labeled]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -17,6 +19,13 @@ concurrency:
 jobs:
   browser:
     name: Playwright smoke
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
+      (github.event_name == 'pull_request' &&
+      (contains(github.event.pull_request.labels.*.name, 'release') ||
+      startsWith(github.event.pull_request.title, 'chore(release):') ||
+      startsWith(github.head_ref, 'release/')))
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:

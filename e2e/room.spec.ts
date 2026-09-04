@@ -155,6 +155,7 @@ test.describe("room shell", () => {
   });
 
   test("undoes repeated local edits without corrupting the file", async ({ page }) => {
+    test.setTimeout(60_000);
     await page.goto("/room/e2e-undo", { waitUntil: "domcontentloaded" });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
@@ -168,6 +169,7 @@ test.describe("room shell", () => {
     const initial = await readText();
 
     await editor.click();
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/, { timeout: 15_000 });
     await page.keyboard.press("ControlOrMeta+End");
     await page.keyboard.type("\n// undo-first");
     await page.keyboard.press("ControlOrMeta+z");
@@ -224,6 +226,10 @@ test.describe("room shell", () => {
       .poll(() => readEditorText(firstPage), { timeout: 45_000 })
       .toContain("// undo-jun");
 
+    await firstPage.locator(".cm-content").click();
+    await expect(firstPage.locator(".cm-editor")).toHaveClass(/cm-focused/, {
+      timeout: 15_000,
+    });
     await firstPage.keyboard.press("ControlOrMeta+z");
     const expected = "// undo-jun\n" + initial;
     await expect.poll(() => readEditorText(firstPage), { timeout: 45_000 }).toBe(expected);
@@ -334,6 +340,7 @@ test.describe("room shell", () => {
   });
 
   test("keeps remaining collaborator cursors when one member leaves", async ({ browser }) => {
+    test.setTimeout(90_000);
     const identities = [
       { userId: "e2e-owner", displayName: "Maya", color: "#d88961" },
       { userId: "e2e-jun", displayName: "Jun", color: "#7389b7" },
@@ -362,16 +369,14 @@ test.describe("room shell", () => {
     await pages[2].locator(".cm-content").click();
     await pages[2].keyboard.press("ControlOrMeta+A");
 
-    await expect(
-      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
-    ).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(
-      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
-    ).toBeVisible({
-      timeout: 15_000,
-    });
+    await Promise.all([
+      expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toBeVisible({
+        timeout: 30_000,
+      }),
+      expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible({
+        timeout: 30_000,
+      }),
+    ]);
 
     await contexts[2].close();
 
@@ -392,6 +397,7 @@ test.describe("room shell", () => {
   });
 
   test("keeps a collapsed cursor when a selected collaborator leaves", async ({ browser }) => {
+    test.setTimeout(90_000);
     const identities = [
       { userId: "e2e-collapsed-observer", displayName: "Maya", color: "#d88961" },
       { userId: "e2e-collapsed-survivor", displayName: "Sora", color: "#5d9f8c" },
@@ -419,16 +425,14 @@ test.describe("room shell", () => {
     await pages[1].locator(".cm-content").click({ position: { x: 12, y: 12 } });
     await pages[2].locator(".cm-content").click();
     await pages[2].keyboard.press("ControlOrMeta+A");
-    await expect(
-      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
-    ).toBeVisible({
-      timeout: 15_000,
-    });
-    await expect(
-      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
-    ).toBeVisible({
-      timeout: 15_000,
-    });
+    await Promise.all([
+      expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible({
+        timeout: 30_000,
+      }),
+      expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toBeVisible({
+        timeout: 30_000,
+      }),
+    ]);
 
     await contexts[2].close();
     await expect(

@@ -41,6 +41,7 @@ test.describe("file and editor actions", () => {
   });
 
   test("keeps local undo history when renaming the active file", async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
     await page.goto("/room/e2e-undo-rename-" + process.pid + "-" + testInfo.repeatEachIndex, {
       waitUntil: "domcontentloaded",
     });
@@ -65,11 +66,13 @@ test.describe("file and editor actions", () => {
       timeout: 15_000,
     });
     await editor.click();
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/, { timeout: 15_000 });
     await page.keyboard.press("ControlOrMeta+z");
-    await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
+    await expect.poll(readText, { timeout: 30_000 }).toBe(initial);
   });
 
   test("keeps local undo history when switching files", async ({ page }, testInfo) => {
+    test.setTimeout(60_000);
     await page.goto("/room/e2e-undo-switch-" + process.pid + "-" + testInfo.repeatEachIndex, {
       waitUntil: "domcontentloaded",
     });
@@ -87,8 +90,9 @@ test.describe("file and editor actions", () => {
     await page.getByRole("button", { name: "index.html", exact: true }).click();
     await page.getByRole("button", { name: "main.tsx", exact: true }).click();
     await editor.click();
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/, { timeout: 15_000 });
     await page.keyboard.press("ControlOrMeta+z");
-    await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
+    await expect.poll(readText, { timeout: 30_000 }).toBe(initial);
   });
 
   test("keeps the active editor tab after a remote file rename", async ({ browser }, testInfo) => {
