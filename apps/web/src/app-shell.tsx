@@ -365,6 +365,7 @@ export function AppShell({ roomId }: AppShellProps) {
                   onCursorChange={handleCursorChange}
                   onLocalInteraction={() => setFollowingUserId(null)}
                   followedSelection={followedSelection}
+                  isFollowing={Boolean(followingUserId)}
                   remoteMembers={client.members}
                   currentUserId={client.identity.userId}
                 />

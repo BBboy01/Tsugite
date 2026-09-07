@@ -56,12 +56,18 @@ test("follows a collaborator's file and cursor until a local action", async ({ b
   await expect.poll(hasVisibleFollowStyle).toBe(true);
   await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
   await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);
+  const followedEditor = firstPage.locator("[data-editor-following='true']");
+  await expect(followedEditor).toBeVisible();
+  await expect
+    .poll(() => followedEditor.evaluate((element) => getComputedStyle(element).borderTopColor))
+    .not.toBe("rgba(0, 0, 0, 0)");
 
   await firstPage
     .locator(".cm-line")
     .filter({ hasText: /^createRoot\(document/ })
     .click();
   await expect(firstPage.locator("[data-following-member='e2e-follow-second']")).toHaveCount(0);
+  await expect(firstPage.locator("[data-editor-following='true']")).toHaveCount(0);
 
   await secondPage.keyboard.press("ArrowDown");
   await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);

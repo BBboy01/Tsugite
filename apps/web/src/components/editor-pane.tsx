@@ -82,6 +82,7 @@ type EditorPaneProps = {
   onCursorChange: (cursor: { anchor: number; head: number }) => void;
   onLocalInteraction: () => void;
   followedSelection: { anchor: number; head: number } | null;
+  isFollowing: boolean;
   remoteMembers: readonly PresenceMember[];
   currentUserId: string;
 };
@@ -96,6 +97,7 @@ export function EditorPane({
   onCursorChange,
   onLocalInteraction,
   followedSelection,
+  isFollowing,
   remoteMembers,
   currentUserId,
 }: EditorPaneProps) {
@@ -330,7 +332,18 @@ export function EditorPane({
           </div>
         </div>
       </div>
-      <div className="min-h-0 flex-1 [&_.cm-editor]:h-full" ref={hostRef} />
+      <div className="relative min-h-0 flex-1">
+        <div className="h-full min-h-0 [&_.cm-editor]:h-full" ref={hostRef} />
+        {isFollowing && (
+          <div
+            className="pointer-events-none absolute inset-0 z-10 border-2 border-solid transition-[border-color] duration-150"
+            data-editor-following="true"
+            style={{
+              borderColor: "color-mix(in srgb, var(--accent) 68%, transparent)",
+            }}
+          />
+        )}
+      </div>
     </section>
   );
 }
