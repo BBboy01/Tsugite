@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
@@ -46,6 +46,7 @@ export function AppShell({ roomId }: AppShellProps) {
   const [revision, setRevision] = useState(0);
   const [selectedPath, setSelectedPath] = useState("src/main.tsx");
   const [openTabPaths, setOpenTabPaths] = useState(["src/main.tsx"]);
+  const [followingUserId, setFollowingUserId] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel | null>(null);
   const presenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -107,17 +108,63 @@ export function AppShell({ roomId }: AppShellProps) {
     if (nextPath !== selectedPath) setSelectedPath(nextPath);
   }, [files, openTabPaths, selectedPath]);
 
+  const selectFile = useCallback(
+    (path: string) => {
+      if (presenceTimer.current) {
+        clearTimeout(presenceTimer.current);
+        presenceTimer.current = null;
+      }
+      setOpenTabPaths((current) => openEditorTab(current, path));
+      setSelectedPath(path);
+      client.sendPresence(path);
+    },
+    [client],
+  );
+
   const activateFile = (path: string) => {
-    if (presenceTimer.current) {
-      clearTimeout(presenceTimer.current);
-      presenceTimer.current = null;
+    setFollowingUserId(null);
+    selectFile(path);
+  };
+
+  const followingMember = useMemo(
+    () =>
+      followingUserId
+        ? client.members.find((member) => member.userId === followingUserId)
+        : undefined,
+    [client, followingUserId, revision],
+  );
+  const followedSelection = useMemo(
+    () =>
+      followingMember?.selectedPath === selectedPath ? (followingMember.cursor ?? null) : null,
+    [followingMember, selectedPath],
+  );
+
+  useEffect(() => {
+    if (!followingUserId) return;
+    const member = client.members.find((candidate) => candidate.userId === followingUserId);
+    if (!member) {
+      setFollowingUserId(null);
+      return;
     }
-    setOpenTabPaths((current) => openEditorTab(current, path));
-    setSelectedPath(path);
-    client.sendPresence(path);
+    if (member.selectedPath && member.selectedPath !== selectedPath) {
+      selectFile(member.selectedPath);
+    }
+  }, [client, followingUserId, revision, selectedPath, selectFile]);
+
+  const handleFollowMember = (userId: string) => {
+    if (userId === client.identity.userId) return;
+    if (followingUserId === userId) {
+      setFollowingUserId(null);
+      return;
+    }
+    const member = client.members.find((candidate) => candidate.userId === userId);
+    if (!member) return;
+    setFollowingUserId(userId);
+    if (member.selectedPath) selectFile(member.selectedPath);
   };
 
   const handleCloseTab = (path: string) => {
+    setFollowingUserId(null);
     const result = closeEditorTab(openTabPaths, path, selectedPath);
     setOpenTabPaths(result.paths);
     if (path === selectedPath) setSelectedPath(result.nextPath);
@@ -127,6 +174,7 @@ export function AppShell({ roomId }: AppShellProps) {
     key: K,
     value: ProjectSettings[K],
   ) => {
+    setFollowingUserId(null);
     setSharedSetting(client.doc, key, value);
     client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
   };
@@ -149,6 +197,7 @@ export function AppShell({ roomId }: AppShellProps) {
 
   const handleAddFolder = (_target: FileTreeTarget, nextPath: string): string | undefined => {
     try {
+      setFollowingUserId(null);
       createFolder(client.doc, nextPath);
       client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
@@ -164,6 +213,7 @@ export function AppShell({ roomId }: AppShellProps) {
     const currentPath = target.type === "file" ? target.file.path : target.path;
     if (!nextPath || nextPath === currentPath) return undefined;
     try {
+      setFollowingUserId(null);
       if (target.type === "file") {
         renameFile(client.doc, target.file.id, nextPath);
         setOpenTabPaths((current) =>
@@ -203,6 +253,7 @@ export function AppShell({ roomId }: AppShellProps) {
   const handleDelete = (target: Exclude<FileTreeTarget, null>) => {
     const path = target.type === "file" ? target.file.path : target.path;
     if (!window.confirm(`Delete ${path}?`)) return;
+    setFollowingUserId(null);
     if (target.type === "file") {
       deleteFile(client.doc, target.file.id);
       if (openTabPaths.includes(path)) {
@@ -227,13 +278,24 @@ export function AppShell({ roomId }: AppShellProps) {
   };
 
   const handleCursorChange = (cursor: { anchor: number; head: number }) => {
-    if (presenceTimer.current) clearTimeout(presenceTimer.current);
+    setFollowingUserId(null);
+    if (presenceTimer.current) {
+      clearTimeout(presenceTimer.current);
+      presenceTimer.current = null;
+    }
     presenceTimer.current = setTimeout(() => client.sendPresence(selectedPath, cursor), 120);
   };
 
-  const handleDisplayNameChange = (displayName: string) => client.updateDisplayName(displayName);
-  const handleColorChange = (color: string) => client.updateColor(color);
+  const handleDisplayNameChange = (displayName: string): boolean => {
+    setFollowingUserId(null);
+    return client.updateDisplayName(displayName);
+  };
+  const handleColorChange = (color: string): boolean => {
+    setFollowingUserId(null);
+    return client.updateColor(color);
+  };
   const toggleMobilePanel = (panel: MobileWorkspacePanel) => {
+    setFollowingUserId(null);
     setMobilePanel((current) => toggleMobileWorkspacePanel(current, panel));
   };
 
@@ -247,7 +309,7 @@ export function AppShell({ roomId }: AppShellProps) {
       scaling="100%"
     >
       <motion.main
-        className={`grid min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${settings.theme}`}
+        className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${settings.theme}`}
         style={{ "--code-font": `'${settings.fontFamily}'` } as CSSProperties}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -258,6 +320,8 @@ export function AppShell({ roomId }: AppShellProps) {
           roomId={roomId}
           members={client.members}
           status={client.status}
+          followingUserId={followingUserId}
+          onFollowMember={handleFollowMember}
           onOpenFiles={() => toggleMobilePanel("files")}
           onOpenPreview={() => toggleMobilePanel("preview")}
         />
@@ -299,6 +363,8 @@ export function AppShell({ roomId }: AppShellProps) {
                   onSelectTab={activateFile}
                   onCloseTab={handleCloseTab}
                   onCursorChange={handleCursorChange}
+                  onLocalInteraction={() => setFollowingUserId(null)}
+                  followedSelection={followedSelection}
                   remoteMembers={client.members}
                   currentUserId={client.identity.userId}
                 />

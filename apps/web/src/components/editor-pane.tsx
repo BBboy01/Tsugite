@@ -1,7 +1,14 @@
 import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { basicSetup } from "codemirror";
-import { Compartment, EditorState, RangeSet, RangeSetBuilder, StateField } from "@codemirror/state";
+import {
+  Compartment,
+  EditorState,
+  RangeSet,
+  RangeSetBuilder,
+  StateField,
+  Transaction,
+} from "@codemirror/state";
 import { EditorView, GutterMarker, lineNumberMarkers } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
 import { Cross2Icon } from "@radix-ui/react-icons";
@@ -73,6 +80,8 @@ type EditorPaneProps = {
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
   onCursorChange: (cursor: { anchor: number; head: number }) => void;
+  onLocalInteraction: () => void;
+  followedSelection: { anchor: number; head: number } | null;
   remoteMembers: readonly PresenceMember[];
   currentUserId: string;
 };
@@ -85,6 +94,8 @@ export function EditorPane({
   onSelectTab,
   onCloseTab,
   onCursorChange,
+  onLocalInteraction,
+  followedSelection,
   remoteMembers,
   currentUserId,
 }: EditorPaneProps) {
@@ -95,9 +106,13 @@ export function EditorPane({
   const relativeLineNumbersRef = useRef(settings.relativeLineNumbers);
   const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
+  const localInteractionRef = useRef(onLocalInteraction);
+  const followedSelectionRef = useRef(followedSelection);
   const undoManager = useEditorUndoManager(doc, file.id);
   const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
   cursorChangeRef.current = onCursorChange;
+  localInteractionRef.current = onLocalInteraction;
+  followedSelectionRef.current = followedSelection;
   relativeLineNumbersRef.current = settings.relativeLineNumbers;
   remoteMembersRef.current = remoteMembers;
 
@@ -150,9 +165,13 @@ export function EditorPane({
             groupedLoroUndo(undoManager),
             LoroExtensions(doc, undefined, undoManager, () => file.text),
             EditorView.updateListener.of((update) => {
-              if ((!update.selectionSet && !update.focusChanged) || !update.view.hasFocus) {
+              const hasUserEvent = update.transactions.some((transaction) =>
+                Boolean(transaction.annotation(Transaction.userEvent)),
+              );
+              if ((!hasUserEvent && !update.focusChanged) || !update.view.hasFocus) {
                 return;
               }
+              if (hasUserEvent || update.focusChanged) localInteractionRef.current();
               const selection = update.state.selection.main;
               cursorChangeRef.current({
                 anchor: selection.anchor,
@@ -174,6 +193,12 @@ export function EditorPane({
           view.state.doc.length,
         ),
       );
+      const selection = followedSelectionRef.current;
+      if (selection) {
+        const anchor = Math.max(0, Math.min(selection.anchor, view.state.doc.length));
+        const head = Math.max(0, Math.min(selection.head, view.state.doc.length));
+        view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
+      }
     };
 
     void setupEditor();
@@ -218,6 +243,16 @@ export function EditorPane({
       getRemoteSelections(remoteMembers, currentUserId, file.path, view.state.doc.length),
     );
   }, [currentUserId, file.path, remoteMembers]);
+
+  useEffect(() => {
+    const view = viewRef.current;
+    if (!view || !followedSelection) return;
+    const anchor = Math.max(0, Math.min(followedSelection.anchor, view.state.doc.length));
+    const head = Math.max(0, Math.min(followedSelection.head, view.state.doc.length));
+    const currentSelection = view.state.selection.main;
+    if (currentSelection.anchor === anchor && currentSelection.head === head) return;
+    view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
+  }, [file.path, followedSelection]);
 
   return (
     <section

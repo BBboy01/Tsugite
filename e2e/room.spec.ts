@@ -77,6 +77,34 @@ test.describe("room shell", () => {
     expect(Math.abs(styles.labelCenter - styles.checkboxCenter)).toBeLessThan(1);
   });
 
+  test("keeps long editor content inside the editor scroller", async ({ page }) => {
+    await page.goto(`/room/e2e-editor-scroll-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+
+    await page.locator(".cm-content").click();
+    await page.keyboard.press("ControlOrMeta+A");
+    await page.keyboard.insertText(
+      Array.from({ length: 500 }, (_, index) => `const line${index} = ${index};`).join("\n"),
+    );
+
+    const dimensions = await page.evaluate(() => {
+      const editor = document.querySelector<HTMLElement>(".cm-editor");
+      const scroller = document.querySelector<HTMLElement>(".cm-scroller");
+      if (!editor || !scroller) throw new Error("CodeMirror scrolling elements did not mount");
+      return {
+        documentScrollHeight: document.documentElement.scrollHeight,
+        viewportHeight: window.innerHeight,
+        editorHeight: editor.clientHeight,
+        scrollerHeight: scroller.clientHeight,
+        scrollerScrollHeight: scroller.scrollHeight,
+      };
+    });
+
+    expect(dimensions.documentScrollHeight).toBe(dimensions.viewportHeight);
+    expect(dimensions.scrollerScrollHeight).toBeGreaterThan(dimensions.scrollerHeight);
+    expect(dimensions.editorHeight).toBeLessThan(dimensions.scrollerScrollHeight);
+  });
+
   test("shows relative line numbers when enabled in editor settings", async ({ page }) => {
     await page.goto(`/room/e2e-relative-line-numbers-${Date.now()}`, {
       waitUntil: "domcontentloaded",

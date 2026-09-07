@@ -11,9 +11,18 @@ type PresenceStackProps = {
   currentUserId: string;
   roomId: string;
   status: ConnectionStatus;
+  followingUserId: string | null;
+  onFollowMember: (userId: string) => void;
 };
 
-export function PresenceStack({ members, currentUserId, roomId, status }: PresenceStackProps) {
+export function PresenceStack({
+  members,
+  currentUserId,
+  roomId,
+  status,
+  followingUserId,
+  onFollowMember,
+}: PresenceStackProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
   const statusLabel = t(`status.${status}`);
@@ -51,7 +60,7 @@ export function PresenceStack({ members, currentUserId, roomId, status }: Presen
           type="button"
           aria-label={t("presence.onlineCount", { count: members.length })}
           aria-expanded={open}
-          onClick={() => setOpen((value) => !value)}
+          onClick={() => setOpen(true)}
           onKeyDown={(event) => {
             if (event.key === "Escape") {
               setOpen(false);
@@ -92,11 +101,9 @@ export function PresenceStack({ members, currentUserId, roomId, status }: Presen
               <div className="grid gap-px pt-1.5">
                 {orderedMembers.map((member) => {
                   const isCurrentUser = isPresenceCurrentUser(member.userId, currentUserId);
-                  return (
-                    <div
-                      className="flex min-w-0 items-center gap-2 rounded-md px-1 py-1"
-                      key={member.userId}
-                    >
+                  const isFollowing = followingUserId === member.userId;
+                  const memberContent = (
+                    <>
                       <span
                         className="grid h-[22px] w-[22px] shrink-0 place-items-center rounded-full border border-iris-canvas font-iris-mono text-[8px] leading-none text-white"
                         style={{ background: member.color }}
@@ -111,7 +118,39 @@ export function PresenceStack({ members, currentUserId, roomId, status }: Presen
                           {t("presence.you")}
                         </span>
                       )}
-                    </div>
+                    </>
+                  );
+                  if (isCurrentUser) {
+                    return (
+                      <div
+                        className="flex min-w-0 items-center gap-2 rounded-md px-1 py-1"
+                        key={member.userId}
+                      >
+                        {memberContent}
+                      </div>
+                    );
+                  }
+                  return (
+                    <button
+                      className="flex min-w-0 w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-1 py-1 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+                      style={
+                        isFollowing
+                          ? {
+                              backgroundColor:
+                                "color-mix(in srgb, var(--accent) 14%, var(--canvas))",
+                              borderColor: "color-mix(in srgb, var(--accent) 42%, var(--divider))",
+                            }
+                          : undefined
+                      }
+                      type="button"
+                      aria-label={member.displayName}
+                      aria-pressed={isFollowing}
+                      data-following-member={isFollowing ? member.userId : undefined}
+                      onClick={() => onFollowMember(member.userId)}
+                      key={member.userId}
+                    >
+                      {memberContent}
+                    </button>
                   );
                 })}
               </div>
