@@ -309,7 +309,7 @@ export function AppShell({ roomId }: AppShellProps) {
       scaling="100%"
     >
       <motion.main
-        className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${settings.theme}`}
+        className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas pb-1 max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${settings.theme}`}
         style={{ "--code-font": `'${settings.fontFamily}'` } as CSSProperties}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -353,7 +353,7 @@ export function AppShell({ roomId }: AppShellProps) {
             </div>
           }
           editor={
-            <section className="flex h-full min-w-0 min-h-0 flex-col bg-[var(--editor-surface)] max-[760px]:min-h-[calc(100vh-44px)]">
+            <section className="flex h-full min-w-0 min-h-0 flex-col bg-[var(--editor-surface)] max-[760px]:min-h-[calc(100vh-48px)]">
               {selectedFile ? (
                 <EditorPane
                   doc={client.doc}
