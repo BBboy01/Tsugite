@@ -61,6 +61,23 @@ test("follows a collaborator's file and cursor until a local action", async ({ b
   await expect
     .poll(() => followedEditor.evaluate((element) => getComputedStyle(element).borderTopColor))
     .not.toBe("rgba(0, 0, 0, 0)");
+  await expect
+    .poll(() => followedEditor.evaluate((element) => getComputedStyle(element).boxShadow))
+    .not.toBe("none");
+  const followLayout = await followedEditor.evaluate((element) => ({
+    editorRight: element.parentElement?.getBoundingClientRect().right ?? 0,
+    gutterRight:
+      element.parentElement?.querySelector(".cm-gutters")?.getBoundingClientRect().right ?? 0,
+    indicatorLeft: element.getBoundingClientRect().left,
+    indicatorRight: element.getBoundingClientRect().right,
+    bottomGap: window.innerHeight - element.getBoundingClientRect().bottom,
+    documentClientHeight: document.documentElement.clientHeight,
+    documentScrollHeight: document.documentElement.scrollHeight,
+  }));
+  expect(followLayout.indicatorLeft).toBeGreaterThanOrEqual(followLayout.gutterRight);
+  expect(followLayout.editorRight - followLayout.indicatorRight).toBeLessThanOrEqual(1);
+  expect(followLayout.bottomGap).toBeGreaterThanOrEqual(4);
+  expect(followLayout.documentScrollHeight).toBe(followLayout.documentClientHeight);
 
   await firstPage
     .locator(".cm-line")
