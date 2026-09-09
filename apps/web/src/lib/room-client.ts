@@ -251,7 +251,8 @@ export class RoomClient {
     const configured = import.meta.env.VITE_WS_URL as string | undefined;
     if (configured) return `${configured.replace(/\/$/, "")}/${this.roomId}`;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    return `${protocol}//${window.location.hostname}:3001/ws/${this.roomId}`;
+    const host = import.meta.env.DEV ? `${window.location.hostname}:3001` : window.location.host;
+    return `${protocol}//${host}/ws/${this.roomId}`;
   }
 
   private setStatus(status: ConnectionStatus): void {

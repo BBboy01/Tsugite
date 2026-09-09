@@ -31,3 +31,23 @@ bun run knip
 bun run build
 bun run test:e2e
 ```
+
+## Docker Compose
+
+Build and start the production web and server containers:
+
+```bash
+docker compose up -d --build
+```
+
+Open `http://127.0.0.1:8080/room/demo`. Caddy serves the Vite build and proxies
+WebSocket traffic to the Bun server on the internal `/ws/` route. Set
+`TSUGITE_PORT` to change the host port, and stop the stack with:
+
+```bash
+docker compose down
+```
+
+GitHub publishes the `web` and `server` images to GHCR on pushes to `main` and
+version tags. Pull those images by setting `TSUGITE_WEB_IMAGE` and
+`TSUGITE_SERVER_IMAGE` before running Compose.

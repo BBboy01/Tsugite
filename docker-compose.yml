@@ -1,0 +1,21 @@
+services:
+  server:
+    build:
+      context: .
+      dockerfile: Dockerfile.server
+    image: ${TSUGITE_SERVER_IMAGE:-tsugite-server:local}
+    restart: unless-stopped
+    expose:
+      - "3001"
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    image: ${TSUGITE_WEB_IMAGE:-tsugite-web:local}
+    depends_on:
+      server:
+        condition: service_started
+    restart: unless-stopped
+    ports:
+      - "${TSUGITE_PORT:-8080}:80"
