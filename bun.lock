@@ -6,13 +6,11 @@
       "name": "tsugite-multiplayer-editor",
       "dependencies": {
         "@babel/standalone": "latest",
-        "@codemirror/autocomplete": "^6.20.3",
         "@codemirror/lang-css": "^6.3.1",
         "@codemirror/lang-html": "^6.4.12",
         "@codemirror/lang-javascript": "latest",
         "@codemirror/lang-json": "^6.0.2",
         "@codemirror/language": "^6.12.4",
-        "@codemirror/lint": "^6.9.7",
         "@codemirror/state": "^6.7.1",
         "@codemirror/view": "^6.43.9",
         "@elysiajs/cors": "latest",
@@ -20,7 +18,6 @@
         "@iris/shared": "workspace:*",
         "@radix-ui/react-context-menu": "^2.3.7",
         "@radix-ui/react-dialog": "^1.1.23",
-        "@radix-ui/react-icons": "^1.3.2",
         "@radix-ui/themes": "^3.3.0",
         "@react-symbols/icons": "^1.4.1",
         "@shikijs/langs": "4.4.3",
@@ -29,7 +26,7 @@
         "@valtown/codemirror-ts": "^2.3.1",
         "@webcontainer/api": "^1.6.4",
         "class-variance-authority": "^0.7.1",
-        "clsx": "^2.1.1",
+        "cn": "^0.2.6",
         "codemirror": "latest",
         "elysia": "latest",
         "i18next": "^26.4.0",
@@ -43,7 +40,6 @@
         "react-i18next": "^17.0.12",
         "shadcn": "^4.19.1",
         "shiki": "^4.4.3",
-        "tailwind-merge": "^3.6.0",
         "tw-animate-css": "^1.4.0",
         "typescript-legacy": "npm:typescript@5.9.3",
       },
@@ -463,8 +459,6 @@
 
     "@radix-ui/react-hover-card": ["@radix-ui/react-hover-card@1.1.23", "https://registry.npmmirror.com/@radix-ui/react-hover-card/-/react-hover-card-1.1.23.tgz", { "dependencies": { "@radix-ui/primitive": "1.1.7", "@radix-ui/react-compose-refs": "1.1.5", "@radix-ui/react-context": "1.2.2", "@radix-ui/react-dismissable-layer": "1.1.19", "@radix-ui/react-popper": "1.3.7", "@radix-ui/react-portal": "1.1.17", "@radix-ui/react-presence": "1.1.10", "@radix-ui/react-primitive": "2.1.10", "@radix-ui/react-use-controllable-state": "1.2.6" }, "peerDependencies": { "@types/react": "*", "@types/react-dom": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-H8qONfZd3ltrU3+jHCIgITbWo6e1iTKvP9DHdrvYbX48ooRM5FjEDTn16AMwdfuOGkWdZEhpl3PLL/Wk/AnHDQ=="],
 
-    "@radix-ui/react-icons": ["@radix-ui/react-icons@1.3.2", "https://registry.npmmirror.com/@radix-ui/react-icons/-/react-icons-1.3.2.tgz", { "peerDependencies": { "react": "^16.x || ^17.x || ^18.x || ^19.0.0 || ^19.0.0-rc" } }, "sha512-fyQIhGDhzfc9pK2kH6Pl9c4BDJGfMkPqkyIgYDthyNYoNg3wVhoJMMh19WS4Up/1KMPFVpNsT2q3WmXn2N1m6g=="],
-
     "@radix-ui/react-id": ["@radix-ui/react-id@1.1.4", "https://registry.npmmirror.com/@radix-ui/react-id/-/react-id-1.1.4.tgz", { "dependencies": { "@radix-ui/react-use-layout-effect": "1.1.4" }, "peerDependencies": { "@types/react": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react"] }, "sha512-TMQp2llA+RYn7JcjnrMnz7wN4pcVttPZnRZo52PLQsoLVKzNlVwUeHmfePgTgRluXFvlD3GD5g5MOVVTJCO0qA=="],
 
     "@radix-ui/react-label": ["@radix-ui/react-label@2.1.15", "https://registry.npmmirror.com/@radix-ui/react-label/-/react-label-2.1.15.tgz", { "dependencies": { "@radix-ui/react-primitive": "2.1.10" }, "peerDependencies": { "@types/react": "*", "@types/react-dom": "*", "react": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc", "react-dom": "^16.8 || ^17.0 || ^18.0 || ^19.0 || ^19.0.0-rc" }, "optionalPeers": ["@types/react", "@types/react-dom"] }, "sha512-o/rdYEwZTTo5tjknnPeyQFU45kUC4i/XyeDPP+HGyi6XqpOP6Zf5Ya5vh/Yfe9Id5JiuWnnAx2XqIeD3UYZt0g=="],
@@ -780,6 +774,8 @@
     "cliui": ["cliui@9.0.1", "https://registry.npmmirror.com/cliui/-/cliui-9.0.1.tgz", { "dependencies": { "string-width": "^7.2.0", "strip-ansi": "^7.1.0", "wrap-ansi": "^9.0.0" } }, "sha512-k7ndgKhwoQveBL+/1tqGJYNz097I7WOvwbmmU2AR5+magtbjPWQTS1C5vzGkBC8Ym8UWRzfKUzUUqFLypY4Q+w=="],
 
     "clsx": ["clsx@2.1.1", "https://registry.npmmirror.com/clsx/-/clsx-2.1.1.tgz", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
+
+    "cn": ["cn@0.2.6", "https://registry.npmmirror.com/cn/-/cn-0.2.6.tgz", { "bin": { "cn": "bin/cn.mjs" } }, "sha512-+i4L0zUGgRcEnhsxueVrP7iBGxBx5iD0WOTYg1MwFEu2ZyCmH5Ov2V1cul2Ht5UchRQQgftCf4be/RxspuW6QQ=="],
 
     "code-block-writer": ["code-block-writer@13.0.3", "https://registry.npmmirror.com/code-block-writer/-/code-block-writer-13.0.3.tgz", {}, "sha512-Oofo0pq3IKnsFtuHqSF7TqBfr71aeyZDVJ0HpmqB7FBM2qEigL0iPONSCZSO9pE9dZTAxANe5XHG9Uy0YMv8cg=="],
 

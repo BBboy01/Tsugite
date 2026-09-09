@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { ReloadIcon } from "@radix-ui/react-icons";
+import { RefreshCw } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
@@ -298,7 +298,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
             }}
             whileTap={{ scale: 0.96 }}
           >
-            <ReloadIcon width="11" height="11" />
+            <RefreshCw width="11" height="11" />
           </motion.button>
         </IconButton>
       </header>

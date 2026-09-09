@@ -1,4 +1,4 @@
-import { ExclamationTriangleIcon } from "@radix-ui/react-icons";
+import { TriangleAlert } from "lucide-react";
 import { useTranslation } from "react-i18next";
 
 export function PreviewError({ message }: { message: string }) {
@@ -10,7 +10,7 @@ export function PreviewError({ message }: { message: string }) {
       role="alert"
     >
       <div className="flex items-center gap-2 font-iris-mono text-[11px] text-[var(--accent-deep)]">
-        <ExclamationTriangleIcon width="13" height="13" />
+        <TriangleAlert width="13" height="13" />
         <span>{t("preview.errorTitle")}</span>
       </div>
       <pre className="m-0 whitespace-pre-wrap break-words font-iris-mono text-[10px] leading-[1.55] text-iris-ink">

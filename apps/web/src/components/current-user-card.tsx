@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { CheckIcon, ColorWheelIcon } from "@radix-ui/react-icons";
+import { Check, Palette } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
@@ -87,7 +87,7 @@ export function CurrentUserCard({
                   whileHover={{ scale: 1.14 }}
                   whileTap={{ scale: 0.96 }}
                 >
-                  {option === color && <CheckIcon width="12" height="12" />}
+                  {option === color && <Check width="12" height="12" />}
                 </motion.button>
               ))}
               <label
@@ -102,7 +102,7 @@ export function CurrentUserCard({
                   onChange={(event) => onColorChange(event.target.value)}
                 />
                 <span aria-hidden="true">
-                  <ColorWheelIcon width="12" height="12" />
+                  <Palette width="12" height="12" />
                 </span>
               </label>
             </motion.div>

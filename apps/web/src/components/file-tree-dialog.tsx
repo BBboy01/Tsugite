@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Cross2Icon, FilePlusIcon, Pencil1Icon, PlusIcon } from "@radix-ui/react-icons";
+import { FilePlus2, Pencil, Plus, X } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { useTranslation } from "react-i18next";
 import { useEffect, useRef, useState } from "react";
@@ -45,7 +45,7 @@ export function FileTreeDialog({
     : isFolder
       ? t("dialog.newFolder")
       : t("dialog.newFile");
-  const Icon = isRename ? Pencil1Icon : isFolder ? PlusIcon : FilePlusIcon;
+  const Icon = isRename ? Pencil : isFolder ? Plus : FilePlus2;
 
   return (
     <Dialog.Root open={mode !== null} onOpenChange={onOpenChange}>
@@ -77,7 +77,7 @@ export function FileTreeDialog({
                 aria-label={t("dialog.close")}
                 title={t("dialog.close")}
               >
-                <Cross2Icon width="15" height="15" />
+                <X width="15" height="15" />
               </IconButton>
             </Dialog.Close>
           </div>

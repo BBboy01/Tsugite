@@ -11,7 +11,7 @@ import {
 } from "@codemirror/state";
 import { EditorView, GutterMarker, lineNumberMarkers } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
-import { Cross2Icon } from "@radix-ui/react-icons";
+import { X } from "lucide-react";
 import type { LoroDoc } from "loro-crdt";
 
 import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
@@ -324,7 +324,7 @@ export function EditorPane({
                     title={t("editor.closeFile", { path: tab.path })}
                     onClick={() => onCloseTab(tab.path)}
                   >
-                    <Cross2Icon width="13" height="13" />
+                    <X width="13" height="13" />
                   </button>
                 </div>
               );
