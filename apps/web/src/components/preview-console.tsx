@@ -1,4 +1,4 @@
-import { ChevronDownIcon, ChevronUpIcon, TrashIcon } from "@radix-ui/react-icons";
+import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Select } from "@radix-ui/themes";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
@@ -99,9 +99,9 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
           onClick={() => setCollapsed((current) => !current)}
         >
           {collapsed ? (
-            <ChevronUpIcon width="10" height="10" />
+            <ChevronUp width="10" height="10" />
           ) : (
-            <ChevronDownIcon width="10" height="10" />
+            <ChevronDown width="10" height="10" />
           )}
           <span>{t("preview.output")}</span>
         </button>
@@ -132,7 +132,7 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
               title={t("preview.clearOutput")}
               onClick={onClear}
             >
-              <TrashIcon width="10" height="10" />
+              <Trash2 width="10" height="10" />
             </button>
           ) : null}
         </div>

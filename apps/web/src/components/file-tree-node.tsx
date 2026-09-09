@@ -1,4 +1,4 @@
-import { ChevronRightIcon } from "@radix-ui/react-icons";
+import { ChevronRight } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 
@@ -57,7 +57,7 @@ export function FileTreeNodes({
                 transition={{ duration: 0.16, ease: "easeOut" }}
                 className="grid shrink-0 place-items-center"
               >
-                <ChevronRightIcon width="13" height="13" aria-hidden="true" />
+                <ChevronRight width="13" height="13" aria-hidden="true" />
               </motion.span>
               <FolderTypeIcon path={node.path} width="15" height="15" />
               <span className="min-w-0 truncate transition-none group-hover:text-iris-strong">

@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { CodeIcon, ColorWheelIcon, Cross2Icon, GearIcon, RocketIcon } from "@radix-ui/react-icons";
+import { Code2, Palette, Rocket, Settings, X } from "lucide-react";
 import { IconButton, Switch, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useState, type ReactNode } from "react";
@@ -29,10 +29,10 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
   const [open, setOpen] = useState(false);
   const [section, setSection] = useState<SettingsSection>("style");
 
-  const sections: Array<{ id: SettingsSection; icon: typeof CodeIcon; label: string }> = [
-    { id: "style", icon: ColorWheelIcon, label: t("settings.nav.style") },
-    { id: "editor", icon: CodeIcon, label: t("settings.nav.editor") },
-    { id: "runtime", icon: RocketIcon, label: t("settings.nav.runtime") },
+  const sections: Array<{ id: SettingsSection; icon: typeof Code2; label: string }> = [
+    { id: "style", icon: Palette, label: t("settings.nav.style") },
+    { id: "editor", icon: Code2, label: t("settings.nav.editor") },
+    { id: "runtime", icon: Rocket, label: t("settings.nav.runtime") },
   ];
 
   return (
@@ -45,7 +45,7 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
           title={t("settings.open")}
           whileTap={{ scale: 0.96 }}
         >
-          <GearIcon width="14" height="14" />
+          <Settings width="14" height="14" />
         </motion.button>
       </Dialog.Trigger>
       <Dialog.Portal>
@@ -105,7 +105,7 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
                     aria-label={t("settings.close")}
                     title={t("settings.close")}
                   >
-                    <Cross2Icon width="15" height="15" />
+                    <X width="15" height="15" />
                   </IconButton>
                 </Dialog.Close>
               </div>

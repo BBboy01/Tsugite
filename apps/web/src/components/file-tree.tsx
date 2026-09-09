@@ -1,5 +1,5 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { CopyIcon, FilePlusIcon, Pencil1Icon, PlusIcon, TrashIcon } from "@radix-ui/react-icons";
+import { Copy, FilePlus2, Pencil, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { useEffect, useMemo, useState, type MouseEvent } from "react";
@@ -199,14 +199,14 @@ export function FileTree({
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
               onSelect={() => openPathDialog("create-file", contextTarget)}
             >
-              <FilePlusIcon width="14" height="14" />
+              <FilePlus2 width="14" height="14" />
               {t("files.newFile")}
             </ContextMenu.Item>
             <ContextMenu.Item
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
               onSelect={() => openPathDialog("create-folder", contextTarget)}
             >
-              <PlusIcon width="14" height="14" />
+              <Plus width="14" height="14" />
               {t("files.newFolder")}
             </ContextMenu.Item>
             <ContextMenu.Separator className="my-1 mx-1 h-px bg-iris-divider" />
@@ -221,7 +221,7 @@ export function FileTree({
                 )
               }
             >
-              <Pencil1Icon width="14" height="14" />
+              <Pencil width="14" height="14" />
               {t("files.rename")}
             </ContextMenu.Item>
             <ContextMenu.Item
@@ -229,7 +229,7 @@ export function FileTree({
               disabled={contextTarget?.type !== "file"}
               onSelect={() => contextTarget?.type === "file" && onCopy(contextTarget.file)}
             >
-              <CopyIcon width="14" height="14" />
+              <Copy width="14" height="14" />
               {t("files.copy")}
             </ContextMenu.Item>
             <ContextMenu.Item
@@ -237,7 +237,7 @@ export function FileTree({
               disabled={!contextTarget}
               onSelect={() => contextTarget && onDelete(contextTarget)}
             >
-              <TrashIcon width="14" height="14" />
+              <Trash2 width="14" height="14" />
               {t("files.delete")}
             </ContextMenu.Item>
           </ContextMenu.Content>

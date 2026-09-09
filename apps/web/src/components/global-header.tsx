@@ -1,4 +1,4 @@
-import { ColumnsIcon, LayoutIcon } from "@radix-ui/react-icons";
+import { Columns3, PanelsTopLeft } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
@@ -50,7 +50,7 @@ export function GlobalHeader({
           title={t("header.toggleFiles")}
           whileTap={{ scale: 0.96 }}
         >
-          <ColumnsIcon width="17" height="17" />
+          <Columns3 width="17" height="17" />
         </motion.button>
       </IconButton>
 
@@ -91,7 +91,7 @@ export function GlobalHeader({
           title={t("header.togglePreview")}
           whileTap={{ scale: 0.96 }}
         >
-          <LayoutIcon width="17" height="17" />
+          <PanelsTopLeft width="17" height="17" />
         </motion.button>
       </IconButton>
     </motion.header>

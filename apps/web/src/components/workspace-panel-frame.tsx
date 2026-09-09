@@ -1,4 +1,4 @@
-import { DoubleArrowLeftIcon, DoubleArrowRightIcon } from "@radix-ui/react-icons";
+import { PanelLeftClose, PanelRightOpen } from "lucide-react";
 import { motion } from "motion/react";
 import type { ReactNode } from "react";
 
@@ -34,7 +34,7 @@ export function WorkspacePanelFrame({
             onClick={onCollapse}
             whileTap={{ scale: 0.96 }}
           >
-            <DoubleArrowLeftIcon width="10" height="10" />
+            <PanelLeftClose width="10" height="10" />
           </motion.button>
         </div>
       ) : null}
@@ -53,7 +53,7 @@ export function CollapsedFilesButton({ label, onExpand }: { label: string; onExp
       onClick={onExpand}
       whileTap={{ scale: 0.96 }}
     >
-      <DoubleArrowRightIcon width="11" height="11" />
+      <PanelRightOpen width="11" height="11" />
     </motion.button>
   );
 }
