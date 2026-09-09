@@ -1,0 +1,16 @@
+FROM oven/bun:1.4.2 AS build
+
+WORKDIR /app
+COPY package.json bun.lock .bun-version ./
+COPY apps ./apps
+COPY packages ./packages
+COPY components.json vite.config.ts tsconfig.json .oxlintrc.json ./
+
+RUN bun install --frozen-lockfile
+RUN bun run build
+
+FROM caddy:2.11.4-alpine
+COPY Caddyfile /etc/caddy/Caddyfile
+COPY --from=build /app/apps/web/dist /srv
+
+EXPOSE 80
