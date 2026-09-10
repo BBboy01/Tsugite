@@ -95,6 +95,7 @@ export class RoomClient {
     const socket = this.socketFactory(url);
     socket.binaryType = "arraybuffer";
     socket.onopen = () => {
+      if (this.socket !== socket) return;
       this.reconnectAttempt = 0;
       this.setStatus("live");
       const join: JoinMessage = { type: "join", ...this.identity };
@@ -104,11 +105,15 @@ export class RoomClient {
         this.sendPresence();
       }
     };
-    socket.onmessage = (event) => this.handleMessage(event.data);
+    socket.onmessage = (event) => {
+      if (this.socket === socket) this.handleMessage(event.data);
+    };
     socket.onerror = () => {
+      if (this.socket !== socket) return;
       if (this.statusValue !== "offline") this.setStatus("reconnecting");
     };
     socket.onclose = () => {
+      if (this.socket !== socket) return;
       this.socket = null;
       if (this.statusValue !== "offline") this.scheduleReconnect();
     };

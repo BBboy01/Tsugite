@@ -12,6 +12,7 @@ import { CurrentUserCard } from "./current-user-card";
 import { FileTreeNodes } from "./file-tree-node";
 import { FileTreeDialog, type FileDialogMode } from "./file-tree-dialog";
 import { SettingsPopover } from "./settings-popover";
+import type { KeyBinding } from "../lib/keymap";
 
 export type FileTreeTarget =
   | { type: "file"; file: ProjectFile }
@@ -43,6 +44,10 @@ type FileTreeProps = {
   onColorChange: (value: string) => boolean;
   settings: ProjectSettings;
   onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  vimMode: boolean;
+  onVimModeChange: (enabled: boolean) => void;
+  keymap: KeyBinding[];
+  onKeymapChange: (bindings: KeyBinding[]) => void;
 };
 
 export function FileTree({
@@ -60,6 +65,10 @@ export function FileTree({
   onColorChange,
   settings,
   onSettingChange,
+  vimMode,
+  onVimModeChange,
+  keymap,
+  onKeymapChange,
 }: FileTreeProps) {
   const { t } = useTranslation();
   const [contextTarget, setContextTarget] = useState<FileTreeTarget>(null);
@@ -186,7 +195,14 @@ export function FileTree({
                   onColorChange={onColorChange}
                 />
               </div>
-              <SettingsPopover settings={settings} onChange={onSettingChange} />
+              <SettingsPopover
+                settings={settings}
+                onChange={onSettingChange}
+                vimMode={vimMode}
+                onVimModeChange={onVimModeChange}
+                keymap={keymap}
+                onKeymapChange={onKeymapChange}
+              />
             </div>
           </motion.aside>
         </ContextMenu.Trigger>

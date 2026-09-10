@@ -1,11 +1,12 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Code2, Palette, Rocket, Settings, X } from "lucide-react";
+import { Code2, Keyboard, Palette, Rocket, Settings, X } from "lucide-react";
 import { IconButton, Switch, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { PackageManager, ProjectSettings } from "@iris/shared";
+import { KEYMAP_ACTIONS, normalizeKey, type KeyBinding } from "../lib/keymap";
 
 import { languageOptions, type LanguageCode } from "../lib/i18n";
 import { isDarkWorkspaceTheme } from "../lib/workspace-theme";
@@ -18,31 +19,65 @@ export const SETTINGS_DIALOG_THEME_CLASS_NAME = "settings-dialog-theme";
 type SettingsDialogProps = {
   settings: ProjectSettings;
   onChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  vimMode: boolean;
+  onVimModeChange: (enabled: boolean) => void;
+  keymap: KeyBinding[];
+  onKeymapChange: (bindings: KeyBinding[]) => void;
 };
 
-type SettingsSection = "style" | "editor" | "runtime";
+type SettingsSection = "workspace" | "editor" | "keyboard" | "runtime";
 
 const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
 
-export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
+export function SettingsPopover({
+  settings,
+  onChange,
+  vimMode,
+  onVimModeChange,
+  keymap,
+  onKeymapChange,
+}: SettingsDialogProps) {
   const { i18n, t } = useTranslation();
   const [open, setOpen] = useState(false);
-  const [section, setSection] = useState<SettingsSection>("style");
+  const returnFocusRef = useRef(false);
+  useEffect(() => {
+    const openSettings = (event: Event) => {
+      returnFocusRef.current =
+        (event as CustomEvent<{ returnFocus?: boolean }>).detail?.returnFocus === true;
+      setOpen(true);
+    };
+    window.addEventListener("iris:open-settings", openSettings);
+    return () => window.removeEventListener("iris:open-settings", openSettings);
+  }, []);
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    setOpen(nextOpen);
+    if (!nextOpen) {
+      const shouldReturnFocus = returnFocusRef.current;
+      returnFocusRef.current = false;
+      if (shouldReturnFocus) window.dispatchEvent(new Event("iris:settings-closed"));
+    }
+  };
+  const [section, setSection] = useState<SettingsSection>("workspace");
 
   const sections: Array<{ id: SettingsSection; icon: typeof Code2; label: string }> = [
-    { id: "style", icon: Palette, label: t("settings.nav.style") },
+    { id: "workspace", icon: Palette, label: t("settings.nav.workspace") },
     { id: "editor", icon: Code2, label: t("settings.nav.editor") },
+    { id: "keyboard", icon: Keyboard, label: t("settings.nav.keyboard") },
     { id: "runtime", icon: Rocket, label: t("settings.nav.runtime") },
   ];
 
   return (
-    <Dialog.Root open={open} onOpenChange={setOpen}>
+    <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger asChild>
         <motion.button
           className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg border-0 bg-transparent p-0 text-iris-muted transition-[background-color,color,box-shadow] duration-150 hover:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] hover:text-iris-strong hover:shadow-[0_2px_8px_color-mix(in_srgb,var(--ink-strong)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
           type="button"
           aria-label={t("settings.open")}
           title={t("settings.open")}
+          onPointerDown={() => {
+            returnFocusRef.current = true;
+          }}
           whileTap={{ scale: 0.96 }}
         >
           <Settings width="14" height="14" />
@@ -61,6 +96,9 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
           <Dialog.Overlay className="glass-overlay settings-overlay fixed inset-0 z-50" />
           <Dialog.Content
             className={`theme-${settings.theme} glass-dialog fixed left-1/2 top-1/2 z-50 grid h-[min(78vh,560px)] w-[min(92vw,760px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[180px_minmax(0,1fr)] overflow-visible rounded-[14px] border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_24px_70px_rgba(38,49,41,0.22)] focus:outline-none max-[760px]:h-[min(86vh,680px)] max-[760px]:w-[min(94vw,560px)] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[auto_minmax(0,1fr)]`}
+            onCloseAutoFocus={(event) => {
+              if (returnFocusRef.current) event.preventDefault();
+            }}
           >
             <aside className="settings-sidebar-glass flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:flex-row max-[760px]:items-center max-[760px]:gap-1 max-[760px]:overflow-x-auto max-[760px]:border-b max-[760px]:border-r-0">
               <div className="mb-5 px-2 max-[760px]:mb-0 max-[760px]:mr-2 max-[760px]:shrink-0">
@@ -111,7 +149,7 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
               </div>
 
               <div className="min-h-0 flex-1 overflow-auto px-5 py-5 max-[760px]:px-4">
-                {section === "style" && (
+                {section === "workspace" && (
                   <div className="grid gap-4">
                     <SettingSelect
                       label={t("settings.language")}
@@ -160,6 +198,71 @@ export function SettingsPopover({ settings, onChange }: SettingsDialogProps) {
                       checked={settings.relativeLineNumbers}
                       onCheckedChange={(checked) => onChange("relativeLineNumbers", checked)}
                     />
+                    <SettingSelect
+                      label={t("settings.normalCursorStyle")}
+                      value={settings.normalCursorStyle}
+                      onChange={(value) =>
+                        onChange("normalCursorStyle", value as ProjectSettings["normalCursorStyle"])
+                      }
+                    >
+                      <option value="block">{t("settings.cursor.block")}</option>
+                      <option value="line">{t("settings.cursor.line")}</option>
+                      <option value="underline">{t("settings.cursor.underline")}</option>
+                      <option value="block-blink">{t("settings.cursor.blockBlink")}</option>
+                      <option value="line-blink">{t("settings.cursor.lineBlink")}</option>
+                      <option value="underline-blink">{t("settings.cursor.underlineBlink")}</option>
+                    </SettingSelect>
+                  </div>
+                )}
+
+                {section === "keyboard" && (
+                  <div className="grid gap-4">
+                    <SettingSwitch
+                      label={t("settings.vimMode")}
+                      description={t("settings.vimModeDescription")}
+                      checked={vimMode}
+                      onCheckedChange={onVimModeChange}
+                    />
+                    {KEYMAP_ACTIONS.map((action) => {
+                      const labelKey =
+                        action === "file.search"
+                          ? "settings.fileSearchKeymap"
+                          : action === "settings.open"
+                            ? "settings.openKeymap"
+                            : "settings.commandPaletteKeymap";
+                      const binding = keymap.find((item) => item.action === action)?.key ?? "";
+                      return (
+                        <label
+                          key={action}
+                          className="grid gap-2 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
+                        >
+                          {t(labelKey)}
+                          <input
+                            className="rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                            value={binding}
+                            readOnly
+                            onKeyDown={(event) => {
+                              if (event.key === "Tab" || event.key === "Escape") return;
+                              event.stopPropagation();
+                              const key = normalizeKey(event.nativeEvent);
+                              if (!key) return;
+                              event.preventDefault();
+                              onKeymapChange(
+                                KEYMAP_ACTIONS.map((item) => ({
+                                  action: item,
+                                  key:
+                                    item === action
+                                      ? key
+                                      : (keymap.find((candidate) => candidate.action === item)
+                                          ?.key ?? ""),
+                                })),
+                              );
+                            }}
+                            aria-label={t(labelKey)}
+                          />
+                        </label>
+                      );
+                    })}
                   </div>
                 )}
 

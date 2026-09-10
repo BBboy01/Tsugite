@@ -409,8 +409,56 @@
     }
   }
 
-  .cm-editor.cm-focused > .cm-scroller > .cm-cursorLayer {
+  .cm-editor.vim-normal[data-normal-cursor-style$="-blink"] .cm-vimCursorLayer {
     animation: iris-cursor-blink 1.2s ease-in-out infinite !important;
+  }
+
+  .cm-editor.vim-normal[data-normal-cursor-style="block"] .cm-cursor,
+  .cm-editor.vim-normal[data-normal-cursor-style="block-blink"] .cm-cursor {
+    width: 0.65em !important;
+    border: 0 !important;
+    background-color: var(--accent) !important;
+    opacity: 0.72;
+  }
+
+  body .cm-editor.vim-normal[data-normal-cursor-style="block"] .cm-fat-cursor,
+  body .cm-editor.vim-normal[data-normal-cursor-style="block-blink"] .cm-fat-cursor {
+    width: 0.65em !important;
+    overflow: hidden;
+    background-color: var(--accent) !important;
+    background: var(--accent) !important;
+    color: transparent !important;
+    border: 0 !important;
+    opacity: 0.72;
+  }
+
+  .cm-editor.vim-normal[data-normal-cursor-style="underline"] .cm-cursor,
+  .cm-editor.vim-normal[data-normal-cursor-style="underline-blink"] .cm-cursor {
+    width: 0.65em !important;
+    border: 0 !important;
+    border-bottom: 2px solid var(--accent) !important;
+  }
+
+  .cm-editor.vim-normal[data-normal-cursor-style="underline"] .cm-fat-cursor,
+  .cm-editor.vim-normal[data-normal-cursor-style="underline-blink"] .cm-fat-cursor {
+    width: 0.65em !important;
+    background-color: transparent !important;
+    color: transparent !important;
+    border-bottom: 2px solid var(--accent) !important;
+  }
+
+  .cm-editor.vim-normal[data-normal-cursor-style="line"] .cm-cursor,
+  .cm-editor.vim-normal[data-normal-cursor-style="line-blink"] .cm-cursor {
+    border: 0 !important;
+    border-left: 2px solid var(--accent) !important;
+  }
+
+  .cm-editor.vim-normal[data-normal-cursor-style="line"] .cm-fat-cursor,
+  .cm-editor.vim-normal[data-normal-cursor-style="line-blink"] .cm-fat-cursor {
+    width: 0 !important;
+    background-color: transparent !important;
+    color: transparent !important;
+    border-left: 2px solid var(--accent) !important;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -418,7 +466,7 @@
       animation: none;
     }
 
-    .cm-editor.cm-focused > .cm-scroller > .cm-cursorLayer {
+    .cm-editor.vim-normal[data-normal-cursor-style$="-blink"] .cm-vimCursorLayer {
       animation: none !important;
     }
   }

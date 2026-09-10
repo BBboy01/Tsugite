@@ -17,6 +17,202 @@ test.describe("room shell", () => {
     });
   });
 
+  test("opens file search from Vim normal mode", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
+    await page.goto(`/room/e2e-vim-search-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+P");
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("opens shared settings with Mod-comma", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-shortcut-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+,");
+    await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("opens the command palette and exposes extensible keymap actions", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open file" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Keyboard" }).click();
+    await expect(page.getByLabel("File search shortcut")).toHaveValue("Mod-P");
+    await expect(page.getByLabel("Open settings shortcut")).toHaveValue("Mod-,");
+    await expect(page.getByLabel("Command palette shortcut")).toHaveValue("Mod-K");
+  });
+
+  test("navigates command palette actions with Ctrl+J and Ctrl+K", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-navigation-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    await expect(page.getByRole("dialog")).toBeVisible();
+
+    await page.keyboard.press("Control+j");
+    await page.keyboard.press("Control+k");
+    await page.keyboard.press("Enter");
+
+    await expect(page.getByPlaceholder("Search files...")).toBeVisible();
+  });
+
+  test("highlights the command selected with keyboard navigation", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-highlight-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+
+    await page.keyboard.press("Control+j");
+    const selectedCommand = page.getByRole("button", { name: "Open settings" });
+    await expect
+      .poll(() => selectedCommand.evaluate((element) => getComputedStyle(element).backgroundColor))
+      .not.toBe("rgba(0, 0, 0, 0)");
+  });
+
+  test("scrolls the keyboard-selected command into view", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-scroll-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+
+    for (let index = 0; index < 10; index += 1) {
+      await page.keyboard.press("Control+j");
+    }
+
+    const commandList = page.getByRole("dialog").locator("div.overflow-y-auto");
+    const selectedCommand = page.getByRole("button", {
+      name: "Toggle start preview automatically · On",
+    });
+    await expect
+      .poll(() => commandList.evaluate((element) => element.scrollTop))
+      .toBeGreaterThan(0);
+    await expect(selectedCommand).toBeInViewport();
+  });
+
+  test("updates workspace settings from command palette actions", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-settings-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+
+    await expect(page.getByRole("button", { name: "Random theme" })).toBeVisible();
+    await page.getByRole("button", { name: "Random theme" }).click();
+    await expect(page.locator("main")).not.toHaveClass(/theme-paper/);
+    await expect(page.getByRole("button", { name: "Toggle word wrap · Off" })).toBeVisible();
+    await page.getByRole("button", { name: "Toggle word wrap · Off" }).click();
+    await expect(page.getByRole("button", { name: "Toggle word wrap · On" })).toBeVisible();
+
+    await page.getByRole("button", { name: "Choose theme" }).click();
+    await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
+    await page.getByRole("button", { name: "Dracula" }).click();
+    await expect(page.locator("main")).toHaveClass(/theme-dracula/);
+    await expect(page.getByRole("button", { name: "Choose theme" })).toBeVisible();
+  });
+
+  test("returns focus to the editor when the command palette is dismissed", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    await page.locator(".glass-overlay").click({ position: { x: 12, y: 12 } });
+    await expect(dialog).toBeHidden();
+    await expect
+      .poll(() =>
+        page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      )
+      .toBe(true);
+    await expect
+      .poll(() =>
+        page.locator(".cm-editor").evaluate((element) => element.classList.contains("cm-focused")),
+      )
+      .toBe(true);
+  });
+
+  test("uses the active workspace theme", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-theme-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("radio", { name: "Dracula" }).click();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+
+    const dialog = page.getByRole("dialog");
+    await expect(dialog).toBeVisible();
+    const colors = await dialog.evaluate((element) => ({
+      backgroundColor: getComputedStyle(element).backgroundColor,
+      color: getComputedStyle(element).color,
+      surface: getComputedStyle(element).getPropertyValue("--glass-popover").trim(),
+    }));
+    expect(colors).toEqual({
+      backgroundColor: "rgba(68, 71, 90, 0.9)",
+      color: "rgb(230, 230, 220)",
+      surface: "rgba(68, 71, 90, 0.9)",
+    });
+  });
+
+  test("returns focus to the editor after closing settings", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+,");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/);
+  });
+
+  test("returns focus after settings opened by its button", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-button-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+  });
+
+  test("returns focus to the editor after closing file search", async ({ page }) => {
+    await page.goto(`/room/e2e-search-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+P");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+  });
+
   test("loads the editor and supports collapsing the source tree", async ({ page }) => {
     await page.goto("/room/e2e", { waitUntil: "domcontentloaded" });
 
@@ -146,6 +342,37 @@ test.describe("room shell", () => {
     await relativeLineNumbersAfterEnable.click();
     await page.getByRole("button", { name: "Close settings" }).click();
     await expect.poll(readVisibleLineNumbers).toEqual(["1", "2", "3", "4", "5", "6", "7", "8"]);
+  });
+
+  test("applies the configured Vim normal cursor style", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
+    await page.goto(`/room/e2e-cursor-style-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Editor", exact: true }).click();
+    await page.getByLabel("Normal mode cursor").selectOption("block");
+    await page.getByRole("button", { name: "Close settings" }).click();
+    await expect(page.locator(".cm-editor.vim-normal")).toHaveAttribute(
+      "data-normal-cursor-style",
+      "block",
+    );
+    await expect
+      .poll(() =>
+        page
+          .locator(".cm-vimCursorLayer .cm-fat-cursor")
+          .evaluate((e) => getComputedStyle(e).backgroundColor),
+      )
+      .toBe("rgb(0, 122, 255)");
+  });
+
+  test("uses the workspace accent for the insert cursor", async ({ page }) => {
+    await page.goto(`/room/e2e-insert-cursor-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("i");
+    await expect
+      .poll(() => page.locator(".cm-cursor").evaluate((e) => getComputedStyle(e).borderLeftColor))
+      .toBe("rgb(0, 122, 255)");
   });
 
   test("keeps the line-number gutter opaque while scrolling long lines", async ({ page }) => {

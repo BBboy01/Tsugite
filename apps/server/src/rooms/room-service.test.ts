@@ -126,3 +126,46 @@ test("keeps the room document when the last member reconnects", () => {
   restoredDoc.import(reconnected.messages[1] as Uint8Array);
   expect(readSettings(restoredDoc).theme).toBe("dracula");
 });
+
+test("rejects identity changes on an already joined socket", () => {
+  const service = new RoomService();
+  const socket = createSocket();
+  expect(
+    service.join(socket.socket, "demo", {
+      type: "join",
+      userId: "one",
+      displayName: "Maya",
+      color: "#d88961",
+    }),
+  ).toBe(true);
+  expect(
+    service.join(socket.socket, "demo", {
+      type: "join",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+    }),
+  ).toBe(false);
+  expect(service.memberCount("demo")).toBe(1);
+});
+
+test("rejects malformed presence fields", () => {
+  const service = new RoomService();
+  const socket = createSocket();
+  service.join(socket.socket, "demo", {
+    type: "join",
+    userId: "one",
+    displayName: "Maya",
+    color: "#d88961",
+  });
+  expect(
+    service.presence(socket.socket, {
+      type: "presence",
+      userId: "one",
+      displayName: "Maya",
+      color: "#d88961",
+      selectedPath: [],
+      cursor: { anchor: 1.5, head: 2 },
+    }),
+  ).toBe(false);
+});

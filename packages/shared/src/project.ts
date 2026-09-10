@@ -29,6 +29,13 @@ export type ProjectSettings = {
   fontSize: number;
   wordWrap: boolean;
   relativeLineNumbers: boolean;
+  normalCursorStyle:
+    | "block"
+    | "line"
+    | "underline"
+    | "block-blink"
+    | "line-blink"
+    | "underline-blink";
   packageManager: PackageManager;
   autoInstall: boolean;
   autoStartPreview: boolean;
@@ -48,6 +55,7 @@ const DEFAULT_SETTINGS: ProjectSettings = {
   fontSize: 14,
   wordWrap: false,
   relativeLineNumbers: false,
+  normalCursorStyle: "block",
   packageManager: "pnpm",
   autoInstall: true,
   autoStartPreview: true,
@@ -211,6 +219,7 @@ export function createProjectDoc(): LoroDoc {
   settings.set("fontSize", DEFAULT_SETTINGS.fontSize);
   settings.set("wordWrap", DEFAULT_SETTINGS.wordWrap);
   settings.set("relativeLineNumbers", DEFAULT_SETTINGS.relativeLineNumbers);
+  settings.set("normalCursorStyle", DEFAULT_SETTINGS.normalCursorStyle);
   settings.set("packageManager", DEFAULT_SETTINGS.packageManager);
   settings.set("autoInstall", DEFAULT_SETTINGS.autoInstall);
   settings.set("autoStartPreview", DEFAULT_SETTINGS.autoStartPreview);
@@ -381,6 +390,14 @@ export function readSettings(doc: LoroDoc): ProjectSettings {
     fontSize: readFontSize(settings.get("fontSize")),
     wordWrap: settings.get("wordWrap") === true,
     relativeLineNumbers: settings.get("relativeLineNumbers") === true,
+    normalCursorStyle:
+      settings.get("normalCursorStyle") === "line" ||
+      settings.get("normalCursorStyle") === "underline" ||
+      settings.get("normalCursorStyle") === "block-blink" ||
+      settings.get("normalCursorStyle") === "line-blink" ||
+      settings.get("normalCursorStyle") === "underline-blink"
+        ? (settings.get("normalCursorStyle") as ProjectSettings["normalCursorStyle"])
+        : DEFAULT_SETTINGS.normalCursorStyle,
     packageManager: isPackageManager(packageManager)
       ? packageManager
       : DEFAULT_SETTINGS.packageManager,

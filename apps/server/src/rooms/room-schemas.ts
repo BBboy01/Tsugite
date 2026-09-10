@@ -49,16 +49,20 @@ export function isPresencePayload(value: unknown): value is PresencePayload {
   return (
     candidate.type === "presence" &&
     typeof candidate.userId === "string" &&
+    candidate.userId.length > 0 &&
+    candidate.userId.length <= 80 &&
     typeof candidate.displayName === "string" &&
+    candidate.displayName.trim().length > 0 &&
+    candidate.displayName.length <= 32 &&
     typeof candidate.color === "string" &&
     /^#[0-9a-fA-F]{6}$/.test(candidate.color) &&
     (candidate.selectedPath === undefined ||
       candidate.selectedPath === null ||
-      candidate.selectedPath.length <= 240) &&
+      (typeof candidate.selectedPath === "string" && candidate.selectedPath.length <= 240)) &&
     (candidate.cursor === undefined ||
       candidate.cursor === null ||
-      (Number.isFinite(candidate.cursor.anchor) &&
-        Number.isFinite(candidate.cursor.head) &&
+      (Number.isInteger(candidate.cursor.anchor) &&
+        Number.isInteger(candidate.cursor.head) &&
         candidate.cursor.anchor >= 0 &&
         candidate.cursor.head >= 0))
   );

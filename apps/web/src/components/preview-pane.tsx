@@ -3,7 +3,6 @@ import { RefreshCw } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import type { ProjectFile, ProjectSettings } from "@iris/shared";
 import type { PreviewOutput } from "../lib/preview-runner";
 import {
   type RuntimeError,
@@ -15,12 +14,8 @@ import { getLatestPreviewError } from "../lib/preview-error-model";
 import { PreviewConsole } from "./preview-console";
 import { PreviewError } from "./preview-error";
 import { PreviewLoader } from "./preview-loader";
-type PreviewPaneProps = {
-  file: ProjectFile;
-  files: ProjectFile[];
-  folders: string[];
-  settings: ProjectSettings;
-};
+import type { PreviewPaneProps } from "./preview-pane.types";
+import { getPreviewRunState, getRuntimeSettingsKey } from "../lib/preview-runtime-model";
 type WebContainerRuntimeInstance = import("../lib/webcontainer-runtime").WebContainerRuntime;
 export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps) {
   const { t } = useTranslation();
@@ -154,7 +149,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       };
       runtimeEventRef.current = onRuntimeEvent;
       timer = setTimeout(() => {
-        const runtimeSettingsKey = `${settings.packageManager}:${settings.autoInstall}:${settings.autoStartPreview}`;
+        const runtimeSettingsKey = getRuntimeSettingsKey(settings);
         if (!runtimeStartedRef.current) {
           runtimeStartedRef.current = true;
           lastRunKeyRef.current = runKey;
@@ -218,16 +213,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
     settings.autoStartPreview,
     settings.packageManager,
   ]);
-  const runState =
-    runtimeError || runtimeState === "error"
-      ? "error"
-      : runtimeState === "installing"
-        ? "installing"
-        : runtimeState === "starting"
-          ? "starting"
-          : runtimeState === "paused"
-            ? "paused"
-            : "idle";
+  const runState = getPreviewRunState(runtimeError, runtimeState);
   const headerLabel = previewUrl ?? t(`preview.${runState === "idle" ? "ready" : runState}`);
   const previewErrorMessage = previewBuildError
     ? (getLatestPreviewError(outputs) ?? previewBuildError)
