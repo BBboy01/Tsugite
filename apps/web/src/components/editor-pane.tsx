@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { basicSetup } from "codemirror";
 import {
@@ -11,16 +11,14 @@ import {
 } from "@codemirror/state";
 import { EditorView, GutterMarker, lineNumberMarkers } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
+import { vim } from "@replit/codemirror-vim";
 import { X } from "lucide-react";
-import type { LoroDoc } from "loro-crdt";
+import type { ProjectSettings } from "@iris/shared";
 
-import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
-
-import { getEditorTabLabels } from "../lib/editor-tabs";
+import { buildEditorTabViewModels } from "../lib/editor-tab-model";
 import { useEditorUndoManager } from "../lib/editor-undo";
 import { FileTypeIcon } from "../lib/file-icon";
 import { deferredLoroUndoKeymap, groupedLoroUndo } from "../lib/loro-undo-keymap";
-import { getFileCollaboratorCount } from "../lib/presence";
 import {
   getEditorLanguage,
   getEditorLanguageSupport,
@@ -33,6 +31,10 @@ import {
   updateRemotePresence,
 } from "../lib/remote-presence";
 import { getShikiTheme } from "../lib/workspace-theme";
+import { clampEditorSelection } from "../lib/editor-selection";
+import type { EditorPaneProps } from "./editor-pane.types";
+import { EditorTabs } from "./editor-tabs";
+import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
 
 class RelativeLineNumberMarker extends GutterMarker {
   constructor(private readonly number: string) {
@@ -51,9 +53,13 @@ class RelativeLineNumberMarker extends GutterMarker {
 const relativeLineNumberMarkers = StateField.define<RangeSet<GutterMarker>>({
   create: buildRelativeLineNumberMarkers,
   update(markers, transaction) {
-    return transaction.docChanged || transaction.selection
-      ? buildRelativeLineNumberMarkers(transaction.state)
-      : markers;
+    if (transaction.docChanged) return buildRelativeLineNumberMarkers(transaction.state);
+    if (!transaction.selection) return markers;
+    const previousLine = transaction.startState.doc.lineAt(
+      transaction.startState.selection.main.head,
+    ).number;
+    const nextLine = transaction.state.doc.lineAt(transaction.state.selection.main.head).number;
+    return previousLine === nextLine ? markers : buildRelativeLineNumberMarkers(transaction.state);
   },
   provide: (field) => lineNumberMarkers.from(field),
 });
@@ -72,26 +78,12 @@ function buildRelativeLineNumberMarkers(state: EditorState): RangeSet<GutterMark
   return markers.finish();
 }
 
-type EditorPaneProps = {
-  doc: LoroDoc;
-  file: ProjectFile;
-  tabs: ProjectFile[];
-  settings: ProjectSettings;
-  onSelectTab: (path: string) => void;
-  onCloseTab: (path: string) => void;
-  onCursorChange: (cursor: { anchor: number; head: number }) => void;
-  onLocalInteraction: () => void;
-  followedSelection: { anchor: number; head: number } | null;
-  isFollowing: boolean;
-  remoteMembers: readonly PresenceMember[];
-  currentUserId: string;
-};
-
 export function EditorPane({
   doc,
   file,
   tabs,
   settings,
+  vimMode,
   onSelectTab,
   onCloseTab,
   onCursorChange,
@@ -100,6 +92,7 @@ export function EditorPane({
   isFollowing,
   remoteMembers,
   currentUserId,
+  onEditorFocusReady,
 }: EditorPaneProps) {
   const { t } = useTranslation();
   const hostRef = useRef<HTMLDivElement>(null);
@@ -111,7 +104,11 @@ export function EditorPane({
   const localInteractionRef = useRef(onLocalInteraction);
   const followedSelectionRef = useRef(followedSelection);
   const undoManager = useEditorUndoManager(doc, file.id);
-  const tabLabels = getEditorTabLabels(tabs.map((tab) => tab.path));
+  const [vimStatus, setVimStatus] = useState("NORMAL");
+  const tabViewModels = useMemo(
+    () => buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
+    [tabs, file.path, remoteMembers, currentUserId],
+  );
   cursorChangeRef.current = onCursorChange;
   localInteractionRef.current = onLocalInteraction;
   followedSelectionRef.current = followedSelection;
@@ -124,6 +121,8 @@ export function EditorPane({
     let disposed = false;
     let view: EditorView | undefined;
     let relativeLineNumbersCompartment: Compartment | undefined;
+    let detachVimStatus: () => void = () => undefined;
+    let detachVimCursorStyle: () => void = () => undefined;
     const setupEditor = async () => {
       const source = file.text.toString();
       const language = getEditorLanguage(file.path, file.language);
@@ -146,6 +145,7 @@ export function EditorPane({
         state: EditorState.create({
           doc: source,
           extensions: [
+            ...(vimMode ? [vim()] : []),
             basicSetup,
             relativeLineNumbersCompartment.of(
               relativeLineNumbersRef.current ? relativeLineNumberMarkers : [],
@@ -186,6 +186,15 @@ export function EditorPane({
         parent: hostRef.current,
       });
       viewRef.current = view;
+      const editorView = view;
+      editorView.dom.dataset.normalCursorStyle = settings.normalCursorStyle;
+      detachVimCursorStyle = vimMode
+        ? attachVimCursorStyle(editorView, settings.normalCursorStyle)
+        : () => undefined;
+      onEditorFocusReady?.(() => editorView.focus());
+      if (vimMode) {
+        detachVimStatus = attachVimStatus(editorView, setVimStatus);
+      }
       updateRemotePresence(
         view,
         getRemoteSelections(
@@ -197,8 +206,7 @@ export function EditorPane({
       );
       const selection = followedSelectionRef.current;
       if (selection) {
-        const anchor = Math.max(0, Math.min(selection.anchor, view.state.doc.length));
-        const head = Math.max(0, Math.min(selection.head, view.state.doc.length));
+        const { anchor, head } = clampEditorSelection(selection, view.state.doc.length);
         view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
       }
     };
@@ -207,6 +215,10 @@ export function EditorPane({
 
     return () => {
       disposed = true;
+      onEditorFocusReady?.(() => undefined);
+      detachVimStatus();
+      detachVimCursorStyle();
+      view?.dom.removeAttribute("data-normal-cursor-style");
       view?.destroy();
       if (viewRef.current === view) viewRef.current = null;
       if (relativeLineNumbersCompartmentRef.current === relativeLineNumbersCompartment) {
@@ -222,6 +234,8 @@ export function EditorPane({
     settings.fontSize,
     settings.theme,
     settings.wordWrap,
+    settings.normalCursorStyle,
+    vimMode,
     undoManager,
   ]);
 
@@ -249,8 +263,7 @@ export function EditorPane({
   useEffect(() => {
     const view = viewRef.current;
     if (!view || !followedSelection) return;
-    const anchor = Math.max(0, Math.min(followedSelection.anchor, view.state.doc.length));
-    const head = Math.max(0, Math.min(followedSelection.head, view.state.doc.length));
+    const { anchor, head } = clampEditorSelection(followedSelection, view.state.doc.length);
     const currentSelection = view.state.selection.main;
     if (currentSelection.anchor === anchor && currentSelection.head === head) return;
     view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
@@ -261,77 +274,63 @@ export function EditorPane({
       className="flex min-w-0 min-h-0 flex-1 flex-col bg-[var(--editor-surface)]"
       aria-label={t("files.editing", { path: file.path })}
     >
-      <div className="editor-toolbar glass-toolbar flex h-12 min-w-0 flex-none items-center px-4 max-[760px]:h-11 max-[760px]:px-3">
-        <div
-          className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-          role="tablist"
-          aria-label={t("editor.openFiles")}
-        >
-          <div className="flex min-w-max items-center gap-1">
-            {tabs.map((tab, index) => {
-              const active = tab.path === file.path;
-              const collaboratorCount = getFileCollaboratorCount(
-                remoteMembers,
-                currentUserId,
-                tab.path,
-              );
-              return (
-                <div
-                  className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
-                    active
-                      ? "bg-[color-mix(in_srgb,var(--accent)_18%,var(--editor-surface))] text-iris-ink shadow-[0_1px_2px_rgba(75,67,45,0.06)]"
-                      : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
-                  }`}
-                  key={tab.id}
-                >
-                  <button
-                    className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit transition-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] max-[760px]:max-w-[180px] max-[760px]:px-2"
-                    type="button"
-                    role="tab"
-                    aria-selected={active}
-                    aria-label={
-                      collaboratorCount > 0
-                        ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`
-                        : tab.path
-                    }
-                    title={tab.path}
-                    onClick={() => onSelectTab(tab.path)}
+      <EditorTabs label={t("editor.openFiles")}>
+        {tabViewModels.map(({ file: tab, label, active, collaboratorCount }) => {
+          return (
+            <div
+              className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
+                active
+                  ? "bg-[color-mix(in_srgb,var(--accent)_18%,var(--editor-surface))] text-iris-ink shadow-[0_1px_2px_rgba(75,67,45,0.06)]"
+                  : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
+              }`}
+              key={tab.id}
+            >
+              <button
+                className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit transition-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] max-[760px]:max-w-[180px] max-[760px]:px-2"
+                type="button"
+                role="tab"
+                aria-selected={active}
+                aria-label={
+                  collaboratorCount > 0
+                    ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`
+                    : tab.path
+                }
+                title={tab.path}
+                onClick={() => onSelectTab(tab.path)}
+              >
+                <FileTypeIcon
+                  path={tab.path}
+                  className="shrink-0 text-[var(--accent)]"
+                  width="12"
+                  height="12"
+                />
+                <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
+                  {label}
+                </span>
+                {collaboratorCount > 0 && (
+                  <span
+                    className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] px-1 font-iris-mono text-[9px] leading-none text-[var(--accent-deep)]"
+                    data-collaborator-badge={tab.path}
+                    title={t("editor.collaboratorsInFile", { count: collaboratorCount })}
+                    aria-hidden="true"
                   >
-                    <FileTypeIcon
-                      path={tab.path}
-                      className="shrink-0 text-[var(--accent)]"
-                      width="12"
-                      height="12"
-                    />
-                    <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
-                      {tabLabels[index]}
-                    </span>
-                    {collaboratorCount > 0 && (
-                      <span
-                        className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] px-1 font-iris-mono text-[9px] leading-none text-[var(--accent-deep)]"
-                        data-collaborator-badge={tab.path}
-                        title={t("editor.collaboratorsInFile", { count: collaboratorCount })}
-                        aria-hidden="true"
-                      >
-                        +{collaboratorCount}
-                      </span>
-                    )}
-                  </button>
-                  <button
-                    className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
-                    type="button"
-                    aria-label={t("editor.closeFile", { path: tab.path })}
-                    title={t("editor.closeFile", { path: tab.path })}
-                    onClick={() => onCloseTab(tab.path)}
-                  >
-                    <X width="13" height="13" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
+                    +{collaboratorCount}
+                  </span>
+                )}
+              </button>
+              <button
+                className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                type="button"
+                aria-label={t("editor.closeFile", { path: tab.path })}
+                title={t("editor.closeFile", { path: tab.path })}
+                onClick={() => onCloseTab(tab.path)}
+              >
+                <X width="13" height="13" />
+              </button>
+            </div>
+          );
+        })}
+      </EditorTabs>
       <div className="relative min-h-0 flex-1">
         <div className="h-full min-h-0 [&_.cm-editor]:h-full" ref={hostRef} />
         {isFollowing && (
@@ -349,6 +348,14 @@ export function EditorPane({
           />
         )}
       </div>
+      {vimMode && (
+        <div
+          className="flex h-6 flex-none items-center border-t border-iris-divider px-3 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
+          data-vim-mode={vimStatus.toLowerCase()}
+        >
+          {vimStatus}
+        </div>
+      )}
     </section>
   );
 }
@@ -430,8 +437,8 @@ function editorTheme(settings: ProjectSettings) {
       color: "var(--ink-strong)",
     },
     ".cm-cursor, .cm-dropCursor": {
-      borderLeft: "2px solid var(--accent)",
       marginLeft: "-1px",
+      borderLeft: "1px solid var(--accent) !important",
     },
     ".cm-content": {
       caretColor: "var(--accent)",

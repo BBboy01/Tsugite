@@ -1,14 +1,8 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
+import { detectLanguage, languageOptions } from "./i18n-config";
 
-export const languageOptions = [
-  { code: "en", label: "English" },
-  { code: "zh-CN", label: "简体中文" },
-  { code: "zh-TW", label: "繁體中文" },
-  { code: "ja", label: "日本語" },
-] as const;
-
-export type LanguageCode = (typeof languageOptions)[number]["code"];
+export { languageOptions, type LanguageCode } from "./i18n-config";
 
 const resources = {
   en: {
@@ -86,13 +80,46 @@ const resources = {
       "settings.relativeLineNumbers": "Relative line numbers",
       "settings.relativeLineNumbersDescription":
         "Show the current line number and relative distances for other lines.",
+      "settings.normalCursorStyle": "Normal mode cursor",
+      "settings.cursor.block": "Block",
+      "settings.cursor.line": "Thin line",
+      "settings.cursor.underline": "Underline",
+      "settings.cursor.blockBlink": "Blinking block",
+      "settings.cursor.lineBlink": "Blinking line",
+      "settings.cursor.underlineBlink": "Blinking underline",
+      "settings.vimMode": "Vim mode",
+      "settings.vimModeDescription": "Use Vim keyboard modes and commands in the editor.",
       "settings.language": "Language",
       "settings.close": "Close settings",
+      "files.searchTitle": "Open file",
+      "files.searchPlaceholder": "Search files...",
+      "files.searchEmpty": "No files found",
+      "settings.fileSearchKeymap": "File search shortcut",
+      "settings.openKeymap": "Open settings shortcut",
+      "settings.commandPaletteKeymap": "Command palette shortcut",
+      "command.title": "Command palette",
+      "command.placeholder": "Search commands...",
+      "command.fileSearch": "Open file",
+      "command.openSettings": "Open settings",
+      "command.toggle": "Toggle {{label}}",
+      "command.state.on": "On",
+      "command.state.off": "Off",
+      "command.chooseTheme": "Choose theme",
+      "command.chooseNormalCursor": "Choose normal cursor",
+      "command.choosePackageManager": "Choose package manager",
+      "command.back": "Back",
+      "command.empty": "No matching commands",
+      "settings.nav.workspace": "Workspace",
+      "settings.nav.keyboard": "Keyboard",
       "settings.nav.style": "Style",
       "settings.nav.editor": "Editor",
       "settings.nav.runtime": "Runtime",
       "settings.section.style.title": "Style",
       "settings.section.style.description": "Tune the shared visual language of this room.",
+      "settings.section.workspace.title": "Workspace",
+      "settings.section.workspace.description": "Set the language and visual theme for this room.",
+      "settings.section.keyboard.title": "Keyboard",
+      "settings.section.keyboard.description": "Configure Vim behavior and editor shortcuts.",
       "settings.section.editor.title": "Editor",
       "settings.section.editor.description": "Choose the shared code editing preferences.",
       "settings.section.runtime.title": "Runtime",
@@ -227,13 +254,39 @@ const resources = {
       "settings.wordWrapDescription": "将超出编辑器宽度的长行自动换行。",
       "settings.relativeLineNumbers": "相对行号",
       "settings.relativeLineNumbersDescription": "当前行显示真实行号，其他行显示与当前行的距离。",
+      "settings.vimMode": "Vim 模式",
+      "settings.vimModeDescription": "在编辑器中使用 Vim 的键盘模式和命令。",
       "settings.language": "语言",
       "settings.close": "关闭设置",
+      "files.searchTitle": "打开文件",
+      "files.searchPlaceholder": "搜索文件...",
+      "files.searchEmpty": "未找到文件",
+      "settings.fileSearchKeymap": "文件搜索快捷键",
+      "settings.openKeymap": "打开设置快捷键",
+      "settings.commandPaletteKeymap": "命令面板快捷键",
+      "command.title": "命令面板",
+      "command.placeholder": "搜索命令...",
+      "command.fileSearch": "打开文件",
+      "command.openSettings": "打开设置",
+      "command.toggle": "切换{{label}}",
+      "command.state.on": "开启",
+      "command.state.off": "关闭",
+      "command.chooseTheme": "选择主题",
+      "command.chooseNormalCursor": "选择普通模式光标",
+      "command.choosePackageManager": "选择包管理器",
+      "command.back": "返回",
+      "command.empty": "没有匹配的命令",
+      "settings.nav.workspace": "工作区",
+      "settings.nav.keyboard": "键盘",
       "settings.nav.style": "样式",
       "settings.nav.editor": "编辑器",
       "settings.nav.runtime": "运行时",
       "settings.section.style.title": "样式",
       "settings.section.style.description": "调整当前房间共享的视觉风格。",
+      "settings.section.workspace.title": "工作区",
+      "settings.section.workspace.description": "设置当前房间的语言和视觉主题。",
+      "settings.section.keyboard.title": "键盘",
+      "settings.section.keyboard.description": "配置 Vim 行为和编辑器快捷键。",
       "settings.section.editor.title": "编辑器",
       "settings.section.editor.description": "选择共享的代码编辑偏好。",
       "settings.section.runtime.title": "运行时",
@@ -574,17 +627,6 @@ const resources = {
     },
   },
 } as const;
-
-function detectLanguage(): LanguageCode {
-  if (typeof window === "undefined") return "en";
-  const stored = window.localStorage.getItem("iris.language");
-  if (languageOptions.some((option) => option.code === stored)) return stored as LanguageCode;
-  const browserLanguage = navigator.language.toLowerCase();
-  if (browserLanguage.startsWith("zh-tw") || browserLanguage.startsWith("zh-hk")) return "zh-TW";
-  if (browserLanguage.startsWith("zh")) return "zh-CN";
-  if (browserLanguage.startsWith("ja")) return "ja";
-  return "en";
-}
 
 function syncLanguageMetadata(language: string): void {
   if (typeof document !== "undefined") document.documentElement.lang = language;

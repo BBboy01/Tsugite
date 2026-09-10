@@ -30,14 +30,14 @@ export function PresenceStack({
 
   return (
     <div className="flex items-center gap-6 max-[1000px]:gap-3">
-      <div className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center gap-2 font-iris-mono text-[11px] uppercase tracking-[0.04em] text-iris-muted">
+      <div className="absolute left-1/2 top-1/2 flex max-w-[42%] -translate-x-1/2 -translate-y-1/2 items-center gap-2 overflow-hidden font-iris-mono text-[11px] uppercase tracking-[0.04em] text-iris-muted max-[760px]:max-w-[34%] max-[420px]:gap-0">
         <span
           className="live-dot inline-block h-[7px] w-[7px] shrink-0 rounded-full"
           data-status={status}
           title={statusLabel}
           aria-label={statusLabel}
         />
-        <span className="status-label" data-status={status}>
+        <span className="status-label truncate max-[420px]:hidden" data-status={status}>
           {statusLabel}
         </span>
         <span className="max-[760px]:hidden">/</span>

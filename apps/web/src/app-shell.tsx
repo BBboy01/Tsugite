@@ -27,6 +27,9 @@ import type { FileTreeTarget } from "./components/file-tree";
 import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
 import { WorkspaceLayout } from "./components/workspace-layout";
+import { FileFuzzySearchDialog } from "./components/file-fuzzy-search-dialog";
+import { CommandPalette } from "./components/command-palette";
+import { matchesKeyBinding, readKeymap, writeKeymap, type KeyBinding } from "./lib/keymap";
 import { closeEditorTab, openEditorTab } from "./lib/editor-tabs";
 import { WORKSPACE_CHANGE_ORIGIN } from "./lib/editor-undo";
 import { isDarkWorkspaceTheme } from "./lib/workspace-theme";
@@ -43,21 +46,35 @@ type AppShellProps = {
 export function AppShell({ roomId }: AppShellProps) {
   const { t } = useTranslation();
   const [client] = useState(() => new RoomClient({ roomId, identity: getIdentity() }));
-  const [revision, setRevision] = useState(0);
+  const [documentRevision, setDocumentRevision] = useState(0);
+  const [presenceRevision, setPresenceRevision] = useState(0);
   const [selectedPath, setSelectedPath] = useState("src/main.tsx");
   const [openTabPaths, setOpenTabPaths] = useState(["src/main.tsx"]);
   const [followingUserId, setFollowingUserId] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel | null>(null);
+  const [vimMode, setVimMode] = useState(
+    () =>
+      typeof window !== "undefined" && window.localStorage.getItem("tsugite.vim-mode") === "true",
+  );
+  const [fileSearchOpen, setFileSearchOpen] = useState(false);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [keymap, setKeymap] = useState<KeyBinding[]>(() => readKeymap());
   const presenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousFilePathsRef = useRef(new Map<string, string>());
+  const editorFocusRef = useRef<() => void>(() => undefined);
 
   useEffect(() => {
     if (disconnectTimer.current) {
       clearTimeout(disconnectTimer.current);
       disconnectTimer.current = null;
     }
-    const unsubscribe = client.subscribe(() => setRevision((value) => value + 1));
+    const unsubscribe = client.subscribe((event) => {
+      if (event.type === "document") setDocumentRevision((value) => value + 1);
+      else if (event.type === "presence" || event.type === "status") {
+        setPresenceRevision((value) => value + 1);
+      }
+    });
     client.connect();
     return () => {
       unsubscribe();
@@ -69,13 +86,16 @@ export function AppShell({ roomId }: AppShellProps) {
     };
   }, [client]);
 
-  const files = useMemo(() => listFiles(client.doc), [client, revision]);
-  const folders = useMemo(() => listFolders(client.doc), [client, revision]);
-  const settings = useMemo(() => readSettings(client.doc), [client, revision]);
-  const selectedFile = selectedPath ? getFileByPath(client.doc, selectedPath) : undefined;
+  const files = useMemo(() => listFiles(client.doc), [client, documentRevision]);
+  const folders = useMemo(() => listFolders(client.doc), [client, documentRevision]);
+  const settings = useMemo(() => readSettings(client.doc), [client, documentRevision]);
+  const selectedFile = useMemo(
+    () => (selectedPath ? getFileByPath(client.doc, selectedPath) : undefined),
+    [client, selectedPath, documentRevision],
+  );
   const openFiles = useMemo(
     () => openTabPaths.map((path) => getFileByPath(client.doc, path)).filter(Boolean),
-    [client, openTabPaths, revision],
+    [client, openTabPaths, documentRevision],
   ) as ProjectFile[];
 
   useEffect(() => {
@@ -131,7 +151,7 @@ export function AppShell({ roomId }: AppShellProps) {
       followingUserId
         ? client.members.find((member) => member.userId === followingUserId)
         : undefined,
-    [client, followingUserId, revision],
+    [client, followingUserId, presenceRevision],
   );
   const followedSelection = useMemo(
     () =>
@@ -149,7 +169,7 @@ export function AppShell({ roomId }: AppShellProps) {
     if (member.selectedPath && member.selectedPath !== selectedPath) {
       selectFile(member.selectedPath);
     }
-  }, [client, followingUserId, revision, selectedPath, selectFile]);
+  }, [client, followingUserId, presenceRevision, selectedPath, selectFile]);
 
   const handleFollowMember = (userId: string) => {
     if (userId === client.identity.userId) return;
@@ -178,6 +198,56 @@ export function AppShell({ roomId }: AppShellProps) {
     setSharedSetting(client.doc, key, value);
     client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
   };
+
+  const updateVimMode = (enabled: boolean) => {
+    setVimMode(enabled);
+    window.localStorage.setItem("tsugite.vim-mode", String(enabled));
+  };
+  const updateKeymap = (bindings: KeyBinding[]) => {
+    setKeymap(bindings);
+    writeKeymap(bindings);
+  };
+  const handleEditorFocusReady = useCallback((focus: () => void) => {
+    editorFocusRef.current = focus;
+  }, []);
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.matches("input, textarea")) {
+        return;
+      }
+      if (matchesKeyBinding(event, "Mod-,")) {
+        event.preventDefault();
+        window.dispatchEvent(
+          new CustomEvent("iris:open-settings", {
+            detail: { returnFocus: true },
+          }),
+        );
+        return;
+      }
+      const commandBinding = keymap.find((candidate) => candidate.action === "command.palette");
+      if (commandBinding && matchesKeyBinding(event, commandBinding.key)) {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+        return;
+      }
+      const binding = keymap.find((candidate) => candidate.action === "file.search");
+      if (binding && matchesKeyBinding(event, binding.key)) {
+        event.preventDefault();
+        setFileSearchOpen(true);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown, true);
+    return () => window.removeEventListener("keydown", handleKeyDown, true);
+  }, [keymap]);
+
+  useEffect(() => {
+    const focusEditor = () =>
+      requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current()));
+    window.addEventListener("iris:settings-closed", focusEditor);
+    return () => window.removeEventListener("iris:settings-closed", focusEditor);
+  }, []);
 
   const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
     try {
@@ -325,6 +395,22 @@ export function AppShell({ roomId }: AppShellProps) {
           onOpenFiles={() => toggleMobilePanel("files")}
           onOpenPreview={() => toggleMobilePanel("preview")}
         />
+        <CommandPalette
+          open={commandPaletteOpen}
+          settings={settings}
+          vimMode={vimMode}
+          onOpenChange={setCommandPaletteOpen}
+          onSettingChange={updateSharedSetting}
+          onVimModeChange={updateVimMode}
+          onCloseAutoFocus={() => editorFocusRef.current()}
+          onSelect={(action) => {
+            if (action === "file.search") setFileSearchOpen(true);
+            if (action === "settings.open")
+              window.dispatchEvent(
+                new CustomEvent("iris:open-settings", { detail: { returnFocus: true } }),
+              );
+          }}
+        />
 
         <WorkspaceLayout
           files={
@@ -349,6 +435,22 @@ export function AppShell({ roomId }: AppShellProps) {
                 onColorChange={handleColorChange}
                 settings={settings}
                 onSettingChange={updateSharedSetting}
+                vimMode={vimMode}
+                onVimModeChange={updateVimMode}
+                keymap={keymap}
+                onKeymapChange={updateKeymap}
+              />
+              <FileFuzzySearchDialog
+                open={fileSearchOpen}
+                files={files}
+                theme={settings.theme}
+                onOpenChange={(open) => {
+                  setFileSearchOpen(open);
+                  if (!open) requestAnimationFrame(() => editorFocusRef.current());
+                }}
+                onSelect={(path) => {
+                  activateFile(path);
+                }}
               />
             </div>
           }
@@ -360,6 +462,7 @@ export function AppShell({ roomId }: AppShellProps) {
                   file={selectedFile}
                   tabs={openFiles}
                   settings={settings}
+                  vimMode={vimMode}
                   onSelectTab={activateFile}
                   onCloseTab={handleCloseTab}
                   onCursorChange={handleCursorChange}
@@ -368,6 +471,7 @@ export function AppShell({ roomId }: AppShellProps) {
                   isFollowing={Boolean(followingUserId)}
                   remoteMembers={client.members}
                   currentUserId={client.identity.userId}
+                  onEditorFocusReady={handleEditorFocusReady}
                 />
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center font-iris-mono text-xs leading-6 text-iris-muted">

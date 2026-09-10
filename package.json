@@ -38,6 +38,7 @@
     "@radix-ui/react-dialog": "^1.1.23",
     "@radix-ui/themes": "^3.3.0",
     "@react-symbols/icons": "^1.4.1",
+    "@replit/codemirror-vim": "^6.4.0",
     "@shikijs/langs": "4.4.3",
     "@shikijs/themes": "4.4.3",
     "@typescript/vfs": "^1.6.4",

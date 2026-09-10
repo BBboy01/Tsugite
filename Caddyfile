@@ -1,6 +1,10 @@
 :80 {
 	root * /srv
 	encode gzip
+	header {
+		Cross-Origin-Opener-Policy "same-origin"
+		Cross-Origin-Embedder-Policy "require-corp"
+	}
 
 	handle /ws/* {
 		reverse_proxy server:3001

@@ -4,6 +4,8 @@ A small multiplayer code editor built with Bun, React, Elysia, CodeMirror 6, and
 
 Tsugite connects collaborators through shared code, files, themes, fonts, and live previews. Each new multiplayer room starts with a shared React + TypeScript + Vite + Tailwind CSS project. All starter files are stored in the room's Loro document, so collaborators can edit the app together and preview it through WebContainer.
 
+See [docs/architecture.md](docs/architecture.md) for the runtime boundaries and update flow.
+
 ## Development
 
 Install dependencies and start the two local processes:

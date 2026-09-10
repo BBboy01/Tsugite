@@ -38,6 +38,10 @@ export class RoomService {
 
   join(socket: RoomSocket, roomId: string, message: unknown): boolean {
     if (!isJoinPayload(message)) return false;
+    const boundClient = this.clients.get(socket);
+    if (boundClient) {
+      return boundClient.roomId === roomId && boundClient.presence.userId === message.userId;
+    }
 
     const room = this.getOrCreate(roomId);
     const presence: PresenceMember = {
