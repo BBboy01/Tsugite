@@ -1,11 +1,10 @@
 # Contributing to Tsugite
 
-## Development
+Tsugite uses Bun, React, Elysia, CodeMirror, and Loro CRDT. Start with the [development guide](docs/development.md) for the local environment and repository layout.
 
-Tsugite uses Bun. Install dependencies with `bun install`, then run the web and
-server processes with `bun run dev:web` and `bun run dev:server`.
+## Before opening a pull request
 
-Before opening a pull request, run:
+Run the checks relevant to the change. The available quality checks are:
 
 ```bash
 bun run test
@@ -16,43 +15,39 @@ bun run build
 bun run test:e2e
 ```
 
+Use focused checks while iterating. For documentation-only changes, check formatting, links, and accuracy against the implementation. For application changes, include the relevant unit and browser tests. Playwright automatically starts the web and server processes, or reuses running local instances.
+
 ## Commit messages
 
-Every commit must follow [Conventional Commits](https://www.conventionalcommits.org/):
+Use [Conventional Commits](https://www.conventionalcommits.org/):
 
 ```text
 <type>[optional scope]: <description>
 ```
 
-Use one of these types:
-
-`build`, `chore`, `ci`, `docs`, `feat`, `fix`, `license`, `meta`, `perf`,
-`refactor`, `revert`, `style`, or `test`.
+Allowed types are `build`, `chore`, `ci`, `docs`, `feat`, `fix`, `license`, `meta`, `perf`, `refactor`, `revert`, `style`, and `test`.
 
 Examples:
 
 ```text
 feat(editor): add shared selection colors
-fix(room): keep the document after reconnect
-ci: run Bun checks on pull requests
+fix(room): preserve the document after reconnect
+docs: clarify Docker deployment
 ```
 
-The local commit hook is installed by `bun install`. Its `pre-commit` step runs
-`lint-staged` on staged source and configuration files, while `commit-msg`
-enforces the commit format. Hooks can be bypassed for an intentional exception
-with `git commit --no-verify`; pull requests are still checked by GitHub
-Actions.
+`bun install` installs local hooks. The pre-commit hook runs staged-file checks and the commit-msg hook validates the commit subject. Use `--no-verify` only for an intentional, documented exception.
 
-## Releases
+## Pull requests
 
-Create and push a semantic version tag from `main`:
+Keep a pull request focused and describe the user-visible behavior, affected runtime boundaries, and verification performed. Include a regression test for bug fixes and screenshots or recordings for visual changes when useful.
+
+## Releases and dependencies
+
+Release tags must match the version in `package.json`:
 
 ```bash
 git tag -a v0.2.0 -m "v0.2.0"
 git push origin v0.2.0
 ```
 
-The release workflow uses git-cliff to generate notes from the commits since
-the previous `v*` tag and publishes them as a GitHub Release. Renovate opens
-dependency update pull requests on its weekly schedule; review and merge them
-through the normal CI and commitlint checks.
+The release workflow validates the tag, runs tests and build checks, publishes the web artifact, and creates a GitHub Release. Renovate opens dependency update pull requests on its configured schedule; review them through the normal CI and commitlint checks.
