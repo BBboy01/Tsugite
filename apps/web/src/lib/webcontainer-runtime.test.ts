@@ -35,12 +35,13 @@ function fakeProcess(exitCode = 0): RuntimeProcess {
 }
 
 function fakeContainer(readyUrl = "http://localhost:4173") {
-  const events = new Map<string, (port: number, url: string) => void>();
+  const events = new Map<string, unknown>();
   const calls = {
     mount: [] as unknown[],
     spawn: [] as string[][],
     writes: [] as string[],
     removes: [] as string[],
+    teardown: 0,
   };
   const container: RuntimeContainer = {
     fs: {
@@ -59,16 +60,31 @@ function fakeContainer(readyUrl = "http://localhost:4173") {
     },
     async spawn(command, args) {
       calls.spawn.push([command, ...args]);
-      if (args[0] === "run") queueMicrotask(() => events.get("server-ready")?.(4173, readyUrl));
+      if (args[0] === "run") {
+        queueMicrotask(() =>
+          (events.get("server-ready") as ((port: number, url: string) => void) | undefined)?.(
+            4173,
+            readyUrl,
+          ),
+        );
+      }
       return fakeProcess();
     },
     on(event, listener) {
       events.set(event, listener);
       return () => events.delete(event);
     },
-    teardown() {},
+    teardown() {
+      calls.teardown += 1;
+    },
   };
-  return { container, calls };
+  return {
+    container,
+    calls,
+    emitError(error: Error) {
+      (events.get("error") as ((error: Error) => void) | undefined)?.(error);
+    },
+  };
 }
 
 const npmSettings: RuntimeSettings = {
@@ -104,6 +120,20 @@ test("starts pnpm project and emits ready after server-ready", async () => {
     "state",
   ]);
   expect(events.at(-1)).toEqual({ type: "state", state: "ready" });
+});
+
+test("forwards preview errors that occur after the server is ready", async () => {
+  const fake = fakeContainer();
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const events: RuntimeEvent[] = [];
+
+  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
+    events.push(event),
+  );
+  fake.emitError(new Error("Unexpected token"));
+
+  expect(events.at(-2)).toEqual({ type: "output", level: "error", message: "Unexpected token" });
+  expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "start-failed" });
 });
 
 test("syncs changed and removed files without remounting", async () => {
@@ -165,6 +195,19 @@ test("can skip automatic install and preview startup until a manual run", async 
 
   await runtime.restart(files, [], () => {}, settings, { forceStart: true });
   expect(fake.calls.spawn).toEqual([["pnpm", "run", "dev"]]);
+});
+
+test("restarts the preview process without tearing down the WebContainer", async () => {
+  const fake = fakeContainer();
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const files = [projectFile("package.json", '{"scripts":{"dev":"vite"}}')];
+
+  await runtime.start(files, [], () => {}, npmSettings);
+  await runtime.restart(files, [], () => {}, npmSettings);
+
+  expect(fake.calls.mount).toHaveLength(2);
+  expect(fake.calls.spawn).toHaveLength(4);
+  expect(fake.calls.teardown).toBe(0);
 });
 
 test("recognizes storage partitioning failures from WebContainer", () => {

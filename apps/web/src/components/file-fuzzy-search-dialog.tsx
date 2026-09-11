@@ -1,5 +1,5 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { FileCode2, X } from "lucide-react";
+import { FileCode2 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -68,10 +68,10 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 } else if (event.key === "Enter") {
                   event.preventDefault();
                   choose();
-                } else if (event.ctrlKey && (event.key === "j" || event.key === "k")) {
+                } else if (event.ctrlKey && (event.key === "n" || event.key === "p")) {
                   event.preventDefault();
                   setSelected((value) =>
-                    event.key === "j"
+                    event.key === "n"
                       ? Math.min(value + 1, matches.length - 1)
                       : Math.max(value - 1, 0),
                   );
@@ -82,15 +82,6 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
               autoComplete="off"
               spellCheck={false}
             />
-            <Dialog.Close asChild>
-              <button
-                type="button"
-                className="grid h-6 w-6 place-items-center rounded-md border-0 bg-transparent text-iris-muted hover:text-iris-strong"
-                aria-label={t("dialog.close")}
-              >
-                <X width="14" height="14" />
-              </button>
-            </Dialog.Close>
           </div>
           <div className="max-h-[min(52vh,360px)] overflow-auto p-2">
             {matches.map((file, index) => (

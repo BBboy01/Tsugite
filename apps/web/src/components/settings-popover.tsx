@@ -1,8 +1,8 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Code2, Keyboard, Palette, Rocket, Settings, X } from "lucide-react";
+import { ChevronDown, Code2, Keyboard, Palette, Rocket, Settings, X } from "lucide-react";
 import { IconButton, Switch, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { PackageManager, ProjectSettings } from "@iris/shared";
@@ -10,6 +10,8 @@ import { KEYMAP_ACTIONS, normalizeKey, type KeyBinding } from "../lib/keymap";
 
 import { languageOptions, type LanguageCode } from "../lib/i18n";
 import { isDarkWorkspaceTheme } from "../lib/workspace-theme";
+import { dispatchRuntimeAction, RUNTIME_ACTIONS, type RuntimeAction } from "../lib/runtime-actions";
+import { getSettingDefinition, getSettingsByScope } from "../lib/settings-registry";
 
 import { FontFamilyPicker, FontSizeSlider } from "./editor-settings-controls";
 import { ThemePicker } from "./theme-picker";
@@ -23,9 +25,22 @@ type SettingsDialogProps = {
   onVimModeChange: (enabled: boolean) => void;
   keymap: KeyBinding[];
   onKeymapChange: (bindings: KeyBinding[]) => void;
+  onLanguageChange: (language: LanguageCode) => void;
 };
 
 type SettingsSection = "workspace" | "editor" | "keyboard" | "runtime";
+
+type NavigationEntry =
+  | { kind: "section"; id: SettingsSection; label: string; description: string }
+  | {
+      kind: "setting";
+      id: string;
+      scope: SettingsSection;
+      label: string;
+      description: string;
+    };
+
+const sectionScopes: SettingsSection[] = ["workspace", "editor", "keyboard", "runtime"];
 
 const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
 
@@ -36,8 +51,14 @@ export function SettingsPopover({
   onVimModeChange,
   keymap,
   onKeymapChange,
+  onLanguageChange,
 }: SettingsDialogProps) {
   const { i18n, t } = useTranslation();
+  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
+  const settingDescription = (id: string) => {
+    const key = getSettingDefinition(id)?.descriptionKey;
+    return key ? t(key) : "";
+  };
   const [open, setOpen] = useState(false);
   const returnFocusRef = useRef(false);
   useEffect(() => {
@@ -55,10 +76,17 @@ export function SettingsPopover({
     if (!nextOpen) {
       const shouldReturnFocus = returnFocusRef.current;
       returnFocusRef.current = false;
-      if (shouldReturnFocus) window.dispatchEvent(new Event("iris:settings-closed"));
+      if (shouldReturnFocus) {
+        window.setTimeout(() => window.dispatchEvent(new Event("iris:settings-closed")), 0);
+      }
     }
   };
   const [section, setSection] = useState<SettingsSection>("workspace");
+  const [query, setQuery] = useState("");
+  const [activeEntryId, setActiveEntryId] = useState("section:workspace");
+  const searchRef = useRef<HTMLInputElement>(null);
+  const sidebarEntryRefs = useRef(new Map<string, HTMLButtonElement>());
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const sections: Array<{ id: SettingsSection; icon: typeof Code2; label: string }> = [
     { id: "workspace", icon: Palette, label: t("settings.nav.workspace") },
@@ -66,6 +94,120 @@ export function SettingsPopover({
     { id: "keyboard", icon: Keyboard, label: t("settings.nav.keyboard") },
     { id: "runtime", icon: Rocket, label: t("settings.nav.runtime") },
   ];
+
+  const navigationEntries = useMemo<NavigationEntry[]>(() => {
+    const entries: NavigationEntry[] = [];
+    for (const scope of sectionScopes) {
+      const sectionDefinition = {
+        kind: "section" as const,
+        id: scope,
+        label: t(`settings.nav.${scope}`),
+        description: t(`settings.section.${scope}.description`),
+      };
+      entries.push(sectionDefinition);
+      for (const setting of getSettingsByScope(scope)) {
+        entries.push({
+          kind: "setting",
+          id: setting.id,
+          scope,
+          label: t(setting.labelKey),
+          description: setting.descriptionKey ? t(setting.descriptionKey) : "",
+        });
+      }
+    }
+    return entries;
+  }, [t]);
+
+  const visibleEntries = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    if (!normalized) return navigationEntries.filter((entry) => entry.kind === "section");
+    const matched = navigationEntries.filter(
+      (entry) =>
+        entry.label.toLocaleLowerCase().includes(normalized) ||
+        entry.description.toLocaleLowerCase().includes(normalized),
+    );
+    const scopes = new Set(
+      matched.map((entry) => (entry.kind === "section" ? entry.id : entry.scope)),
+    );
+    return navigationEntries.filter(
+      (entry) =>
+        scopes.has(entry.kind === "section" ? entry.id : entry.scope) &&
+        (entry.kind === "section" ||
+          matched.some((match) => match.kind === "section" || match.id === entry.id)),
+    );
+  }, [navigationEntries, query]);
+
+  const activateEntry = (entry: NavigationEntry, behavior: ScrollBehavior = "instant") => {
+    setActiveEntryId(`${entry.kind}:${entry.id}`);
+    setSection(entry.kind === "section" ? entry.id : entry.scope);
+    if (entry.kind === "setting") {
+      requestAnimationFrame(() => {
+        const target = contentRef.current?.querySelector<HTMLElement>(
+          `[data-setting-id="${entry.id}"]`,
+        );
+        target?.scrollIntoView({ block: "nearest", behavior });
+      });
+    }
+  };
+
+  useEffect(() => {
+    const first = query.trim()
+      ? (visibleEntries.find((entry) => entry.kind === "setting") ?? visibleEntries[0])
+      : visibleEntries[0];
+    if (first) activateEntry(first);
+  }, [query, visibleEntries]);
+
+  const focusVisibleEntry = (offset: number) => {
+    const currentIndex = Math.max(
+      0,
+      visibleEntries.findIndex((entry) => `${entry.kind}:${entry.id}` === activeEntryId),
+    );
+    const next =
+      visibleEntries[(currentIndex + offset + visibleEntries.length) % visibleEntries.length];
+    if (!next) return;
+    activateEntry(next);
+    requestAnimationFrame(() => sidebarEntryRefs.current.get(`${next.kind}:${next.id}`)?.focus());
+  };
+
+  const focusContentEdge = (fromStart: boolean) => {
+    const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+    );
+    const target = focusables?.[fromStart ? 0 : Math.max(0, focusables.length - 1)];
+    target?.focus();
+  };
+
+  const handleSidebarEntryKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusVisibleEntry(1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusVisibleEntry(-1);
+    } else if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault();
+      searchRef.current?.focus();
+    } else if (event.key === "Tab" && event.shiftKey) {
+      event.preventDefault();
+      focusContentEdge(false);
+    }
+  };
+
+  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "ArrowDown") {
+      event.preventDefault();
+      focusVisibleEntry(1);
+    } else if (event.key === "ArrowUp") {
+      event.preventDefault();
+      focusVisibleEntry(-1);
+    } else if (event.key === "Tab" && !event.shiftKey) {
+      event.preventDefault();
+      focusContentEdge(true);
+    } else if (event.key === "Tab" && event.shiftKey) {
+      event.preventDefault();
+      sidebarEntryRefs.current.get(activeEntryId)?.focus();
+    }
+  };
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -100,8 +242,8 @@ export function SettingsPopover({
               if (returnFocusRef.current) event.preventDefault();
             }}
           >
-            <aside className="settings-sidebar-glass flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:flex-row max-[760px]:items-center max-[760px]:gap-1 max-[760px]:overflow-x-auto max-[760px]:border-b max-[760px]:border-r-0">
-              <div className="mb-5 px-2 max-[760px]:mb-0 max-[760px]:mr-2 max-[760px]:shrink-0">
+            <aside className="settings-sidebar-glass flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:overflow-y-auto max-[760px]:border-b max-[760px]:border-r-0">
+              <div className="mb-4 px-2 max-[760px]:mb-3">
                 <p className="m-0 font-iris-mono text-[9px] uppercase tracking-[0.13em] text-iris-muted">
                   {t("settings.title")}
                 </p>
@@ -109,19 +251,46 @@ export function SettingsPopover({
                   {t("settings.workspaceTone")}
                 </h2>
               </div>
-              <nav className="grid gap-1 max-[760px]:flex max-[760px]:min-w-max">
-                {sections.map(({ id, icon: Icon, label }) => (
-                  <button
-                    className={`flex h-9 items-center gap-2 rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${section === id ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
-                    key={id}
-                    type="button"
-                    aria-current={section === id ? "page" : undefined}
-                    onClick={() => setSection(id)}
-                  >
-                    <Icon width="14" height="14" />
-                    {label}
-                  </button>
-                ))}
+              <input
+                ref={searchRef}
+                className="mb-3 h-8 w-full rounded-lg border border-iris-divider bg-iris-canvas px-2.5 font-iris-mono text-[11px] text-iris-ink outline-none placeholder:text-iris-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                onKeyDown={handleSearchKeyDown}
+                placeholder={t("settings.searchPlaceholder")}
+                aria-label={t("settings.search")}
+              />
+              <nav className="grid gap-1">
+                {visibleEntries.map((entry) => {
+                  const sectionEntry = entry.kind === "section";
+                  const sectionDefinition = sections.find(
+                    (item) => item.id === (sectionEntry ? entry.id : entry.scope),
+                  );
+                  const Icon = sectionDefinition?.icon ?? Settings;
+                  const entryId = `${entry.kind}:${entry.id}`;
+                  const active = activeEntryId === entryId;
+                  return (
+                    <button
+                      ref={(node) => {
+                        if (node) sidebarEntryRefs.current.set(entryId, node);
+                        else sidebarEntryRefs.current.delete(entryId);
+                      }}
+                      className={`flex min-h-8 items-center gap-2 rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
+                      key={entryId}
+                      type="button"
+                      tabIndex={active ? 0 : -1}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => activateEntry(entry, "smooth")}
+                      onKeyDown={handleSidebarEntryKeyDown}
+                    >
+                      <Icon
+                        width={sectionEntry ? "14" : "12"}
+                        height={sectionEntry ? "14" : "12"}
+                      />
+                      <span className="truncate">{entry.label}</span>
+                    </button>
+                  );
+                })}
               </nav>
             </aside>
 
@@ -148,15 +317,36 @@ export function SettingsPopover({
                 </Dialog.Close>
               </div>
 
-              <div className="min-h-0 flex-1 overflow-auto px-5 py-5 max-[760px]:px-4">
+              <div
+                ref={contentRef}
+                className="min-h-0 flex-1 overflow-auto px-5 py-5 max-[760px]:px-4"
+                onKeyDownCapture={(event) => {
+                  if (event.key !== "Tab") return;
+                  const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
+                    'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+                  );
+                  if (!focusables?.length) return;
+                  const index = Array.from(focusables).indexOf(event.target as HTMLElement);
+                  if (!event.shiftKey && (index === focusables.length - 1 || index < 0)) {
+                    event.preventDefault();
+                    requestAnimationFrame(() =>
+                      sidebarEntryRefs.current.get(activeEntryId)?.focus(),
+                    );
+                  } else if (event.shiftKey && index <= 0) {
+                    event.preventDefault();
+                    requestAnimationFrame(() => searchRef.current?.focus());
+                  }
+                }}
+              >
                 {section === "workspace" && (
                   <div className="grid gap-4">
                     <SettingSelect
-                      label={t("settings.language")}
+                      settingId="language"
+                      label={settingLabel("language")}
                       value={i18n.resolvedLanguage ?? "en"}
                       onChange={(value) => {
                         if (languageOptions.some((option) => option.code === value)) {
-                          void i18n.changeLanguage(value as LanguageCode);
+                          onLanguageChange(value as LanguageCode);
                         }
                       }}
                     >
@@ -166,40 +356,49 @@ export function SettingsPopover({
                         </option>
                       ))}
                     </SettingSelect>
-                    <ThemePicker
-                      value={settings.theme}
-                      onChange={(value) => onChange("theme", value as ProjectSettings["theme"])}
-                    />
+                    <div data-setting-id="theme">
+                      <ThemePicker
+                        value={settings.theme}
+                        onChange={(value) => onChange("theme", value as ProjectSettings["theme"])}
+                      />
+                    </div>
                   </div>
                 )}
 
                 {section === "editor" && (
                   <div className="grid gap-4">
-                    <FontFamilyPicker
-                      label={t("settings.fontFamily")}
-                      value={settings.fontFamily}
-                      theme={settings.theme}
-                      onChange={(value) => onChange("fontFamily", value)}
-                    />
-                    <FontSizeSlider
-                      label={t("settings.fontSize")}
-                      value={settings.fontSize}
-                      onChange={(value) => onChange("fontSize", value)}
-                    />
+                    <div data-setting-id="fontFamily">
+                      <FontFamilyPicker
+                        label={t("settings.fontFamily")}
+                        value={settings.fontFamily}
+                        theme={settings.theme}
+                        onChange={(value) => onChange("fontFamily", value)}
+                      />
+                    </div>
+                    <div data-setting-id="fontSize">
+                      <FontSizeSlider
+                        label={t("settings.fontSize")}
+                        value={settings.fontSize}
+                        onChange={(value) => onChange("fontSize", value)}
+                      />
+                    </div>
                     <SettingSwitch
-                      label={t("settings.wordWrap")}
-                      description={t("settings.wordWrapDescription")}
+                      settingId="wordWrap"
+                      label={settingLabel("wordWrap")}
+                      description={settingDescription("wordWrap")}
                       checked={settings.wordWrap}
                       onCheckedChange={(checked) => onChange("wordWrap", checked)}
                     />
                     <SettingSwitch
-                      label={t("settings.relativeLineNumbers")}
-                      description={t("settings.relativeLineNumbersDescription")}
+                      settingId="relativeLineNumbers"
+                      label={settingLabel("relativeLineNumbers")}
+                      description={settingDescription("relativeLineNumbers")}
                       checked={settings.relativeLineNumbers}
                       onCheckedChange={(checked) => onChange("relativeLineNumbers", checked)}
                     />
                     <SettingSelect
-                      label={t("settings.normalCursorStyle")}
+                      settingId="normalCursorStyle"
+                      label={settingLabel("normalCursorStyle")}
                       value={settings.normalCursorStyle}
                       onChange={(value) =>
                         onChange("normalCursorStyle", value as ProjectSettings["normalCursorStyle"])
@@ -218,8 +417,9 @@ export function SettingsPopover({
                 {section === "keyboard" && (
                   <div className="grid gap-4">
                     <SettingSwitch
-                      label={t("settings.vimMode")}
-                      description={t("settings.vimModeDescription")}
+                      settingId="vimMode"
+                      label={settingLabel("vimMode")}
+                      description={settingDescription("vimMode")}
                       checked={vimMode}
                       onCheckedChange={onVimModeChange}
                     />
@@ -234,11 +434,18 @@ export function SettingsPopover({
                       return (
                         <label
                           key={action}
+                          data-setting-id={
+                            action === "file.search"
+                              ? "fileSearchKeymap"
+                              : action === "settings.open"
+                                ? "openSettingsKeymap"
+                                : "commandPaletteKeymap"
+                          }
                           className="grid gap-2 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
                         >
                           {t(labelKey)}
                           <input
-                            className="rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                            className="rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
                             value={binding}
                             readOnly
                             onKeyDown={(event) => {
@@ -269,7 +476,8 @@ export function SettingsPopover({
                 {section === "runtime" && (
                   <div className="grid gap-3">
                     <SettingSelect
-                      label={t("settings.packageManager")}
+                      settingId="packageManager"
+                      label={settingLabel("packageManager")}
                       value={settings.packageManager}
                       onChange={(value) => onChange("packageManager", value as PackageManager)}
                     >
@@ -280,20 +488,23 @@ export function SettingsPopover({
                       ))}
                     </SettingSelect>
                     <SettingSwitch
-                      label={t("settings.autoInstall")}
-                      description={t("settings.autoInstallDescription")}
+                      settingId="autoInstall"
+                      label={settingLabel("autoInstall")}
+                      description={settingDescription("autoInstall")}
                       checked={settings.autoInstall}
                       onCheckedChange={(checked) => onChange("autoInstall", checked)}
                     />
                     <SettingSwitch
-                      label={t("settings.autoStartPreview")}
-                      description={t("settings.autoStartPreviewDescription")}
+                      settingId="autoStartPreview"
+                      label={settingLabel("autoStartPreview")}
+                      description={settingDescription("autoStartPreview")}
                       checked={settings.autoStartPreview}
                       onCheckedChange={(checked) => onChange("autoStartPreview", checked)}
                     />
                     <div className="mt-2 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-2.5 font-iris-mono text-[10px] leading-[1.5] text-iris-muted">
                       {t("settings.runtimeNote", { manager: settings.packageManager })}
                     </div>
+                    <RuntimeActions t={t} />
                   </div>
                 )}
               </div>
@@ -305,44 +516,106 @@ export function SettingsPopover({
   );
 }
 
+function RuntimeActions({ t }: { t: (key: string) => string }) {
+  const [pending, setPending] = useState<RuntimeAction | undefined>();
+
+  useEffect(() => {
+    const handleComplete = (event: Event) => {
+      const detail = (event as CustomEvent<{ action?: RuntimeAction }>).detail;
+      if (detail.action === pending) setPending(undefined);
+    };
+    window.addEventListener("iris:runtime-action-complete", handleComplete);
+    return () => window.removeEventListener("iris:runtime-action-complete", handleComplete);
+  }, [pending]);
+
+  const run = (action: RuntimeAction, button: HTMLButtonElement) => {
+    if (pending) return;
+    setPending(action);
+    dispatchRuntimeAction(action);
+    requestAnimationFrame(() => button.focus());
+  };
+
+  return (
+    <div className="grid gap-2 border-t border-iris-divider pt-3">
+      {RUNTIME_ACTIONS.map((action) => (
+        <button
+          data-setting-id={action.id === "restart" ? "runtimeRestart" : "runtimeReinstall"}
+          className="flex min-h-9 items-center justify-center gap-2 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-[10px] text-iris-strong transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] disabled:cursor-wait disabled:opacity-55"
+          key={action.id}
+          type="button"
+          disabled={Boolean(pending) && pending !== action.id}
+          aria-label={t(action.labelKey)}
+          title={t(action.labelKey)}
+          onClick={(event) => run(action.id, event.currentTarget)}
+        >
+          <action.icon
+            width="13"
+            height="13"
+            className={pending === action.id ? "animate-spin" : undefined}
+          />
+          {pending === action.id ? t(action.pendingLabelKey) : t(action.labelKey)}
+        </button>
+      ))}
+    </div>
+  );
+}
+
 function SettingSelect({
+  settingId,
   label,
   value,
   onChange,
   children,
 }: {
+  settingId?: string;
   label: string;
   value: string;
   onChange: (value: string) => void;
   children: ReactNode;
 }) {
   return (
-    <label className="flex min-w-0 items-center justify-between gap-4 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted">
+    <label
+      data-setting-id={settingId}
+      className="flex min-w-0 items-center justify-between gap-4 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
+    >
       <span className="shrink-0">{label}</span>
-      <select
-        className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 text-base normal-case tracking-normal text-iris-ink outline-2 outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] outline-offset-1 min-[760px]:text-xs"
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      >
-        {children}
-      </select>
+      <span className="relative min-w-0 flex-1">
+        <select
+          className="w-full appearance-none rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 pr-10 text-base normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_72%,white)] focus-visible:outline-offset-2 min-[760px]:text-xs"
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        >
+          {children}
+        </select>
+        <ChevronDown
+          aria-hidden="true"
+          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-iris-muted"
+          width="14"
+          height="14"
+        />
+      </span>
     </label>
   );
 }
 
 function SettingSwitch({
+  settingId,
   label,
   description,
   checked,
   onCheckedChange,
 }: {
+  settingId?: string;
   label: string;
   description: string;
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
 }) {
   return (
-    <div className="flex items-center justify-between gap-4 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-3">
+    <div
+      data-setting-id={settingId}
+      className="flex items-center justify-between gap-4 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-3"
+    >
       <div className="min-w-0">
         <p className="m-0 font-iris-mono text-xs text-iris-strong">{label}</p>
         <p className="m-[4px_0_0] font-iris-mono text-[10px] leading-[1.4] text-iris-muted">

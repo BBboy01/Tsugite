@@ -14,11 +14,11 @@ type ThemePickerProps = {
 
 export function ThemePicker({ value, onChange }: ThemePickerProps) {
   const { t } = useTranslation();
-  const [container, setContainer] = useState<HTMLFieldSetElement | null>(null);
+  const [container, setContainer] = useState<HTMLElement | null>(null);
 
   return (
-    <fieldset ref={setContainer} className="relative z-20 grid gap-2 border-0 p-0">
-      <legend className="flex w-full items-center justify-between gap-3 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted">
+    <div ref={setContainer} className="relative z-20 grid gap-2 border-0 p-0">
+      <div className="flex w-full items-center justify-between gap-3 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted">
         <span>{t("settings.theme")}</span>
         <Tooltip container={container} content={t("settings.theme.random")}>
           <IconButton
@@ -29,21 +29,45 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
             highContrast
             className="bg-transparent transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"
             aria-label={t("settings.theme.random")}
+            onKeyDown={(event) => {
+              if (event.key === "Tab" && !event.shiftKey) {
+                const firstTheme =
+                  container?.querySelector<HTMLButtonElement>("[data-theme-option]");
+                if (firstTheme) {
+                  event.preventDefault();
+                  firstTheme.focus();
+                }
+              }
+            }}
             onClick={() => onChange(getRandomWorkspaceTheme(value))}
           >
             <Dices aria-hidden="true" size={13} strokeWidth={1.8} />
           </IconButton>
         </Tooltip>
-      </legend>
-      <div className="grid grid-cols-2 gap-2 max-[760px]:grid-cols-1" role="radiogroup">
+      </div>
+      <div className="grid grid-cols-2 gap-2 max-[760px]:grid-cols-1">
         {WORKSPACE_THEME_OPTIONS.map((option) => {
           const selected = option.id === value;
           return (
             <button
               key={option.id}
               type="button"
-              role="radio"
-              aria-checked={selected}
+              tabIndex={0}
+              aria-pressed={selected}
+              data-theme-option
+              onKeyDown={(event) => {
+                if (event.key !== "Tab" || event.shiftKey) return;
+                const options =
+                  container?.querySelectorAll<HTMLButtonElement>("[data-theme-option]");
+                const currentIndex = options
+                  ? Array.from(options).indexOf(event.currentTarget)
+                  : -1;
+                const next = options?.[currentIndex + 1];
+                if (next) {
+                  event.preventDefault();
+                  next.focus();
+                }
+              }}
               className={`flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${selected ? "border-[color-mix(in_srgb,var(--accent)_54%,var(--divider))] bg-[color-mix(in_srgb,var(--accent)_10%,var(--canvas))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_14%,transparent)]" : "border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] hover:border-[color-mix(in_srgb,var(--accent)_30%,var(--divider))] hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--canvas))]"}`}
               onClick={() => onChange(option.id)}
             >
@@ -68,6 +92,6 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
           );
         })}
       </div>
-    </fieldset>
+    </div>
   );
 }

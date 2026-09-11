@@ -47,6 +47,11 @@ type RuntimeOptions = {
   boot?: () => Promise<RuntimeContainer>;
 };
 
+type StartOptions = {
+  forceStart?: boolean;
+  forceInstall?: boolean;
+};
+
 const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   packageManager: "pnpm",
   autoInstall: true,
@@ -78,7 +83,7 @@ export class WebContainerRuntime {
     folders: string[],
     onEvent: (event: RuntimeEvent) => void,
     settings: RuntimeSettings = DEFAULT_RUNTIME_SETTINGS,
-    options: { forceStart?: boolean } = {},
+    options: StartOptions = {},
   ): Promise<void> {
     this.listener = onEvent;
     const generation = ++this.generation;
@@ -99,7 +104,7 @@ export class WebContainerRuntime {
         return;
       }
 
-      if (settings.autoInstall) {
+      if (settings.autoInstall || options.forceInstall) {
         const [installCommand, installArgs] = getInstallCommand(settings.packageManager);
         this.emit({ type: "output", level: "log", message: `${installCommand} install` });
         const install = await withTimeout(container.spawn(installCommand, installArgs), 15_000);
@@ -163,6 +168,7 @@ export class WebContainerRuntime {
     }
 
     for (const folder of next.folders) {
+      if (this.snapshot.folders.has(folder)) continue;
       await this.container.fs.mkdir(toContainerPath(folder), { recursive: true });
     }
 
@@ -181,8 +187,15 @@ export class WebContainerRuntime {
     folders: string[],
     onEvent: (event: RuntimeEvent) => void,
     settings: RuntimeSettings = DEFAULT_RUNTIME_SETTINGS,
-    options: { forceStart?: boolean } = {},
+    options: StartOptions = {},
   ): Promise<void> {
+    this.generation += 1;
+    this.stopProcess();
+    this.unsubscribeReady?.();
+    this.unsubscribeReady = undefined;
+    this.unsubscribeError?.();
+    this.unsubscribeError = undefined;
+    this.snapshot = { files: new Map(), folders: new Set() };
     await this.start(files, folders, onEvent, settings, options);
   }
 
@@ -244,9 +257,28 @@ export class WebContainerRuntime {
         on: (event: "error", listener: (error: { message: string }) => void) => () => void;
       }
     ).on("error", (error) => {
-      if (generation !== this.generation || settled) return;
+      if (generation !== this.generation) return;
+      if (settled) {
+        this.emit({
+          type: "output",
+          level: "error",
+          message: error.message || "Preview runtime error",
+        });
+        this.emit({ type: "state", state: "error", error: "start-failed" });
+        return;
+      }
       const runtimeError = getRuntimeError(error);
-      if (runtimeError !== "storage-partitioning-required") return;
+      if (runtimeError !== "storage-partitioning-required") {
+        settled = true;
+        this.emit({
+          type: "output",
+          level: "error",
+          message: error.message || "Preview runtime error",
+        });
+        this.emit({ type: "state", state: "error", error: "start-failed" });
+        resolveReady?.();
+        return;
+      }
       settled = true;
       this.emit({ type: "state", state: "error", error: runtimeError });
       resolveReady?.();

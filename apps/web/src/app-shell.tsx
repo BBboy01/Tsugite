@@ -11,9 +11,7 @@ import {
   deleteFile,
   deleteFolder,
   getFileByPath,
-  listFolders,
-  listFiles,
-  readSettings,
+  readWorkspaceSnapshot,
   renameFolder,
   renameFile,
   setSharedSetting,
@@ -26,6 +24,8 @@ import { FileTree } from "./components/file-tree";
 import type { FileTreeTarget } from "./components/file-tree";
 import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
+import { dispatchRuntimeAction } from "./lib/runtime-actions";
+import type { LanguageCode } from "./lib/i18n";
 import { WorkspaceLayout } from "./components/workspace-layout";
 import { FileFuzzySearchDialog } from "./components/file-fuzzy-search-dialog";
 import { CommandPalette } from "./components/command-palette";
@@ -44,12 +44,12 @@ type AppShellProps = {
 };
 
 export function AppShell({ roomId }: AppShellProps) {
-  const { t } = useTranslation();
+  const { i18n, t } = useTranslation();
   const [client] = useState(() => new RoomClient({ roomId, identity: getIdentity() }));
   const [documentRevision, setDocumentRevision] = useState(0);
   const [presenceRevision, setPresenceRevision] = useState(0);
-  const [selectedPath, setSelectedPath] = useState("src/main.tsx");
-  const [openTabPaths, setOpenTabPaths] = useState(["src/main.tsx"]);
+  const [selectedPath, setSelectedPath] = useState("src/App.tsx");
+  const [openTabPaths, setOpenTabPaths] = useState(["src/App.tsx"]);
   const [followingUserId, setFollowingUserId] = useState<string | null>(null);
   const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel | null>(null);
   const [vimMode, setVimMode] = useState(
@@ -64,6 +64,8 @@ export function AppShell({ roomId }: AppShellProps) {
   const previousFilePathsRef = useRef(new Map<string, string>());
   const editorFocusRef = useRef<(() => void) | undefined>(undefined);
   const focusEditorWhenReadyRef = useRef(false);
+  const focusInitialEditorRef = useRef(true);
+  const focusEditorAfterSelectionRef = useRef(false);
 
   useEffect(() => {
     if (disconnectTimer.current) {
@@ -87,13 +89,17 @@ export function AppShell({ roomId }: AppShellProps) {
     };
   }, [client]);
 
-  const files = useMemo(() => listFiles(client.doc), [client, documentRevision]);
-  const folders = useMemo(() => listFolders(client.doc), [client, documentRevision]);
-  const settings = useMemo(() => readSettings(client.doc), [client, documentRevision]);
+  const workspaceSnapshot = useMemo(
+    () => readWorkspaceSnapshot(client.doc),
+    [client, documentRevision],
+  );
+  const { files, folders, settings } = workspaceSnapshot;
   const selectedFile = useMemo(
     () => (selectedPath ? getFileByPath(client.doc, selectedPath) : undefined),
     [client, selectedPath, documentRevision],
   );
+  const previewFile =
+    selectedFile ?? files.find((file) => file.path === "src/main.tsx") ?? files[0];
   const openFiles = useMemo(
     () => openTabPaths.map((path) => getFileByPath(client.doc, path)).filter(Boolean),
     [client, openTabPaths, documentRevision],
@@ -136,8 +142,16 @@ export function AppShell({ roomId }: AppShellProps) {
         presenceTimer.current = null;
       }
       setOpenTabPaths((current) => openEditorTab(current, path));
+      focusEditorAfterSelectionRef.current = true;
       setSelectedPath(path);
       client.sendPresence(path);
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => {
+          if (!focusEditorAfterSelectionRef.current) return;
+          focusEditorAfterSelectionRef.current = false;
+          editorFocusRef.current?.();
+        }),
+      );
     },
     [client],
   );
@@ -208,10 +222,14 @@ export function AppShell({ roomId }: AppShellProps) {
     setKeymap(bindings);
     writeKeymap(bindings);
   };
+  const updateLanguage = (language: LanguageCode) => {
+    void i18n.changeLanguage(language);
+  };
   const focusEditorIfRequested = useCallback(() => {
     const focus = editorFocusRef.current;
-    if (focus && focusEditorWhenReadyRef.current) {
+    if (focus && (focusEditorWhenReadyRef.current || focusInitialEditorRef.current)) {
       focusEditorWhenReadyRef.current = false;
+      focusInitialEditorRef.current = false;
       focus();
     }
   }, []);
@@ -220,6 +238,10 @@ export function AppShell({ roomId }: AppShellProps) {
     (focus: (() => void) | undefined) => {
       editorFocusRef.current = focus;
       focusEditorIfRequested();
+      if (focus && focusEditorAfterSelectionRef.current) {
+        focusEditorAfterSelectionRef.current = false;
+        focus();
+      }
     },
     [focusEditorIfRequested],
   );
@@ -419,6 +441,9 @@ export function AppShell({ roomId }: AppShellProps) {
           onOpenChange={setCommandPaletteOpen}
           onSettingChange={updateSharedSetting}
           onVimModeChange={updateVimMode}
+          onRuntimeAction={dispatchRuntimeAction}
+          onLanguageChange={updateLanguage}
+          keymap={keymap}
           onCloseAutoFocus={() =>
             requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current?.()))
           }
@@ -458,6 +483,7 @@ export function AppShell({ roomId }: AppShellProps) {
                 onVimModeChange={updateVimMode}
                 keymap={keymap}
                 onKeymapChange={updateKeymap}
+                onLanguageChange={updateLanguage}
               />
               <FileFuzzySearchDialog
                 open={fileSearchOpen}
@@ -465,6 +491,7 @@ export function AppShell({ roomId }: AppShellProps) {
                 theme={settings.theme}
                 onOpenChange={(open) => {
                   focusEditorWhenReadyRef.current = !open;
+                  if (open) focusInitialEditorRef.current = false;
                   setFileSearchOpen(open);
                 }}
                 onSelect={activateFile}
@@ -492,7 +519,7 @@ export function AppShell({ roomId }: AppShellProps) {
                 />
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center font-iris-mono text-xs leading-6 text-iris-muted">
-                  {t("app.waitingSnapshot")}
+                  {t("editor.noOpenFiles")}
                 </div>
               )}
             </section>
@@ -501,9 +528,9 @@ export function AppShell({ roomId }: AppShellProps) {
             <aside
               className={`h-full min-h-0 min-w-0 overflow-hidden bg-iris-preview max-[760px]:fixed max-[760px]:right-0 max-[760px]:top-11 max-[760px]:bottom-0 max-[760px]:z-10 max-[760px]:h-auto max-[760px]:w-[min(92vw,420px)] max-[760px]:shadow-[-8px_0_28px_rgba(66,68,45,0.12)] ${mobilePanel === "preview" ? "max-[760px]:block" : "max-[760px]:hidden"}`}
             >
-              {selectedFile ? (
+              {previewFile ? (
                 <PreviewPane
-                  file={selectedFile}
+                  file={previewFile}
                   files={files}
                   folders={folders}
                   settings={settings}

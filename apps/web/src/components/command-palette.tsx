@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Theme } from "@radix-ui/themes";
-import { ArrowLeft, Check, Command, X } from "lucide-react";
+import { ArrowLeft, Check, Command } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -15,8 +15,28 @@ import {
   type Submenu,
 } from "@/lib/command-palette-model";
 import { getRandomWorkspaceTheme, isDarkWorkspaceTheme } from "@/lib/workspace-theme";
+import type { RuntimeAction } from "@/lib/runtime-actions";
+import type { LanguageCode } from "@/lib/i18n";
+import type { KeyBinding } from "@/lib/keymap";
 
 import { useCommandPaletteSelectionScroll } from "./use-command-palette-selection-scroll";
+
+function highlightCommandLabel(label: string, query: string) {
+  const normalizedQuery = query.trim();
+  if (!normalizedQuery) return label;
+  const start = label.toLocaleLowerCase().indexOf(normalizedQuery.toLocaleLowerCase());
+  if (start < 0) return label;
+  const end = start + normalizedQuery.length;
+  return (
+    <>
+      {label.slice(0, start)}
+      <mark className="rounded-[2px] bg-[color-mix(in_srgb,var(--accent)_28%,transparent)] px-0.5 text-inherit">
+        {label.slice(start, end)}
+      </mark>
+      {label.slice(end)}
+    </>
+  );
+}
 
 type CommandPaletteProps = {
   open: boolean;
@@ -26,6 +46,9 @@ type CommandPaletteProps = {
   onSelect: (command: CommandId) => void;
   onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
   onVimModeChange: (enabled: boolean) => void;
+  onRuntimeAction: (action: RuntimeAction) => void;
+  onLanguageChange: (language: LanguageCode) => void;
+  keymap: readonly KeyBinding[];
   onCloseAutoFocus: () => void;
 };
 
@@ -37,6 +60,9 @@ export function CommandPalette({
   onSelect,
   onSettingChange,
   onVimModeChange,
+  onRuntimeAction,
+  onLanguageChange,
+  keymap,
   onCloseAutoFocus,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
@@ -47,12 +73,12 @@ export function CommandPalette({
   const [submenu, setSubmenu] = useState<Submenu | null>(null);
   const isDark = isDarkWorkspaceTheme(settings.theme);
 
-  const rootCommands = getRootCommands(settings, vimMode, t);
+  const rootCommands = getRootCommands(settings, vimMode, t, keymap);
   const submenuLabel = submenu ? getSubmenuLabel(submenu, t) : null;
   const submenuCommands = submenu ? getSubmenuCommands(submenu, settings, t) : [];
 
   const commands = (submenu ? submenuCommands : rootCommands).filter((command) =>
-    command.label.toLowerCase().includes(query.toLowerCase()),
+    (command.searchText ?? command.label).toLowerCase().includes(query.toLowerCase()),
   );
   const { commandListRef, registerCommand } = useCommandPaletteSelectionScroll(
     commands,
@@ -105,6 +131,11 @@ export function CommandPalette({
   const closePalette = () => handleOpenChange(false);
 
   const activate = (command: PaletteCommand) => {
+    if (submenu === "language") {
+      onLanguageChange(command.id as LanguageCode);
+      closePalette();
+      return;
+    }
     if (submenu === "theme") {
       onSettingChange("theme", command.id as WorkspaceTheme);
       closePalette();
@@ -127,6 +158,9 @@ export function CommandPalette({
       case "file.search":
       case "settings.open":
         selectExternalCommand(command.id);
+        return;
+      case "language.choose":
+        openSubmenu("language");
         return;
       case "theme.random":
         onSettingChange("theme", getRandomWorkspaceTheme(settings.theme));
@@ -159,6 +193,11 @@ export function CommandPalette({
         return;
       case "autoStartPreview.toggle":
         onSettingChange("autoStartPreview", !settings.autoStartPreview);
+        closePalette();
+        return;
+      case "runtime.restart":
+      case "runtime.reinstall":
+        onRuntimeAction(command.id.slice("runtime.".length) as RuntimeAction);
         closePalette();
         return;
     }
@@ -230,13 +269,13 @@ export function CommandPalette({
                     return;
                   }
 
-                  if ((event.ctrlKey || event.metaKey) && event.key === "j") {
+                  if ((event.ctrlKey || event.metaKey) && event.key === "n") {
                     event.preventDefault();
                     moveSelection(1);
                     return;
                   }
 
-                  if ((event.ctrlKey || event.metaKey) && event.key === "k") {
+                  if ((event.ctrlKey || event.metaKey) && event.key === "p") {
                     event.preventDefault();
                     moveSelection(-1);
                   }
@@ -249,15 +288,6 @@ export function CommandPalette({
                 spellCheck={false}
                 className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
               />
-              <button
-                type="button"
-                aria-label={t("settings.close")}
-                title={t("settings.close")}
-                className="grid size-7 shrink-0 place-items-center text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
-                onClick={() => handleOpenChange(false)}
-              >
-                <X size={16} aria-hidden="true" />
-              </button>
             </div>
             <div
               ref={commandListRef}
@@ -272,7 +302,7 @@ export function CommandPalette({
                       key={command.id}
                       type="button"
                       ref={(element) => registerCommand(command.id, element)}
-                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-colors ${
+                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-none ${
                         selectedIndex === index
                           ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--foreground)]"
                           : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
@@ -280,8 +310,19 @@ export function CommandPalette({
                       onMouseEnter={() => setSelectedIndex(index)}
                       onClick={() => activate(command)}
                     >
-                      <Icon size={16} aria-hidden="true" className="shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{command.label}</span>
+                      <Icon
+                        size={16}
+                        aria-hidden="true"
+                        className={`shrink-0 ${command.iconClassName ?? ""}`}
+                      />
+                      <span className="min-w-0 flex-1 truncate">
+                        {highlightCommandLabel(command.label, query)}
+                      </span>
+                      {command.shortcut ? (
+                        <span className="shrink-0 font-iris-mono text-[10px] text-[color-mix(in_srgb,var(--muted)_62%,transparent)]">
+                          {command.shortcut}
+                        </span>
+                      ) : null}
                       {command.selected ? (
                         <Check
                           size={16}

@@ -11,6 +11,7 @@ import {
   isStoragePartitioningErrorUrl,
 } from "../lib/webcontainer-runtime";
 import { getLatestPreviewError } from "../lib/preview-error-model";
+import type { RuntimeAction } from "../lib/runtime-actions";
 import { PreviewConsole } from "./preview-console";
 import { PreviewError } from "./preview-error";
 import { PreviewLoader } from "./preview-loader";
@@ -32,12 +33,14 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
   const [runKey, setRunKey] = useState(0);
   const runtimeRef = useRef<WebContainerRuntimeInstance | undefined>(undefined);
   const runtimeStartedRef = useRef(false);
+  const syntaxErrorActiveRef = useRef(false);
   const lastRunKeyRef = useRef(runKey);
   const lastRuntimeSettingsKeyRef = useRef("");
   const latestProjectRef = useRef({ files, folders });
   const translateRef = useRef(t);
   const runtimeEventRef = useRef<(event: RuntimeEvent) => void>(() => undefined);
   const stableRuntimeHandlerRef = useRef((event: RuntimeEvent) => runtimeEventRef.current(event));
+  const manualRuntimeActionRef = useRef<RuntimeAction | undefined>(undefined);
   latestProjectRef.current = { files, folders };
   translateRef.current = t;
   useEffect(() => {
@@ -58,8 +61,18 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
   }, []);
 
   useEffect(() => {
+    const handleRuntimeAction = (event: Event) => {
+      const action = (event as CustomEvent<{ action?: RuntimeAction }>).detail?.action;
+      if (action !== "restart" && action !== "reinstall") return;
+      manualRuntimeActionRef.current = action;
+      setRunKey((value) => value + 1);
+    };
+    window.addEventListener("iris:runtime-action", handleRuntimeAction);
+    return () => window.removeEventListener("iris:runtime-action", handleRuntimeAction);
+  }, []);
+
+  useEffect(() => {
     let cancelled = false;
-    setPreviewBuildError(undefined);
     const packageFile = files.find((item) => item.path === "package.json");
     if (!packageFile) {
       const fallbackTimer = setTimeout(() => {
@@ -112,6 +125,25 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       }
       const runtime = runtimeRef.current;
       if (!runtime || cancelled) return;
+      if (runtimeStartedRef.current) {
+        const { validateSourceSyntax } = await import("../lib/preview-runner");
+        const syntaxError = validateSourceSyntax(file.text.toString(), file.language);
+        if (cancelled) return;
+        if (syntaxError) {
+          syntaxErrorActiveRef.current = true;
+          setRuntimeState("error");
+          setPreviewBuildError(syntaxError);
+          setOutputs([{ level: "error", message: syntaxError }]);
+          return;
+        }
+        if (syntaxErrorActiveRef.current) {
+          syntaxErrorActiveRef.current = false;
+          setRuntimeError(undefined);
+          setRuntimeState("ready");
+          setPreviewBuildError(undefined);
+          setOutputs([]);
+        }
+      }
       const onRuntimeEvent = (event: RuntimeEvent) => {
         if (cancelled) return;
         if (event.type === "output") {
@@ -150,6 +182,30 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       runtimeEventRef.current = onRuntimeEvent;
       timer = setTimeout(() => {
         const runtimeSettingsKey = getRuntimeSettingsKey(settings);
+        const manualAction = manualRuntimeActionRef.current;
+        if (manualAction) {
+          manualRuntimeActionRef.current = undefined;
+          lastRunKeyRef.current = runKey;
+          runtimeStartedRef.current = true;
+          setPreviewLoaded(false);
+          setPreviewUrl(undefined);
+          setOutputs([]);
+          setRuntimeError(undefined);
+          setPreviewBuildError(undefined);
+          void runtime
+            .restart(files, folders, stableRuntimeHandlerRef.current, settings, {
+              forceStart: true,
+              forceInstall: manualAction === "reinstall",
+            })
+            .then(() => {
+              window.dispatchEvent(
+                new CustomEvent("iris:runtime-action-complete", {
+                  detail: { action: manualAction },
+                }),
+              );
+            });
+          return;
+        }
         if (!runtimeStartedRef.current) {
           runtimeStartedRef.current = true;
           lastRunKeyRef.current = runKey;
@@ -205,7 +261,6 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
       if (timer) clearTimeout(timer);
     };
   }, [
-    file,
     files,
     folders,
     runKey,
@@ -213,6 +268,7 @@ export function PreviewPane({ file, files, folders, settings }: PreviewPaneProps
     settings.autoStartPreview,
     settings.packageManager,
   ]);
+
   const runState = getPreviewRunState(runtimeError, runtimeState);
   const headerLabel = previewUrl ?? t(`preview.${runState === "idle" ? "ready" : runState}`);
   const previewErrorMessage = previewBuildError

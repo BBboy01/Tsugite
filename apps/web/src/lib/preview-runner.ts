@@ -42,3 +42,19 @@ export function runPreview(
     return { error: error instanceof Error ? error.message : String(error) };
   }
 }
+
+export function validateSourceSyntax(
+  source: string,
+  language: "typescript" | "javascript",
+): string | undefined {
+  try {
+    Babel.transform(source, {
+      parserOpts: {
+        plugins: language === "typescript" ? ["typescript", "jsx"] : ["jsx"],
+      },
+    });
+    return undefined;
+  } catch (error) {
+    return error instanceof Error ? error.message : String(error);
+  }
+}
