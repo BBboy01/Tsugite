@@ -43,6 +43,9 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
       <Dialog.Portal>
         <Dialog.Overlay className="glass-overlay fixed inset-0 z-50" />
         <Dialog.Content
+          onCloseAutoFocus={(event) => {
+            event.preventDefault();
+          }}
           className={`theme-${theme} glass-dialog fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 rounded-xl border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_20px_50px_rgba(65,66,45,0.2)] focus:outline-none`}
         >
           <div className="flex items-center gap-3 border-b border-iris-divider px-4 py-3">

@@ -98,26 +98,28 @@ export function CommandPalette({
   const handleOpenChange = (nextOpen: boolean) => {
     onOpenChange(nextOpen);
     if (!nextOpen && shouldReturnFocusRef.current) {
-      requestAnimationFrame(onCloseAutoFocus);
+      requestAnimationFrame(() => requestAnimationFrame(onCloseAutoFocus));
     }
   };
+
+  const closePalette = () => handleOpenChange(false);
 
   const activate = (command: PaletteCommand) => {
     if (submenu === "theme") {
       onSettingChange("theme", command.id as WorkspaceTheme);
-      returnToRoot();
+      closePalette();
       return;
     }
 
     if (submenu === "normalCursor") {
       onSettingChange("normalCursorStyle", command.id as ProjectSettings["normalCursorStyle"]);
-      returnToRoot();
+      closePalette();
       return;
     }
 
     if (submenu === "packageManager") {
       onSettingChange("packageManager", command.id as ProjectSettings["packageManager"]);
-      returnToRoot();
+      closePalette();
       return;
     }
 
@@ -128,6 +130,7 @@ export function CommandPalette({
         return;
       case "theme.random":
         onSettingChange("theme", getRandomWorkspaceTheme(settings.theme));
+        closePalette();
         return;
       case "theme.choose":
         openSubmenu("theme");
@@ -140,18 +143,23 @@ export function CommandPalette({
         return;
       case "vim.toggle":
         onVimModeChange(!vimMode);
+        closePalette();
         return;
       case "wordWrap.toggle":
         onSettingChange("wordWrap", !settings.wordWrap);
+        closePalette();
         return;
       case "relativeLineNumbers.toggle":
         onSettingChange("relativeLineNumbers", !settings.relativeLineNumbers);
+        closePalette();
         return;
       case "autoInstall.toggle":
         onSettingChange("autoInstall", !settings.autoInstall);
+        closePalette();
         return;
       case "autoStartPreview.toggle":
         onSettingChange("autoStartPreview", !settings.autoStartPreview);
+        closePalette();
         return;
     }
   };

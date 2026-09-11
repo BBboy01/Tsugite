@@ -62,7 +62,8 @@ export function AppShell({ roomId }: AppShellProps) {
   const presenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const previousFilePathsRef = useRef(new Map<string, string>());
-  const editorFocusRef = useRef<() => void>(() => undefined);
+  const editorFocusRef = useRef<(() => void) | undefined>(undefined);
+  const focusEditorWhenReadyRef = useRef(false);
 
   useEffect(() => {
     if (disconnectTimer.current) {
@@ -207,9 +208,25 @@ export function AppShell({ roomId }: AppShellProps) {
     setKeymap(bindings);
     writeKeymap(bindings);
   };
-  const handleEditorFocusReady = useCallback((focus: () => void) => {
-    editorFocusRef.current = focus;
+  const focusEditorIfRequested = useCallback(() => {
+    const focus = editorFocusRef.current;
+    if (focus && focusEditorWhenReadyRef.current) {
+      focusEditorWhenReadyRef.current = false;
+      focus();
+    }
   }, []);
+
+  const handleEditorFocusReady = useCallback(
+    (focus: (() => void) | undefined) => {
+      editorFocusRef.current = focus;
+      focusEditorIfRequested();
+    },
+    [focusEditorIfRequested],
+  );
+
+  useEffect(() => {
+    if (!fileSearchOpen) focusEditorIfRequested();
+  }, [fileSearchOpen, focusEditorIfRequested]);
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
@@ -244,7 +261,7 @@ export function AppShell({ roomId }: AppShellProps) {
 
   useEffect(() => {
     const focusEditor = () =>
-      requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current()));
+      requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current?.()));
     window.addEventListener("iris:settings-closed", focusEditor);
     return () => window.removeEventListener("iris:settings-closed", focusEditor);
   }, []);
@@ -402,7 +419,9 @@ export function AppShell({ roomId }: AppShellProps) {
           onOpenChange={setCommandPaletteOpen}
           onSettingChange={updateSharedSetting}
           onVimModeChange={updateVimMode}
-          onCloseAutoFocus={() => editorFocusRef.current()}
+          onCloseAutoFocus={() =>
+            requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current?.()))
+          }
           onSelect={(action) => {
             if (action === "file.search") setFileSearchOpen(true);
             if (action === "settings.open")
@@ -445,12 +464,10 @@ export function AppShell({ roomId }: AppShellProps) {
                 files={files}
                 theme={settings.theme}
                 onOpenChange={(open) => {
+                  focusEditorWhenReadyRef.current = !open;
                   setFileSearchOpen(open);
-                  if (!open) requestAnimationFrame(() => editorFocusRef.current());
                 }}
-                onSelect={(path) => {
-                  activateFile(path);
-                }}
+                onSelect={activateFile}
               />
             </div>
           }
