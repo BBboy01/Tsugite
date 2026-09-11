@@ -13,6 +13,7 @@ import { FileTreeNodes } from "./file-tree-node";
 import { FileTreeDialog, type FileDialogMode } from "./file-tree-dialog";
 import { SettingsPopover } from "./settings-popover";
 import type { KeyBinding } from "../lib/keymap";
+import type { LanguageCode } from "../lib/i18n";
 
 export type FileTreeTarget =
   | { type: "file"; file: ProjectFile }
@@ -48,6 +49,7 @@ type FileTreeProps = {
   onVimModeChange: (enabled: boolean) => void;
   keymap: KeyBinding[];
   onKeymapChange: (bindings: KeyBinding[]) => void;
+  onLanguageChange: (language: LanguageCode) => void;
 };
 
 export function FileTree({
@@ -69,6 +71,7 @@ export function FileTree({
   onVimModeChange,
   keymap,
   onKeymapChange,
+  onLanguageChange,
 }: FileTreeProps) {
   const { t } = useTranslation();
   const [contextTarget, setContextTarget] = useState<FileTreeTarget>(null);
@@ -202,6 +205,7 @@ export function FileTree({
                 onVimModeChange={onVimModeChange}
                 keymap={keymap}
                 onKeymapChange={onKeymapChange}
+                onLanguageChange={onLanguageChange}
               />
             </div>
           </motion.aside>

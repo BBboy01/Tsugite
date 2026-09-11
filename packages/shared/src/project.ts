@@ -49,6 +49,12 @@ export type ProjectFile = {
   text: LoroText;
 };
 
+export type WorkspaceSnapshot = {
+  files: ProjectFile[];
+  folders: string[];
+  settings: ProjectSettings;
+};
+
 const DEFAULT_SETTINGS: ProjectSettings = {
   theme: "paper",
   fontFamily: "JetBrains Mono",
@@ -354,11 +360,24 @@ export function deleteFolder(doc: LoroDoc, path: string): void {
 }
 
 export function listFolders(doc: LoroDoc): string[] {
+  return listFoldersFromFiles(doc, listFiles(doc));
+}
+
+export function readWorkspaceSnapshot(doc: LoroDoc): WorkspaceSnapshot {
+  const files = listFiles(doc);
+  return {
+    files,
+    folders: listFoldersFromFiles(doc, files),
+    settings: readSettings(doc),
+  };
+}
+
+function listFoldersFromFiles(doc: LoroDoc, files: ProjectFile[]): string[] {
   const folderPaths = new Set<string>();
   const folders = doc.getMap("folders");
   for (const folderPath of folders.keys()) folderPaths.add(folderPath);
 
-  for (const file of listFiles(doc)) ensureFolderAncestors(folderPaths, file.path);
+  for (const file of files) ensureFolderAncestors(folderPaths, file.path);
   return [...folderPaths].toSorted((left, right) => left.localeCompare(right));
 }
 

@@ -4,7 +4,11 @@ declare module "@babel/standalone" {
   const Babel: {
     transform: (
       source: string,
-      options: { presets: string[]; sourceType: "script" },
+      options: {
+        presets?: string[];
+        sourceType?: "script";
+        parserOpts?: { plugins: string[] };
+      },
     ) => TransformResult;
   };
 

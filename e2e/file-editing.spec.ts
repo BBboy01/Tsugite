@@ -56,7 +56,7 @@ test.describe("file and editor actions", () => {
     await page.keyboard.type("\n// before-rename");
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
 
-    await page.getByRole("button", { name: "main.tsx", exact: true }).click({ button: "right" });
+    await page.getByRole("button", { name: "App.tsx", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     const pathInput = page.locator("#file-tree-path");
     await pathInput.fill("src/renamed.tsx");
@@ -88,7 +88,7 @@ test.describe("file and editor actions", () => {
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
 
     await page.getByRole("button", { name: "index.html", exact: true }).click();
-    await page.getByRole("button", { name: "main.tsx", exact: true }).click();
+    await page.getByRole("button", { name: "App.tsx", exact: true }).click();
     await editor.click();
     await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/, { timeout: 15_000 });
     await page.keyboard.press("ControlOrMeta+z");
@@ -128,7 +128,7 @@ test.describe("file and editor actions", () => {
     await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
     await secondPage
-      .getByRole("button", { name: "main.tsx", exact: true })
+      .getByRole("button", { name: "App.tsx", exact: true })
       .click({ button: "right" });
     await secondPage.getByRole("menuitem", { name: "Rename", exact: true }).click();
     await secondPage.locator("#file-tree-path").fill("src/remote-renamed.tsx");

@@ -105,6 +105,7 @@ export function EditorPane({
   const cursorChangeRef = useRef(onCursorChange);
   const localInteractionRef = useRef(onLocalInteraction);
   const followedSelectionRef = useRef(followedSelection);
+  const isFollowingRef = useRef(isFollowing);
   const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
@@ -115,6 +116,7 @@ export function EditorPane({
   cursorChangeRef.current = onCursorChange;
   localInteractionRef.current = onLocalInteraction;
   followedSelectionRef.current = followedSelection;
+  isFollowingRef.current = isFollowing;
   relativeLineNumbersRef.current = settings.relativeLineNumbers;
   remoteMembersRef.current = remoteMembers;
 
@@ -176,12 +178,14 @@ export function EditorPane({
               if ((!hasUserEvent && !update.focusChanged) || !update.view.hasFocus) {
                 return;
               }
-              if (hasUserEvent || update.focusChanged) localInteractionRef.current();
+              if (hasUserEvent) localInteractionRef.current();
               const selection = update.state.selection.main;
-              cursorChangeRef.current({
-                anchor: selection.anchor,
-                head: selection.head,
-              });
+              if (hasUserEvent || (update.focusChanged && !isFollowingRef.current)) {
+                cursorChangeRef.current({
+                  anchor: selection.anchor,
+                  head: selection.head,
+                });
+              }
             }),
             editorTheme(settings),
           ],

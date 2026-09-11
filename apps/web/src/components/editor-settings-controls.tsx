@@ -53,10 +53,19 @@ export function FontFamilyPicker({ label, value, theme, onChange }: FontFamilyPi
         onOpenChange={setIsOpen}
         value={value}
         onChange={(nextValue) => {
-          if (typeof nextValue === "string") onChange(nextValue);
+          if (typeof nextValue !== "string") return;
+          onChange(nextValue);
+          requestAnimationFrame(() => {
+            containerRef.current
+              ?.querySelector<HTMLElement>('[data-slot="select-trigger"]')
+              ?.focus();
+          });
         }}
       >
-        <SelectTrigger className="h-8 min-w-0 border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_68%,transparent)] px-2.5 py-0 text-iris-ink shadow-none ring-0 hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] focus-visible:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent)_18%,transparent)]">
+        <SelectTrigger
+          aria-label={label}
+          className="h-8 min-w-0 border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_68%,transparent)] px-2.5 py-0 text-iris-ink shadow-none ring-0 hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] focus-visible:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent)_18%,transparent)]"
+        >
           <SelectValue
             className="min-w-0 truncate text-xs normal-case tracking-normal"
             style={{ fontFamily: value }}

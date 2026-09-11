@@ -578,6 +578,13 @@
     inset 0 1px color-mix(in srgb, white 18%, transparent);
 }
 
+.settings-dialog-theme
+  :is(button, input, select, [role="radio"], [role="slider"], [role="switch"]):focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 18%, transparent);
+}
+
 @media (prefers-reduced-transparency: reduce) {
   .glass-panel,
   .glass-header,

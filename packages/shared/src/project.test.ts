@@ -10,7 +10,7 @@ import {
   deleteFolder,
   getFileByPath,
   listFolders,
-  listFiles,
+  readWorkspaceSnapshot,
   readSettings,
   renameFolder,
   renameFile,
@@ -19,8 +19,9 @@ import {
 
 test("bootstraps the shared project with files and settings", () => {
   const doc = createProjectDoc();
+  const snapshot = readWorkspaceSnapshot(doc);
 
-  expect(listFiles(doc).map((file) => file.path)).toEqual([
+  expect(snapshot.files.map((file) => file.path)).toEqual([
     "index.html",
     "package.json",
     "src/App.tsx",
@@ -42,7 +43,7 @@ test("bootstraps the shared project with files and settings", () => {
   expect(getFileByPath(doc, "src/index.css")?.text.toString()).toContain('@import "tailwindcss"');
   expect(getFileByPath(doc, "vite.config.ts")?.text.toString()).toContain("@tailwindcss/vite");
   expect(getFileByPath(doc, "tsconfig.json")?.text.toString()).toContain('"jsx": "react-jsx"');
-  expect(readSettings(doc)).toEqual({
+  expect(snapshot.settings).toEqual({
     theme: "paper",
     fontFamily: "JetBrains Mono",
     fontSize: 14,

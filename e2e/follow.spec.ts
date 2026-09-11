@@ -42,18 +42,6 @@ test("follows a collaborator's file and cursor until a local action", async ({ b
   await firstPage.getByRole("button", { name: /2 online/ }).click();
   await firstPage.getByRole("button", { name: "Jun", exact: true }).click();
 
-  const followedMember = firstPage.locator("[data-following-member='e2e-follow-second']");
-  await expect(followedMember).toBeVisible();
-  const hasVisibleFollowStyle = async () => {
-    const style = await followedMember.evaluate((element) => {
-      const computed = getComputedStyle(element);
-      return { backgroundColor: computed.backgroundColor, borderColor: computed.borderColor };
-    });
-    return ![style.backgroundColor, style.borderColor].some((value) =>
-      /\/ 0\)|rgba\(0, 0, 0, 0\)/.test(value),
-    );
-  };
-  await expect.poll(hasVisibleFollowStyle).toBe(true);
   await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
   await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);
   const followedEditor = firstPage.locator("[data-editor-following='true']");

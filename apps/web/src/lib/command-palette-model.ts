@@ -1,25 +1,38 @@
 import type { ProjectSettings } from "@iris/shared";
 import {
-  Command,
   Dices,
   FileSearch,
+  Languages,
   Package,
   Palette,
   Settings,
+  TextCursor,
   ToggleLeft,
+  ToggleRight,
   type LucideIcon,
 } from "lucide-react";
 import type { TFunction } from "i18next";
 
 import { WORKSPACE_THEME_OPTIONS } from "./workspace-theme";
+import { RUNTIME_ACTIONS } from "./runtime-actions";
+import { languageOptions } from "./i18n";
+import { getSettingDefinition } from "./settings-registry";
+import type { KeyBinding } from "./keymap";
 
-export type CommandId = "file.search" | "settings.open";
-export type Submenu = "theme" | "normalCursor" | "packageManager";
+export type CommandId =
+  | "file.search"
+  | "settings.open"
+  | "language.choose"
+  | `runtime.${(typeof RUNTIME_ACTIONS)[number]["id"]}`;
+export type Submenu = "language" | "theme" | "normalCursor" | "packageManager";
 
 export type PaletteCommand = {
   id: string;
   label: string;
+  searchText?: string;
   icon: LucideIcon;
+  iconClassName?: string;
+  shortcut?: string;
   selected?: boolean;
 };
 
@@ -43,48 +56,68 @@ const NORMAL_CURSOR_LABEL_KEYS: Record<ProjectSettings["normalCursorStyle"], str
   "underline-blink": "settings.cursor.underlineBlink",
 };
 
-function toggleLabel(t: TFunction, label: string, enabled: boolean) {
-  return `${t("command.toggle", { label })} · ${t(enabled ? "command.state.on" : "command.state.off")}`;
+function toggleCommand(id: string, label: string, enabled: boolean): PaletteCommand {
+  return {
+    id,
+    label,
+    searchText: label,
+    icon: enabled ? ToggleRight : ToggleLeft,
+    iconClassName: enabled ? "text-emerald-500" : "text-rose-500",
+  };
 }
 
 export function getRootCommands(
   settings: ProjectSettings,
   vimMode: boolean,
   t: TFunction,
+  keymap: readonly KeyBinding[],
 ): PaletteCommand[] {
+  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
+  const shortcutFor = (action: KeyBinding["action"]) =>
+    keymap.find((binding) => binding.action === action)?.key;
   return [
-    { id: "file.search", label: t("command.fileSearch"), icon: FileSearch },
-    { id: "settings.open", label: t("command.openSettings"), icon: Settings },
+    {
+      id: "file.search",
+      label: t("command.fileSearch"),
+      icon: FileSearch,
+      shortcut: shortcutFor("file.search"),
+    },
+    {
+      id: "settings.open",
+      label: t("command.openSettings"),
+      icon: Settings,
+      shortcut: shortcutFor("settings.open"),
+    },
+    { id: "language.choose", label: settingLabel("language"), icon: Languages },
     { id: "theme.random", label: t("settings.theme.random"), icon: Dices },
     { id: "theme.choose", label: t("command.chooseTheme"), icon: Palette },
-    { id: "cursor.choose", label: t("command.chooseNormalCursor"), icon: Command },
+    { id: "cursor.choose", label: t("command.chooseNormalCursor"), icon: TextCursor },
     { id: "packageManager.choose", label: t("command.choosePackageManager"), icon: Package },
-    { id: "vim.toggle", label: toggleLabel(t, t("settings.vimMode"), vimMode), icon: ToggleLeft },
-    {
-      id: "wordWrap.toggle",
-      label: toggleLabel(t, t("settings.wordWrap"), settings.wordWrap),
-      icon: ToggleLeft,
-    },
-    {
-      id: "relativeLineNumbers.toggle",
-      label: toggleLabel(t, t("settings.relativeLineNumbers"), settings.relativeLineNumbers),
-      icon: ToggleLeft,
-    },
-    {
-      id: "autoInstall.toggle",
-      label: toggleLabel(t, t("settings.autoInstall"), settings.autoInstall),
-      icon: ToggleLeft,
-    },
-    {
-      id: "autoStartPreview.toggle",
-      label: toggleLabel(t, t("settings.autoStartPreview"), settings.autoStartPreview),
-      icon: ToggleLeft,
-    },
+    toggleCommand("vim.toggle", settingLabel("vimMode"), vimMode),
+    toggleCommand("wordWrap.toggle", settingLabel("wordWrap"), settings.wordWrap),
+    toggleCommand(
+      "relativeLineNumbers.toggle",
+      settingLabel("relativeLineNumbers"),
+      settings.relativeLineNumbers,
+    ),
+    toggleCommand("autoInstall.toggle", settingLabel("autoInstall"), settings.autoInstall),
+    toggleCommand(
+      "autoStartPreview.toggle",
+      settingLabel("autoStartPreview"),
+      settings.autoStartPreview,
+    ),
+    ...RUNTIME_ACTIONS.map((action) => ({
+      id: `runtime.${action.id}`,
+      label: t(action.labelKey),
+      icon: action.icon,
+    })),
   ];
 }
 
 export function getSubmenuLabel(submenu: Submenu, t: TFunction) {
   switch (submenu) {
+    case "language":
+      return t("settings.language");
     case "theme":
       return t("command.chooseTheme");
     case "normalCursor":
@@ -100,6 +133,12 @@ export function getSubmenuCommands(
   t: TFunction,
 ): PaletteCommand[] {
   switch (submenu) {
+    case "language":
+      return languageOptions.map((language) => ({
+        id: language.code,
+        label: language.label,
+        icon: Languages,
+      }));
     case "theme":
       return WORKSPACE_THEME_OPTIONS.map((theme) => ({
         id: theme.id,
@@ -111,7 +150,7 @@ export function getSubmenuCommands(
       return NORMAL_CURSOR_STYLES.map((style) => ({
         id: style,
         label: t(NORMAL_CURSOR_LABEL_KEYS[style]),
-        icon: Command,
+        icon: TextCursor,
         selected: style === settings.normalCursorStyle,
       }));
     case "packageManager":

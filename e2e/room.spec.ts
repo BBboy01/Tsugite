@@ -27,12 +27,169 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
+  test("dismisses file search and command palette by clicking the backdrop", async ({ page }) => {
+    await page.goto(`/room/e2e-dialog-backdrop-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+
+    await page.keyboard.press("ControlOrMeta+P");
+    await expect(page.getByPlaceholder("Search files...")).toBeVisible();
+    await page
+      .locator(".glass-overlay")
+      .last()
+      .click({ position: { x: 4, y: 4 } });
+    await expect(page.getByRole("dialog")).toBeHidden();
+
+    await page.keyboard.press("ControlOrMeta+K");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await page
+      .locator(".glass-overlay")
+      .last()
+      .click({ position: { x: 4, y: 4 } });
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
   test("opens shared settings with Mod-comma", async ({ page }) => {
     await page.goto(`/room/e2e-settings-shortcut-${Date.now()}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+,");
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("keeps workspace settings controls in the Tab order", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-tab-order-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+
+    const language = page.getByLabel("Language");
+    await language.focus();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Random theme" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Paper Light" })).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "GitHub Light" })).toBeFocused();
+  });
+
+  test("searches settings hierarchically and updates the right panel automatically", async ({
+    page,
+  }) => {
+    await page.goto(`/room/e2e-settings-search-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+
+    const search = page.getByLabel("Search settings");
+    await search.fill("relative line");
+    await expect(page.getByRole("heading", { name: "Editor" })).toBeVisible();
+    await expect(page.locator('[data-setting-id="relativeLineNumbers"]')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Relative line numbers" })).toBeVisible();
+  });
+
+  test("cycles focus from the current menu through search and right content", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-focus-cycle-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+
+    const currentMenu = page.getByRole("button", { name: "Workspace" });
+    const search = page.getByLabel("Search settings");
+    await currentMenu.focus();
+    await page.keyboard.press("Tab");
+    await expect(search).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByLabel("Language")).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(search).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(currentMenu).toBeFocused();
+  });
+
+  test("keeps settings navigation focused after changing a font", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-font-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Editor", exact: true }).click();
+
+    const font = page.locator('[data-slot="select-trigger"]').first();
+    await font.focus();
+    await page.keyboard.press("Enter");
+    await expect(page.getByPlaceholder("Search fonts")).toBeVisible();
+    await page.keyboard.press("ArrowDown");
+    await page.keyboard.press("Enter");
+    await expect(font).toBeFocused();
+  });
+
+  test("keeps the runtime action focused while restarting the preview", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-runtime-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Runtime" }).click();
+
+    const restart = page.getByRole("button", { name: "Restart preview runtime" });
+    await restart.focus();
+    await page.keyboard.press("Enter");
+    await expect(restart).toBeFocused();
+  });
+
+  test("changes the workspace language from the command palette", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-language-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    await page.getByRole("button", { name: "Language" }).click();
+    await page.getByRole("button", { name: "简体中文" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => localStorage.getItem("iris.language")))
+      .toBe("zh-CN");
+  });
+
+  test("exposes WebContainer recovery actions in runtime settings", async ({ page }) => {
+    await page.goto(`/room/e2e-runtime-actions-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Runtime" }).click();
+    await expect(page.getByRole("button", { name: "Restart preview runtime" })).toBeVisible();
+    await expect(
+      page.getByRole("button", { name: "Reinstall dependencies and restart preview" }),
+    ).toBeVisible();
+  });
+
+  test("restores the preview after either runtime recovery action", async ({ page }) => {
+    test.setTimeout(180_000);
+    await page.goto(`/room/e2e-runtime-recovery-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden({ timeout: 90_000 });
+    await expect(page.getByRole("button", { name: "package.json", exact: true })).toBeVisible({
+      timeout: 90_000,
+    });
+    const preview = page.locator('iframe[title^="Preview of "]');
+    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 90_000 });
+
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Runtime" }).click();
+
+    const restart = page.getByRole("button", { name: "Restart preview runtime" });
+    await restart.click();
+    await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
+    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 90_000 });
+
+    const reinstall = page.getByRole("button", {
+      name: "Reinstall dependencies and restart preview",
+    });
+    await reinstall.click();
+    await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
+    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 90_000 });
   });
 
   test("opens the command palette and exposes extensible keymap actions", async ({ page }) => {
@@ -43,6 +200,8 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("button", { name: "Open file" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Open file" })).toContainText("Mod-P");
+    await expect(page.getByRole("button", { name: "Open settings" })).toContainText("Mod-,");
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Open shared settings" }).click();
     await page.getByRole("button", { name: "Keyboard" }).click();
@@ -51,7 +210,19 @@ test.describe("room shell", () => {
     await expect(page.getByLabel("Command palette shortcut")).toHaveValue("Mod-K");
   });
 
-  test("navigates command palette actions with Ctrl+J and Ctrl+K", async ({ page }) => {
+  test("exposes and executes runtime actions from the command palette", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-runtime-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    await expect(page.getByRole("button", { name: "Restart preview runtime" })).toBeVisible();
+    await page.getByRole("button", { name: "Restart preview runtime" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+  });
+
+  test("navigates command palette actions with Ctrl+N and Ctrl+P", async ({ page }) => {
     await page.goto(`/room/e2e-command-palette-navigation-${Date.now()}`, {
       waitUntil: "domcontentloaded",
     });
@@ -60,8 +231,8 @@ test.describe("room shell", () => {
     await page.keyboard.press("ControlOrMeta+K");
     await expect(page.getByRole("dialog")).toBeVisible();
 
-    await page.keyboard.press("Control+j");
-    await page.keyboard.press("Control+k");
+    await page.keyboard.press("Control+n");
+    await page.keyboard.press("Control+p");
     await page.keyboard.press("Enter");
 
     await expect(page.getByPlaceholder("Search files...")).toBeVisible();
@@ -75,7 +246,7 @@ test.describe("room shell", () => {
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+K");
 
-    await page.keyboard.press("Control+j");
+    await page.keyboard.press("Control+n");
     const selectedCommand = page.getByRole("button", { name: "Open settings" });
     await expect
       .poll(() => selectedCommand.evaluate((element) => getComputedStyle(element).backgroundColor))
@@ -90,13 +261,13 @@ test.describe("room shell", () => {
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+K");
 
-    for (let index = 0; index < 10; index += 1) {
-      await page.keyboard.press("Control+j");
+    for (let index = 0; index < 11; index += 1) {
+      await page.keyboard.press("Control+n");
     }
 
     const commandList = page.getByRole("dialog").locator("div.overflow-y-auto");
     const selectedCommand = page.getByRole("button", {
-      name: "Toggle start preview automatically · On",
+      name: "Start preview automatically",
     });
     await expect
       .poll(() => commandList.evaluate((element) => element.scrollTop))
@@ -113,6 +284,23 @@ test.describe("room shell", () => {
     await page.keyboard.press("ControlOrMeta+K");
 
     await expect(page.getByRole("button", { name: "Random theme" })).toBeVisible();
+    await page.getByRole("button", { name: "Language" }).click();
+    await expect(page.getByRole("button", { name: "English" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("button", { name: "Language" })).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    const commandSearch = page.getByPlaceholder("Search commands...");
+    await commandSearch.fill("Toggle");
+    await expect(page.getByText("No matching commands")).toBeVisible();
+    await commandSearch.fill("word wrap");
+    await expect(page.getByRole("button", { name: "Word wrap" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Word wrap" }).locator("mark")).toHaveText(
+      "Word wrap",
+    );
+    await commandSearch.fill("");
     await page.getByRole("button", { name: "Random theme" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect
@@ -128,8 +316,8 @@ test.describe("room shell", () => {
     await page.keyboard.press("ArrowLeft");
     const textBeforeWordWrapChange = await readEditorText(page);
     await page.keyboard.press("ControlOrMeta+K");
-    await expect(page.getByRole("button", { name: "Toggle word wrap · Off" })).toBeVisible();
-    await page.getByRole("button", { name: "Toggle word wrap · Off" }).click();
+    await expect(page.getByRole("button", { name: "Word wrap" })).toBeVisible();
+    await page.getByRole("button", { name: "Word wrap" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect
       .poll(() =>
@@ -188,7 +376,7 @@ test.describe("room shell", () => {
     });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
     await page.getByRole("button", { name: "Open shared settings" }).click();
-    await page.getByRole("radio", { name: "Dracula" }).click();
+    await page.getByRole("button", { name: "Dracula" }).click();
     await page.getByRole("button", { name: "Close settings" }).click();
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+K");
@@ -295,6 +483,50 @@ test.describe("room shell", () => {
     await expect(page.getByRole("button", { name: "main.tsx", exact: true })).toBeHidden();
     await sourceFolder.click();
     await expect(page.getByRole("button", { name: "main.tsx", exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "main.tsx", exact: true }).click();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+  });
+
+  test("opens App.tsx and focuses the editor after a refresh", async ({ page }) => {
+    await page.goto(`/room/e2e-default-editor-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await page.reload({ waitUntil: "domcontentloaded" });
+    await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible({
+      timeout: 15_000,
+    });
+    await expect(page.locator(".cm-content")).toBeFocused();
+  });
+
+  test("keeps the preview running after closing the last file tab", async ({ page }) => {
+    await page.goto(`/room/e2e-preview-after-close-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Close src/App.tsx" }).click();
+    await expect(page.getByText("No open files")).toBeVisible();
+    await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden();
+    await expect(page.getByText("Waiting for preview…")).toBeHidden();
+    await expect(page.getByRole("region", { name: "Live preview" })).toBeVisible();
+    await expect(page.locator("iframe").first()).toBeVisible({ timeout: 15_000 });
+  });
+
+  test("keeps the project preview stable when switching editor files", async ({ page }) => {
+    test.setTimeout(120_000);
+    await page.goto(`/room/e2e-preview-file-switch-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    const preview = page.locator('iframe[title^="Preview of "]');
+    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 90_000 });
+    const previewUrl = await preview.getAttribute("src");
+
+    await page.getByRole("button", { name: "index.html", exact: true }).click();
+    await expect(preview).toHaveAttribute("src", previewUrl ?? "");
+    await expect(page.getByText("Waiting for preview…")).toBeHidden();
   });
 
   test("keeps the CodeMirror search panel aligned with the editor theme", async ({ page }) => {
@@ -419,10 +651,8 @@ test.describe("room shell", () => {
     await page.getByRole("button", { name: "Editor", exact: true }).click();
     await page.getByLabel("Normal mode cursor").selectOption("block");
     await page.getByRole("button", { name: "Close settings" }).click();
-    await expect(page.locator(".cm-editor.vim-normal")).toHaveAttribute(
-      "data-normal-cursor-style",
-      "block",
-    );
+    await expect(page.locator(".cm-editor")).toHaveAttribute("data-normal-cursor-style", "block");
+    await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
     await expect
       .poll(() =>
         page
@@ -669,6 +899,8 @@ test.describe("room shell", () => {
       /^https?:\/\//,
       { timeout: 90_000 },
     );
+    const preview = page.locator('iframe[title^="Preview of "]');
+    const previewUrl = await preview.getAttribute("src");
 
     const editor = page.locator(".cm-content");
     await editor.click();
@@ -683,6 +915,7 @@ test.describe("room shell", () => {
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.type("export const fixed = 1;");
     await expect(page.getByRole("alert")).toHaveCount(0, { timeout: 60_000 });
+    await expect(preview).toHaveAttribute("src", previewUrl ?? "");
   });
 
   test("sends the existing cursor to a collaborator who joins later", async ({ browser }) => {
