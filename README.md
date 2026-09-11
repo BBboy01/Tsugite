@@ -1,14 +1,25 @@
-# Tsugite Multiplayer Editor
+# Tsugite
 
-A small multiplayer code editor built with Bun, React, Elysia, CodeMirror 6, and Loro CRDT.
+Tsugite is a collaborative code editor for small, shared rooms. Multiple people can edit the same project, follow each other's cursors, and see a live preview in the browser.
 
-Tsugite connects collaborators through shared code, files, themes, fonts, and live previews. Each new multiplayer room starts with a shared React + TypeScript + Vite + Tailwind CSS project. All starter files are stored in the room's Loro document, so collaborators can edit the app together and preview it through WebContainer.
+Each room starts with a React, TypeScript, Vite, and Tailwind project. The shared project document is synchronized with Loro CRDT. When a room contains a root `package.json`, each browser runs that project locally in WebContainer; the server never executes user project code.
 
-See [docs/architecture.md](docs/architecture.md) for the runtime boundaries and update flow.
+## What it includes
 
-## Development
+- Shared files, settings, themes, fonts, cursors, and presence
+- CodeMirror 6 editor with Vim mode, relative line numbers, fuzzy file search, and configurable keymaps
+- Browser-local live previews with incremental file synchronization and runtime recovery actions
+- Anonymous room identities with editable display names and avatar colors
+- Docker Compose deployment with Caddy serving the web app and proxying WebSocket traffic
 
-Install dependencies and start the two local processes:
+## Quick start
+
+Requirements:
+
+- [Bun](https://bun.sh/) matching [`.bun-version`](.bun-version)
+- A browser that supports cross-origin isolation and WebContainer
+
+Install dependencies, then start each development process in a separate terminal:
 
 ```bash
 bun install
@@ -16,17 +27,22 @@ bun run dev:server
 bun run dev:web
 ```
 
-Open `http://127.0.0.1:5173/room/demo` in two browser tabs to test collaboration. On first entry, Tsugite generates an anonymous Faker username and keeps the identity in the current browser profile. You can edit the name or avatar color from the current-user card in the lower-left corner.
+Open [http://127.0.0.1:5173/room/demo](http://127.0.0.1:5173/room/demo) in two browser tabs to try collaboration.
 
-The current MVP keeps room documents in memory. Stopping the Bun server resets rooms to the example project. Projects with a root `package.json` run in a browser-local WebContainer: Tsugite mounts the shared files, runs the standard `pnpm install`, then starts `scripts.dev` (falling back to `scripts.start`). Source edits are synced incrementally so the project dev server can hot-update the preview. Projects without `package.json` keep the single-file Babel iframe fallback.
+## Documentation
 
-WebContainer requires a cross-origin isolated page. The included Vite configuration sends the required `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers in development and preview mode. Each browser creates its own runtime; the Bun server only synchronizes the Loro document and never executes project commands.
+- [Getting started](docs/getting-started.md): first run, room usage, and browser requirements
+- [Development guide](docs/development.md): repository layout, local workflows, and verification
+- [Deployment guide](docs/deployment.md): Docker Compose, Caddy, images, and configuration
+- [Architecture](docs/architecture.md): runtime boundaries, data flow, and failure boundaries
+- [Contributing](CONTRIBUTING.md): commits, pull requests, releases, and dependency updates
 
-## Checks
+## Verification
+
+Run the checks that match the change before opening a pull request:
 
 ```bash
 bun run test
-bunx tsc --noEmit --pretty false
 bun run lint
 bun run format:check
 bun run knip
@@ -34,22 +50,11 @@ bun run build
 bun run test:e2e
 ```
 
-## Docker Compose
+Playwright automatically starts the web and server processes, or reuses running local instances. The GitHub Actions browser workflow runs Playwright smoke tests for release candidates, version tags, and manual runs.
 
-Build and start the production web and server containers:
+## Current limitations
 
-```bash
-docker compose up -d --build
-```
-
-Open `http://127.0.0.1:8080/room/demo`. Caddy serves the Vite build and proxies
-WebSocket traffic to the Bun server on the internal `/ws/` route. Set
-`TSUGITE_PORT` to change the host port, and stop the stack with:
-
-```bash
-docker compose down
-```
-
-GitHub publishes the `web` and `server` images to GHCR on pushes to `main` and
-version tags. Pull those images by setting `TSUGITE_WEB_IMAGE` and
-`TSUGITE_SERVER_IMAGE` before running Compose.
+- Room documents are stored in memory by the Bun server. Restarting the server resets rooms.
+- Room access is based on the room URL; there is no authentication or authorization layer yet.
+- Project dependencies and preview processes run independently in each collaborator's browser.
+- A project without a root `package.json` uses the single-file Babel iframe fallback instead of WebContainer.
