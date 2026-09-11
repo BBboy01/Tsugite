@@ -15,5 +15,5 @@ export type EditorPaneProps = {
   isFollowing: boolean;
   remoteMembers: readonly PresenceMember[];
   currentUserId: string;
-  onEditorFocusReady?: (focus: () => void) => void;
+  onEditorFocusReady?: (focus: (() => void) | undefined) => void;
 };

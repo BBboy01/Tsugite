@@ -114,16 +114,48 @@ test.describe("room shell", () => {
 
     await expect(page.getByRole("button", { name: "Random theme" })).toBeVisible();
     await page.getByRole("button", { name: "Random theme" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect
+      .poll(() =>
+        page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      )
+      .toBe(true);
     await expect(page.locator("main")).not.toHaveClass(/theme-paper/);
+
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+End");
+    await page.keyboard.type("/* cursor anchor */");
+    await page.keyboard.press("ArrowLeft");
+    const textBeforeWordWrapChange = await readEditorText(page);
+    await page.keyboard.press("ControlOrMeta+K");
     await expect(page.getByRole("button", { name: "Toggle word wrap · Off" })).toBeVisible();
     await page.getByRole("button", { name: "Toggle word wrap · Off" }).click();
-    await expect(page.getByRole("button", { name: "Toggle word wrap · On" })).toBeVisible();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect
+      .poll(() =>
+        page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      )
+      .toBe(true);
+    const cursorMarker = "x";
+    await page.keyboard.type(cursorMarker);
+    await expect
+      .poll(() => readEditorText(page))
+      .toBe(
+        `${textBeforeWordWrapChange.slice(0, -1)}${cursorMarker}${textBeforeWordWrapChange.slice(-1)}`,
+      );
 
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
     await page.getByRole("button", { name: "Choose theme" }).click();
     await expect(page.getByRole("button", { name: "Back" })).toBeVisible();
     await page.getByRole("button", { name: "Dracula" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect
+      .poll(() =>
+        page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      )
+      .toBe(true);
     await expect(page.locator("main")).toHaveClass(/theme-dracula/);
-    await expect(page.getByRole("button", { name: "Choose theme" })).toBeVisible();
   });
 
   test("returns focus to the editor when the command palette is dismissed", async ({ page }) => {
@@ -211,6 +243,41 @@ test.describe("room shell", () => {
     await expect
       .poll(() => page.evaluate(() => document.activeElement?.className))
       .toBe("cm-content");
+  });
+
+  test("focuses the editor after opening a file from file search", async ({ page }) => {
+    await page.goto(`/room/e2e-search-select-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+P");
+    await expect(page.getByPlaceholder("Search files...")).toBeVisible();
+    await page.getByPlaceholder("Search files...").fill("App.tsx");
+    await page.getByRole("button", { name: "src/App.tsx" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+  });
+
+  test("keeps Vim navigation focused after opening a file from search", async ({ page }) => {
+    await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
+    await page.goto(`/room/e2e-search-vim-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+P");
+    await page.getByPlaceholder("Search files...").fill("App.tsx");
+    await page.getByRole("button", { name: "src/App.tsx" }).click();
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect
+      .poll(() => page.evaluate(() => document.activeElement?.className))
+      .toBe("cm-content");
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/);
+    await page.keyboard.press("j");
+    await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/);
   });
 
   test("loads the editor and supports collapsing the source tree", async ({ page }) => {

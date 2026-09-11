@@ -31,7 +31,7 @@ import {
   updateRemotePresence,
 } from "../lib/remote-presence";
 import { getShikiTheme } from "../lib/workspace-theme";
-import { clampEditorSelection } from "../lib/editor-selection";
+import { clampEditorSelection, type EditorSelection } from "../lib/editor-selection";
 import type { EditorPaneProps } from "./editor-pane.types";
 import { EditorTabs } from "./editor-tabs";
 import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
@@ -63,6 +63,8 @@ const relativeLineNumberMarkers = StateField.define<RangeSet<GutterMarker>>({
   },
   provide: (field) => lineNumberMarkers.from(field),
 });
+
+type SavedEditorSelection = EditorSelection & { fileId: string };
 
 function buildRelativeLineNumberMarkers(state: EditorState): RangeSet<GutterMarker> {
   const currentLine = state.doc.lineAt(state.selection.main.head).number;
@@ -103,6 +105,7 @@ export function EditorPane({
   const cursorChangeRef = useRef(onCursorChange);
   const localInteractionRef = useRef(onLocalInteraction);
   const followedSelectionRef = useRef(followedSelection);
+  const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
   const tabViewModels = useMemo(
@@ -204,7 +207,10 @@ export function EditorPane({
           view.state.doc.length,
         ),
       );
-      const selection = followedSelectionRef.current;
+      const savedSelection = savedSelectionRef.current;
+      const selection =
+        followedSelectionRef.current ??
+        (savedSelection?.fileId === file.id ? savedSelection : undefined);
       if (selection) {
         const { anchor, head } = clampEditorSelection(selection, view.state.doc.length);
         view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
@@ -215,9 +221,16 @@ export function EditorPane({
 
     return () => {
       disposed = true;
-      onEditorFocusReady?.(() => undefined);
+      onEditorFocusReady?.(undefined);
       detachVimStatus();
       detachVimCursorStyle();
+      if (view) {
+        savedSelectionRef.current = {
+          fileId: file.id,
+          anchor: view.state.selection.main.anchor,
+          head: view.state.selection.main.head,
+        };
+      }
       view?.dom.removeAttribute("data-normal-cursor-style");
       view?.destroy();
       if (viewRef.current === view) viewRef.current = null;
