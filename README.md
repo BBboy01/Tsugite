@@ -9,6 +9,7 @@
 <p align="center">
   <a href="https://github.com/BBboy01/Tsugite/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BBboy01/Tsugite/ci.yml?branch=main&label=CI" alt="CI status" /></a>
   <a href="https://github.com/BBboy01/Tsugite/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/BBboy01/Tsugite/docker-publish.yml?branch=main&label=containers" alt="Container workflow status" /></a>
+  <a href="https://deepwiki.com/BBboy01/Tsugite"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
   <a href="https://github.com/BBboy01/Tsugite/commits/main"><img src="https://img.shields.io/github/last-commit/BBboy01/Tsugite" alt="Last commit" /></a>
   <a href="https://github.com/BBboy01/Tsugite/issues"><img src="https://img.shields.io/github/issues/BBboy01/Tsugite" alt="Open issues" /></a>
 </p>
