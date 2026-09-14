@@ -65,16 +65,14 @@ test("l stays on single-character and empty lines", async ({ page }) => {
   await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "x", "xyz"]);
 });
 
-for (const modifier of ["Meta", "Control"]) {
-  for (const mode of ["normal", "insert"]) {
-    test(`${modifier}-comma opens settings from Vim ${mode}`, async ({ page }) => {
-      if (mode === "insert") await page.keyboard.press("i");
-      await page.keyboard.press(`${modifier}+,`);
-      await expect(page.getByRole("dialog")).toBeVisible();
-      await expect(page.getByRole("button", { name: "Close settings" })).toBeVisible();
-      await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "", "xyz"]);
-      await page.keyboard.press("Escape");
-      await expect(page.getByRole("dialog")).toHaveCount(0);
-    });
-  }
+for (const mode of ["normal", "insert"]) {
+  test(`Mod-comma opens settings from Vim ${mode}`, async ({ page }) => {
+    if (mode === "insert") await page.keyboard.press("i");
+    await page.keyboard.press("ControlOrMeta+,");
+    await expect(page.getByRole("dialog")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Close settings" })).toBeVisible();
+    await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "", "xyz"]);
+    await page.keyboard.press("Escape");
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  });
 }

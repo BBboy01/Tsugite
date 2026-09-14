@@ -86,9 +86,15 @@ test.describe("file and editor actions", () => {
     await page.keyboard.press("ControlOrMeta+End");
     await page.keyboard.type("\n// before-switch");
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
+    const edited = await readText();
 
     await page.getByRole("button", { name: "index.html", exact: true }).click();
+    await expect(page.locator('section[aria-label="Editing index.html"]')).toBeVisible();
+    await expect.poll(readText, { timeout: 15_000 }).not.toBe(edited);
+
     await page.getByRole("button", { name: "App.tsx", exact: true }).click();
+    await expect(page.locator('section[aria-label="Editing src/App.tsx"]')).toBeVisible();
+    await expect.poll(readText, { timeout: 15_000 }).toBe(edited);
     await editor.click();
     await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/, { timeout: 15_000 });
     await page.keyboard.press("ControlOrMeta+z");
