@@ -32,6 +32,7 @@ import { getSettingDefinition, getSettingsByScope } from "../lib/settings-regist
 
 import { FontFamilyPicker, FontSizeSlider } from "./editor-settings-controls";
 import { ThemePicker } from "./theme-picker";
+import { useSystemClipboard } from "../lib/use-system-clipboard";
 
 export const SETTINGS_DIALOG_THEME_CLASS_NAME = "settings-dialog-theme";
 
@@ -68,10 +69,7 @@ function highlightSearchText(text: string, query: string): ReactNode {
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
   return parts.map((part, index) =>
     part.toLocaleLowerCase() === value.toLocaleLowerCase() ? (
-      <mark
-        key={`${part}-${index}`}
-        className="rounded-sm bg-[color-mix(in_srgb,var(--accent)_22%,transparent)] px-0.5 text-[var(--accent-deep)]"
-      >
+      <mark key={`${part}-${index}`} className="bg-transparent text-[var(--accent-deep)]">
         {part}
       </mark>
     ) : (
@@ -90,6 +88,7 @@ export function SettingsPopover({
   onLanguageChange,
 }: SettingsDialogProps) {
   const { i18n, t } = useTranslation();
+  const [systemClipboard, setSystemClipboard] = useSystemClipboard();
   const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
   const settingDescription = (id: string) => {
     const key = getSettingDefinition(id)?.descriptionKey;
@@ -470,6 +469,13 @@ export function SettingsPopover({
                       description={settingDescription("vimMode")}
                       checked={vimMode}
                       onCheckedChange={onVimModeChange}
+                    />
+                    <SettingSwitch
+                      settingId="systemClipboard"
+                      label={settingLabel("systemClipboard")}
+                      description={settingDescription("systemClipboard")}
+                      checked={systemClipboard}
+                      onCheckedChange={setSystemClipboard}
                     />
                     {KEYMAP_ACTIONS.map((action) => {
                       const labelKey =

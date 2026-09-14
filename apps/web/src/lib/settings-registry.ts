@@ -69,6 +69,13 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     command: true,
   },
   {
+    id: "systemClipboard",
+    scope: "keyboard",
+    kind: "toggle",
+    labelKey: "settings.systemClipboard",
+    descriptionKey: "settings.systemClipboardDescription",
+  },
+  {
     id: "fileSearchKeymap",
     scope: "keyboard",
     kind: "keymap",

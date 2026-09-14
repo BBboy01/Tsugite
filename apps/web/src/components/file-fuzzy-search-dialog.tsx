@@ -112,24 +112,47 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
 }
 
 function renderHighlightedPath(path: string, query: string) {
-  const indexes = new Set(fuzzyMatchIndexes(path, query));
+  const separator = path.lastIndexOf("/");
+  const directory = separator >= 0 ? path.slice(0, separator + 1) : "";
+  const fileName = path.slice(separator + 1);
+  return (
+    <>
+      <span data-file-directory className="text-iris-muted">
+        {directory}
+      </span>
+      <span data-file-name className="text-iris-strong">
+        {renderHighlightedText(
+          fileName,
+          fuzzyMatchIndexes(path, query)
+            .filter((index) => index > separator)
+            .map((index) => index - separator - 1),
+        )}
+      </span>
+    </>
+  );
+}
+
+function renderHighlightedText(text: string, matches: number[]) {
+  const indexes = new Set(matches);
   const segments: Array<{ text: string; highlighted: boolean }> = [];
-  [...path].forEach((character, index) => {
+  let index = 0;
+  for (const character of text) {
     const highlighted = indexes.has(index);
     const previous = segments.at(-1);
     if (previous?.highlighted === highlighted) previous.text += character;
     else segments.push({ text: character, highlighted });
-  });
-  return segments.map((segment, index) =>
+    index += character.length;
+  }
+  return segments.map((segment, segmentIndex) =>
     segment.highlighted ? (
       <mark
-        className="rounded-[2px] bg-[color-mix(in_srgb,var(--accent)_28%,transparent)] px-px text-[var(--accent-deep)]"
-        key={`${index}-${segment.text}`}
+        className="bg-transparent text-[var(--accent-deep)]"
+        key={`${segmentIndex}-${segment.text}`}
       >
         {segment.text}
       </mark>
     ) : (
-      <span key={`${index}-${segment.text}`}>{segment.text}</span>
+      <span key={`${segmentIndex}-${segment.text}`}>{segment.text}</span>
     ),
   );
 }

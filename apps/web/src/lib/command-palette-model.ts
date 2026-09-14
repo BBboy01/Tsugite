@@ -22,6 +22,7 @@ import { formatKeyBinding, type KeyBinding } from "./keymap";
 export type CommandId =
   | "file.search"
   | "settings.open"
+  | "systemClipboard.toggle"
   | "language.choose"
   | `runtime.${(typeof RUNTIME_ACTIONS)[number]["id"]}`;
 export type Submenu = "language" | "theme" | "normalCursor" | "packageManager";
@@ -69,6 +70,7 @@ function toggleCommand(id: string, label: string, enabled: boolean): PaletteComm
 export function getRootCommands(
   settings: ProjectSettings,
   vimMode: boolean,
+  systemClipboard: boolean,
   t: TFunction,
   keymap: readonly KeyBinding[],
 ): PaletteCommand[] {
@@ -94,6 +96,7 @@ export function getRootCommands(
     { id: "cursor.choose", label: t("command.chooseNormalCursor"), icon: TextCursor },
     { id: "packageManager.choose", label: t("command.choosePackageManager"), icon: Package },
     toggleCommand("vim.toggle", settingLabel("vimMode"), vimMode),
+    toggleCommand("systemClipboard.toggle", settingLabel("systemClipboard"), systemClipboard),
     toggleCommand("wordWrap.toggle", settingLabel("wordWrap"), settings.wordWrap),
     toggleCommand(
       "relativeLineNumbers.toggle",
