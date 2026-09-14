@@ -4,13 +4,13 @@
 
 ```text
 apps/web/       React application, editor, settings, preview, and browser state
-apps/server/    Elysia WebSocket server and in-memory room service
+apps/server/    Elysia WebSocket server, room service, and SQLite persistence
 packages/shared Shared project model, settings, protocol, and CRDT helpers
 e2e/            Playwright browser workflows
 docs/           Project and operational documentation
 ```
 
-The browser owns editor state, WebContainer execution, and local persistence. The server owns room membership, presence relay, and the in-memory Loro document. Shared types and transformations belong in `packages/shared`.
+The browser owns editor state, WebContainer execution, and local persistence. The server owns room membership, presence relay, the in-memory Loro document, and its persisted SQLite snapshot. Shared types and transformations belong in `packages/shared`.
 
 ## Local workflow
 
@@ -20,6 +20,15 @@ Start the server and web app in separate terminals:
 bun run dev:server
 bun run dev:web
 ```
+
+Database migrations are generated from the server schema and committed:
+
+```bash
+bun run db:generate --name=describe_the_change
+bun run db:migrate
+```
+
+The server also applies pending migrations on startup. Set `DATABASE_PATH` to override the default `./data/tsugite.sqlite` path.
 
 Useful commands:
 

@@ -22,7 +22,7 @@ The web process serves the editor at `http://127.0.0.1:5173`. Open a room by app
 http://127.0.0.1:5173/room/demo
 ```
 
-The server and web process are intentionally separate. Keep both running while using the editor.
+The server and web process are intentionally separate. Keep both running while using the editor. On startup, the server runs the checked-in Drizzle migrations and stores room snapshots in `./data/tsugite.sqlite` by default.
 
 ## Try collaboration
 
@@ -47,4 +47,15 @@ If the preview remains unavailable, check the browser's cross-origin isolation a
 
 ## Stop and reset
 
-Stop the terminal processes with `Ctrl-C`. The server stores rooms in memory, so restarting it resets room documents to a fresh in-memory state.
+Stop the terminal processes with `Ctrl-C`. Room snapshots survive server restarts. To use another database location, set `DATABASE_PATH` before starting the server.
+
+## Database migrations
+
+Generate a migration after changing `apps/server/src/db/schema.ts`, then apply it locally:
+
+```bash
+bun run db:generate --name=describe_the_change
+bun run db:migrate
+```
+
+Migration files under `drizzle/` are committed to the repository. Runtime SQLite files under `data/` are local deployment state and are ignored by Git.

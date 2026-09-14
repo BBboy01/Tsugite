@@ -40,12 +40,12 @@ flowchart TB
 
 ## Ownership
 
-| Area              | Owner       | Responsibility                                                               |
-| ----------------- | ----------- | ---------------------------------------------------------------------------- |
-| `apps/web`        | Browser     | UI state, CodeMirror lifecycle, local settings, WebContainer, preview iframe |
-| `apps/server`     | Bun process | Room membership, presence relay, validation, in-memory Loro documents        |
-| `packages/shared` | Both        | Project files, folders, settings, protocol messages, CRDT helpers            |
-| Caddy             | Deployment  | Static files, SPA fallback, WebSocket proxy, cross-origin isolation headers  |
+| Area              | Owner                | Responsibility                                                                                |
+| ----------------- | -------------------- | --------------------------------------------------------------------------------------------- |
+| `apps/web`        | Browser              | UI state, CodeMirror lifecycle, local settings, WebContainer, preview iframe                  |
+| `apps/server`     | Bun process + SQLite | Room membership, presence relay, validation, in-memory Loro documents and persisted snapshots |
+| `packages/shared` | Both                 | Project files, folders, settings, protocol messages, CRDT helpers                             |
+| Caddy             | Deployment           | Static files, SPA fallback, WebSocket proxy, cross-origin isolation headers                   |
 
 The server never runs a user's project commands. Dependency installation and preview servers run inside each collaborator's browser.
 
@@ -77,9 +77,16 @@ Presence and cursor updates use a separate high-frequency path. They should not 
 - A syntax error is reported in the preview surface without destroying the runtime.
 - Without `package.json`, the selected source is transpiled into a single-file iframe fallback.
 
+## Persistence
+
+- Room snapshots are stored in SQLite through Drizzle ORM. The snapshot contains the complete Loro project document: files, folders, and workspace settings.
+- The active Loro document remains in memory for low-latency collaboration and is saved after accepted document updates.
+- Presence, cursors, follow mode, WebContainer dependencies, and preview processes are intentionally not persisted.
+- Docker mounts `/data` as the `tsugite-data` volume. Set `DATABASE_PATH` when running the server outside Docker.
+
 ## Failure boundaries
 
-- Server restart loses rooms because storage is currently in memory.
+- Database loss or an unavailable database prevents room recovery, while presence remains connection-scoped.
 - Network interruption pauses synchronization but must not corrupt the local editor document.
 - WebContainer capability or browser policy failures are surfaced as preview runtime errors.
 - Preview process failures are local to a browser and do not affect collaboration state.

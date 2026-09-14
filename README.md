@@ -98,7 +98,7 @@ Playwright automatically starts the web and server processes, or reuses running 
 
 ## Current limitations
 
-- Room documents are stored in memory by the Bun server. Restarting the server resets rooms.
+- Room documents are persisted as Loro snapshots in SQLite. Docker deployments keep the database in the `tsugite-data` volume.
 - Room access is based on the room URL; there is no authentication or authorization layer yet.
 - Project dependencies and preview processes run independently in each collaborator's browser.
 - A project without a root `package.json` uses the single-file Babel iframe fallback instead of WebContainer.

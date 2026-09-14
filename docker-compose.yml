@@ -5,6 +5,10 @@ services:
       dockerfile: Dockerfile.server
     image: ${TSUGITE_SERVER_IMAGE:-tsugite-server:local}
     restart: unless-stopped
+    environment:
+      DATABASE_PATH: /data/tsugite.sqlite
+    volumes:
+      - tsugite-data:/data
     expose:
       - "3001"
 
@@ -19,3 +23,6 @@ services:
     restart: unless-stopped
     ports:
       - "${TSUGITE_PORT:-8080}:80"
+
+volumes:
+  tsugite-data:
