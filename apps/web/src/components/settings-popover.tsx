@@ -365,7 +365,7 @@ export function SettingsPopover({
                 onKeyDownCapture={(event) => {
                   if (event.key !== "Tab") return;
                   const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
-                    'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+                    'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex="0"]',
                   );
                   if (!focusables?.length) return;
                   const index = Array.from(focusables).indexOf(event.target as HTMLElement);
