@@ -61,8 +61,8 @@ Those headers are required by WebContainer. If a reverse proxy is placed in fron
 Create a semantic version tag matching `package.json`:
 
 ```bash
-git tag -a v0.2.0 -m "v0.2.0"
-git push origin v0.2.0
+git tag -a v1.0.0 -m "v1.0.0"
+git push origin v1.0.0
 ```
 
 The release workflow validates the version, runs tests, lint, formatting, build, and packaging, then publishes a GitHub Release with a tarball, checksum, and build provenance. Version-tag pushes also publish Docker images.
