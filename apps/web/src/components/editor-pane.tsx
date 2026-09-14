@@ -35,6 +35,8 @@ import { clampEditorSelection, type EditorSelection } from "../lib/editor-select
 import type { EditorPaneProps } from "./editor-pane.types";
 import { EditorTabs } from "./editor-tabs";
 import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
+import { attachVimClipboard } from "../lib/vim-clipboard";
+import { useSystemClipboard } from "../lib/use-system-clipboard";
 
 class RelativeLineNumberMarker extends GutterMarker {
   constructor(private readonly number: string) {
@@ -97,6 +99,9 @@ export function EditorPane({
   onEditorFocusReady,
 }: EditorPaneProps) {
   const { t } = useTranslation();
+  const [systemClipboard] = useSystemClipboard();
+  const systemClipboardRef = useRef(systemClipboard);
+  systemClipboardRef.current = systemClipboard;
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
   const relativeLineNumbersCompartmentRef = useRef<Compartment | null>(null);
@@ -128,6 +133,7 @@ export function EditorPane({
     let relativeLineNumbersCompartment: Compartment | undefined;
     let detachVimStatus: () => void = () => undefined;
     let detachVimCursorStyle: () => void = () => undefined;
+    let detachVimClipboard: () => void = () => undefined;
     const setupEditor = async () => {
       const source = file.text.toString();
       const language = getEditorLanguage(file.path, file.language);
@@ -198,6 +204,9 @@ export function EditorPane({
       detachVimCursorStyle = vimMode
         ? attachVimCursorStyle(editorView, settings.normalCursorStyle)
         : () => undefined;
+      detachVimClipboard = vimMode
+        ? attachVimClipboard(editorView, () => systemClipboardRef.current)
+        : () => undefined;
       onEditorFocusReady?.(() => editorView.focus());
       if (vimMode) {
         detachVimStatus = attachVimStatus(editorView, setVimStatus);
@@ -228,6 +237,7 @@ export function EditorPane({
       onEditorFocusReady?.(undefined);
       detachVimStatus();
       detachVimCursorStyle();
+      detachVimClipboard();
       if (view) {
         savedSelectionRef.current = {
           fileId: file.id,

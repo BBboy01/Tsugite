@@ -27,6 +27,21 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
+  test("de-emphasizes file search directories and uses text-only matches", async ({ page }) => {
+    await page.goto(`/room/e2e-file-search-highlight-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+P");
+    const search = page.getByPlaceholder("Search files...");
+    await search.fill("App");
+    const result = page.getByRole("button", { name: /App\.tsx/ }).first();
+    await expect(result.locator("[data-file-directory]")).toHaveText("src/");
+    await expect(result.locator("[data-file-name]")).toContainText("App.tsx");
+    await expect(result.locator("mark")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  });
+
   test("dismisses file search and command palette by clicking the backdrop", async ({ page }) => {
     await page.goto(`/room/e2e-dialog-backdrop-${Date.now()}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
@@ -55,6 +70,16 @@ test.describe("room shell", () => {
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+,");
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("exposes the system clipboard setting in Vim keyboard preferences", async ({ page }) => {
+    await page.goto(`/room/e2e-system-clipboard-setting-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Keyboard" }).click();
+    await expect(page.getByRole("switch", { name: "Use system clipboard" })).toBeVisible();
   });
 
   test("keeps workspace settings controls in the Tab order", async ({ page }) => {
@@ -218,6 +243,7 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("button", { name: "Open file" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Use system clipboard" })).toBeVisible();
     const primaryModifier = await page.evaluate(() =>
       /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "⌘" : "Ctrl",
     );

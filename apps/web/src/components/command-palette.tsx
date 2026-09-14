@@ -20,6 +20,7 @@ import type { LanguageCode } from "@/lib/i18n";
 import type { KeyBinding } from "@/lib/keymap";
 
 import { useCommandPaletteSelectionScroll } from "./use-command-palette-selection-scroll";
+import { useSystemClipboard } from "../lib/use-system-clipboard";
 
 function highlightCommandLabel(label: string, query: string) {
   const normalizedQuery = query.trim();
@@ -30,9 +31,7 @@ function highlightCommandLabel(label: string, query: string) {
   return (
     <>
       {label.slice(0, start)}
-      <mark className="rounded-[2px] bg-[color-mix(in_srgb,var(--accent)_28%,transparent)] px-0.5 text-inherit">
-        {label.slice(start, end)}
-      </mark>
+      <mark className="bg-transparent text-[var(--accent-deep)]">{label.slice(start, end)}</mark>
       {label.slice(end)}
     </>
   );
@@ -66,6 +65,7 @@ export function CommandPalette({
   onCloseAutoFocus,
 }: CommandPaletteProps) {
   const { t } = useTranslation();
+  const [systemClipboard, setSystemClipboard] = useSystemClipboard();
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldReturnFocusRef = useRef(true);
   const [query, setQuery] = useState("");
@@ -73,7 +73,7 @@ export function CommandPalette({
   const [submenu, setSubmenu] = useState<Submenu | null>(null);
   const isDark = isDarkWorkspaceTheme(settings.theme);
 
-  const rootCommands = getRootCommands(settings, vimMode, t, keymap);
+  const rootCommands = getRootCommands(settings, vimMode, systemClipboard, t, keymap);
   const submenuLabel = submenu ? getSubmenuLabel(submenu, t) : null;
   const submenuCommands = submenu ? getSubmenuCommands(submenu, settings, t) : [];
 
@@ -177,6 +177,10 @@ export function CommandPalette({
         return;
       case "vim.toggle":
         onVimModeChange(!vimMode);
+        closePalette();
+        return;
+      case "systemClipboard.toggle":
+        setSystemClipboard(!systemClipboard);
         closePalette();
         return;
       case "wordWrap.toggle":
