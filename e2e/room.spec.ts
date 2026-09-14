@@ -68,6 +68,10 @@ test.describe("room shell", () => {
     await language.focus();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Random theme" })).toBeFocused();
+    await page.keyboard.press("Shift+Tab");
+    await expect(language).toBeFocused();
+    await page.keyboard.press("Tab");
+    await expect(page.getByRole("button", { name: "Random theme" })).toBeFocused();
     await page.keyboard.press("Tab");
     await expect(page.getByRole("button", { name: "Paper Light" })).toBeFocused();
     await page.keyboard.press("Tab");
@@ -86,6 +90,20 @@ test.describe("room shell", () => {
     await expect(page.getByRole("heading", { name: "Editor" })).toBeVisible();
     await expect(page.locator('[data-setting-id="relativeLineNumbers"]')).toBeVisible();
     await expect(page.getByRole("button", { name: "Relative line numbers" })).toBeVisible();
+    await expect(page.locator("aside.settings-sidebar-glass button")).toHaveText([
+      "Editor",
+      "Relative line numbers",
+    ]);
+    await expect(page.locator("aside.settings-sidebar-glass mark")).toHaveText("Relative line");
+  });
+
+  test("focuses the current settings menu item when opened", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-open-focus-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await expect(page.getByRole("button", { name: "Workspace" })).toBeFocused();
   });
 
   test("cycles focus from the current menu through search and right content", async ({ page }) => {
@@ -200,14 +218,30 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
     await expect(page.getByRole("button", { name: "Open file" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Open file" })).toContainText("Mod-P");
-    await expect(page.getByRole("button", { name: "Open settings" })).toContainText("Mod-,");
+    const primaryModifier = await page.evaluate(() =>
+      /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "⌘" : "Ctrl",
+    );
+    await expect(page.getByRole("button", { name: "Open file" })).toContainText(
+      `${primaryModifier}-P`,
+    );
+    await expect(page.getByRole("button", { name: "Open settings" })).toContainText(
+      `${primaryModifier}-,`,
+    );
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Open shared settings" }).click();
     await page.getByRole("button", { name: "Keyboard" }).click();
-    await expect(page.getByLabel("File search shortcut")).toHaveValue("Mod-P");
-    await expect(page.getByLabel("Open settings shortcut")).toHaveValue("Mod-,");
-    await expect(page.getByLabel("Command palette shortcut")).toHaveValue("Mod-K");
+    await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
+    await expect(page.getByLabel("Open settings shortcut")).toHaveValue(`${primaryModifier}-,`);
+    await expect(page.getByLabel("Command palette shortcut")).toHaveValue(`${primaryModifier}-K`);
+    await page.getByLabel("File search shortcut").press("ControlOrMeta+Shift+P");
+    await expect(page.getByLabel("File search shortcut")).toHaveValue(
+      `${primaryModifier === "⌘" ? "Cmd" : "Ctrl"}-Shift-P`,
+    );
+    await page.getByRole("button", { name: "Restore default shortcut" }).first().click();
+    await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
+    await page.getByLabel("File search shortcut").press("ControlOrMeta+K");
+    await expect(page.getByRole("alert")).toContainText("Command palette shortcut");
+    await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
   });
 
   test("exposes and executes runtime actions from the command palette", async ({ page }) => {
