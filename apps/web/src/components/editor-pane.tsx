@@ -205,7 +205,7 @@ export function EditorPane({
         ? attachVimCursorStyle(editorView, settings.normalCursorStyle)
         : () => undefined;
       detachVimClipboard = vimMode
-        ? attachVimClipboard(editorView, () => systemClipboardRef.current)
+        ? attachVimClipboard(editorView, systemClipboardRef.current)
         : () => undefined;
       onEditorFocusReady?.(() => editorView.focus());
       if (vimMode) {
@@ -262,6 +262,7 @@ export function EditorPane({
     settings.theme,
     settings.wordWrap,
     settings.normalCursorStyle,
+    systemClipboard,
     vimMode,
     undoManager,
   ]);
