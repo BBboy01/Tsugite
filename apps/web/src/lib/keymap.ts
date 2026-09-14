@@ -12,6 +12,39 @@ export const DEFAULT_KEYMAP: readonly KeyBinding[] = [
   { action: "command.palette", key: "Mod-K" },
 ];
 
+export function isMacPlatform(platform: string = globalThis.navigator?.platform ?? ""): boolean {
+  return /Mac|iPhone|iPad|iPod/i.test(platform);
+}
+
+export function formatKeyBinding(
+  binding: string,
+  platform: string = globalThis.navigator?.platform ?? "",
+) {
+  if (!binding.startsWith("Mod-")) return binding;
+  return `${isMacPlatform(platform) ? "⌘" : "Ctrl"}-${binding.slice(4)}`;
+}
+
+function comparableKey(binding: string, platform: string) {
+  if (binding.startsWith("Mod-")) {
+    return `${isMacPlatform(platform) ? "Cmd" : "Ctrl"}${binding.slice(3)}`;
+  }
+  return binding;
+}
+
+export function findKeymapConflict(
+  bindings: readonly KeyBinding[],
+  action: AppAction,
+  key: string,
+  platform: string = globalThis.navigator?.platform ?? "",
+): AppAction | null {
+  const comparable = comparableKey(key, platform);
+  return (
+    bindings.find(
+      (binding) => binding.action !== action && comparableKey(binding.key, platform) === comparable,
+    )?.action ?? null
+  );
+}
+
 export function normalizeKey(event: KeyboardEvent): string | null {
   if (
     event.key === "Control" ||
@@ -30,11 +63,15 @@ export function normalizeKey(event: KeyboardEvent): string | null {
   return [...parts, key].join("-");
 }
 
-export function matchesKeyBinding(event: KeyboardEvent, binding: string): boolean {
+export function matchesKeyBinding(
+  event: KeyboardEvent,
+  binding: string,
+  platform = globalThis.navigator?.platform ?? "",
+): boolean {
   const normalized = normalizeKey(event);
   if (!normalized) return false;
   const expected = binding.startsWith("Mod-")
-    ? `${event.metaKey ? "Cmd" : "Ctrl"}${binding.slice(3)}`
+    ? `${isMacPlatform(platform) ? "Cmd" : "Ctrl"}${binding.slice(3)}`
     : binding;
   return normalized === expected;
 }

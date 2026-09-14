@@ -17,7 +17,7 @@ import { WORKSPACE_THEME_OPTIONS } from "./workspace-theme";
 import { RUNTIME_ACTIONS } from "./runtime-actions";
 import { languageOptions } from "./i18n";
 import { getSettingDefinition } from "./settings-registry";
-import type { KeyBinding } from "./keymap";
+import { formatKeyBinding, type KeyBinding } from "./keymap";
 
 export type CommandId =
   | "file.search"
@@ -74,7 +74,7 @@ export function getRootCommands(
 ): PaletteCommand[] {
   const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
   const shortcutFor = (action: KeyBinding["action"]) =>
-    keymap.find((binding) => binding.action === action)?.key;
+    formatKeyBinding(keymap.find((binding) => binding.action === action)?.key ?? "");
   return [
     {
       id: "file.search",

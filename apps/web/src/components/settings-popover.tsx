@@ -1,12 +1,29 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { ChevronDown, Code2, Keyboard, Palette, Rocket, Settings, X } from "lucide-react";
+import {
+  ChevronDown,
+  Code2,
+  Keyboard,
+  Palette,
+  RotateCcw,
+  Rocket,
+  Settings,
+  X,
+} from "lucide-react";
 import { IconButton, Switch, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { PackageManager, ProjectSettings } from "@iris/shared";
-import { KEYMAP_ACTIONS, normalizeKey, type KeyBinding } from "../lib/keymap";
+import {
+  DEFAULT_KEYMAP,
+  findKeymapConflict,
+  KEYMAP_ACTIONS,
+  formatKeyBinding,
+  normalizeKey,
+  type AppAction,
+  type KeyBinding,
+} from "../lib/keymap";
 
 import { languageOptions, type LanguageCode } from "../lib/i18n";
 import { isDarkWorkspaceTheme } from "../lib/workspace-theme";
@@ -43,6 +60,25 @@ type NavigationEntry =
 const sectionScopes: SettingsSection[] = ["workspace", "editor", "keyboard", "runtime"];
 
 const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
+
+function highlightSearchText(text: string, query: string): ReactNode {
+  const value = query.trim();
+  if (!value) return text;
+  const escaped = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const parts = text.split(new RegExp(`(${escaped})`, "gi"));
+  return parts.map((part, index) =>
+    part.toLocaleLowerCase() === value.toLocaleLowerCase() ? (
+      <mark
+        key={`${part}-${index}`}
+        className="rounded-sm bg-[color-mix(in_srgb,var(--accent)_22%,transparent)] px-0.5 text-[var(--accent-deep)]"
+      >
+        {part}
+      </mark>
+    ) : (
+      part
+    ),
+  );
+}
 
 export function SettingsPopover({
   settings,
@@ -84,6 +120,7 @@ export function SettingsPopover({
   const [section, setSection] = useState<SettingsSection>("workspace");
   const [query, setQuery] = useState("");
   const [activeEntryId, setActiveEntryId] = useState("section:workspace");
+  const [keymapErrors, setKeymapErrors] = useState<Partial<Record<AppAction, string>>>({});
   const searchRef = useRef<HTMLInputElement>(null);
   const sidebarEntryRefs = useRef(new Map<string, HTMLButtonElement>());
   const contentRef = useRef<HTMLDivElement>(null);
@@ -133,7 +170,7 @@ export function SettingsPopover({
       (entry) =>
         scopes.has(entry.kind === "section" ? entry.id : entry.scope) &&
         (entry.kind === "section" ||
-          matched.some((match) => match.kind === "section" || match.id === entry.id)),
+          matched.some((match) => match.kind === "setting" && match.id === entry.id)),
     );
   }, [navigationEntries, query]);
 
@@ -238,6 +275,10 @@ export function SettingsPopover({
           <Dialog.Overlay className="glass-overlay settings-overlay fixed inset-0 z-50" />
           <Dialog.Content
             className={`theme-${settings.theme} glass-dialog fixed left-1/2 top-1/2 z-50 grid h-[min(78vh,560px)] w-[min(92vw,760px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[180px_minmax(0,1fr)] overflow-visible rounded-[14px] border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_24px_70px_rgba(38,49,41,0.22)] focus:outline-none max-[760px]:h-[min(86vh,680px)] max-[760px]:w-[min(94vw,560px)] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[auto_minmax(0,1fr)]`}
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              requestAnimationFrame(() => sidebarEntryRefs.current.get(activeEntryId)?.focus());
+            }}
             onCloseAutoFocus={(event) => {
               if (returnFocusRef.current) event.preventDefault();
             }}
@@ -275,7 +316,7 @@ export function SettingsPopover({
                         if (node) sidebarEntryRefs.current.set(entryId, node);
                         else sidebarEntryRefs.current.delete(entryId);
                       }}
-                      className={`flex min-h-8 items-center gap-2 rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
+                      className={`flex min-h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
                       key={entryId}
                       type="button"
                       tabIndex={active ? 0 : -1}
@@ -287,7 +328,9 @@ export function SettingsPopover({
                         width={sectionEntry ? "14" : "12"}
                         height={sectionEntry ? "14" : "12"}
                       />
-                      <span className="truncate">{entry.label}</span>
+                      <span className="min-w-0 whitespace-normal break-words">
+                        {highlightSearchText(entry.label, query)}
+                      </span>
                     </button>
                   );
                 })}
@@ -327,14 +370,19 @@ export function SettingsPopover({
                   );
                   if (!focusables?.length) return;
                   const index = Array.from(focusables).indexOf(event.target as HTMLElement);
-                  if (!event.shiftKey && (index === focusables.length - 1 || index < 0)) {
+                  if (!event.shiftKey && index >= 0 && index < focusables.length - 1) {
+                    const next = focusables[index + 1];
+                    event.preventDefault();
+                    requestAnimationFrame(() => next.focus());
+                  } else if (!event.shiftKey && (index === focusables.length - 1 || index < 0)) {
                     event.preventDefault();
                     requestAnimationFrame(() =>
                       sidebarEntryRefs.current.get(activeEntryId)?.focus(),
                     );
-                  } else if (event.shiftKey && index <= 0) {
+                  } else if (event.shiftKey) {
+                    const previous = focusables[index - 1];
                     event.preventDefault();
-                    requestAnimationFrame(() => searchRef.current?.focus());
+                    requestAnimationFrame(() => (previous ?? searchRef.current)?.focus());
                   }
                 }}
               >
@@ -444,29 +492,89 @@ export function SettingsPopover({
                           className="grid gap-2 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
                         >
                           {t(labelKey)}
-                          <input
-                            className="rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
-                            value={binding}
-                            readOnly
-                            onKeyDown={(event) => {
-                              if (event.key === "Tab" || event.key === "Escape") return;
-                              event.stopPropagation();
-                              const key = normalizeKey(event.nativeEvent);
-                              if (!key) return;
-                              event.preventDefault();
-                              onKeymapChange(
-                                KEYMAP_ACTIONS.map((item) => ({
-                                  action: item,
-                                  key:
-                                    item === action
-                                      ? key
-                                      : (keymap.find((candidate) => candidate.action === item)
-                                          ?.key ?? ""),
-                                })),
-                              );
-                            }}
-                            aria-label={t(labelKey)}
-                          />
+                          <div className="flex items-center gap-2">
+                            <input
+                              className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                              value={formatKeyBinding(binding)}
+                              readOnly
+                              onKeyDown={(event) => {
+                                if (event.key === "Tab" || event.key === "Escape") return;
+                                event.stopPropagation();
+                                const key = normalizeKey(event.nativeEvent);
+                                if (!key) return;
+                                event.preventDefault();
+                                const conflict = findKeymapConflict(keymap, action, key);
+                                if (conflict) {
+                                  setKeymapErrors((current) => ({
+                                    ...current,
+                                    [action]: t("settings.keymapConflict", {
+                                      action: settingLabel(
+                                        conflict === "file.search"
+                                          ? "fileSearchKeymap"
+                                          : conflict === "settings.open"
+                                            ? "openSettingsKeymap"
+                                            : "commandPaletteKeymap",
+                                      ),
+                                    }),
+                                  }));
+                                  return;
+                                }
+                                setKeymapErrors((current) => {
+                                  const next = { ...current };
+                                  delete next[action];
+                                  return next;
+                                });
+                                onKeymapChange(
+                                  KEYMAP_ACTIONS.map((item) => ({
+                                    action: item,
+                                    key:
+                                      item === action
+                                        ? key
+                                        : (keymap.find((candidate) => candidate.action === item)
+                                            ?.key ?? ""),
+                                  })),
+                                );
+                              }}
+                              aria-label={t(labelKey)}
+                            />
+                            <IconButton
+                              size="1"
+                              variant="ghost"
+                              color="gray"
+                              type="button"
+                              aria-label={t("settings.resetKeymap")}
+                              title={t("settings.resetKeymap")}
+                              onClick={() => {
+                                setKeymapErrors((current) => {
+                                  const next = { ...current };
+                                  delete next[action];
+                                  return next;
+                                });
+                                onKeymapChange(
+                                  KEYMAP_ACTIONS.map((item) => ({
+                                    action: item,
+                                    key:
+                                      item === action
+                                        ? DEFAULT_KEYMAP.find(
+                                            (candidate) => candidate.action === item,
+                                          )!.key
+                                        : (keymap.find((candidate) => candidate.action === item)
+                                            ?.key ?? ""),
+                                  })),
+                                );
+                              }}
+                            >
+                              <RotateCcw width="13" height="13" />
+                            </IconButton>
+                          </div>
+                          {keymapErrors[action] && (
+                            <span
+                              className="text-[10px] normal-case tracking-normal text-rose-600"
+                              role="alert"
+                            >
+                              {keymapErrors[action]}
+                            </span>
+                          )}
                         </label>
                       );
                     })}

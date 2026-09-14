@@ -30,7 +30,23 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
             className="bg-transparent transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)]"
             aria-label={t("settings.theme.random")}
             onKeyDown={(event) => {
-              if (event.key === "Tab" && !event.shiftKey) {
+              if (event.key !== "Tab") return;
+              if (event.shiftKey) {
+                const dialog = container?.closest('[role="dialog"]');
+                const focusables = dialog?.querySelectorAll<HTMLElement>(
+                  'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
+                );
+                const currentIndex = focusables
+                  ? Array.from(focusables).indexOf(event.currentTarget)
+                  : -1;
+                const previous = focusables?.[currentIndex - 1];
+                if (previous) {
+                  event.preventDefault();
+                  previous.focus();
+                }
+                return;
+              }
+              {
                 const firstTheme =
                   container?.querySelector<HTMLButtonElement>("[data-theme-option]");
                 if (firstTheme) {
