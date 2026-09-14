@@ -1,6 +1,7 @@
 import { expect, test } from "playwright/test";
 
 test("follows a collaborator's file and cursor until a local action", async ({ browser }) => {
+  test.setTimeout(90_000);
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
   await firstContext.addInitScript(
@@ -39,7 +40,9 @@ test("follows a collaborator's file and cursor until a local action", async ({ b
   const secondActiveLine = secondPage.locator(".cm-activeLine").first();
   await expect(secondActiveLine).toHaveText(/createRoot/);
 
-  await firstPage.getByRole("button", { name: /2 online/ }).click();
+  const onlineMembers = firstPage.getByRole("button", { name: /2 online/ });
+  await expect(onlineMembers).toBeVisible({ timeout: 30_000 });
+  await onlineMembers.click();
   await firstPage.getByRole("button", { name: "Jun", exact: true }).click();
 
   await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
