@@ -56,17 +56,6 @@ The web image uses Caddy to:
 
 Those headers are required by WebContainer. If a reverse proxy is placed in front of Caddy, preserve the headers and WebSocket upgrade requests.
 
-## Release flow
-
-Create a semantic version tag matching `package.json`:
-
-```bash
-git tag -a v1.0.0 -m "v1.0.0"
-git push origin v1.0.0
-```
-
-The release workflow validates the version, runs tests, lint, formatting, build, and packaging, then publishes a GitHub Release with a tarball, checksum, and build provenance. Version-tag pushes also publish Docker images.
-
 ## Operational boundaries
 
 - The server persists room documents as Loro snapshots in SQLite. Docker Compose stores the database in the `tsugite-data` volume, and `DATABASE_PATH` can override the location for standalone deployments.
