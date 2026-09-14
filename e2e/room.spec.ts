@@ -168,6 +168,21 @@ test.describe("room shell", () => {
     await expect(font).toBeFocused();
   });
 
+  test("moves from the editor font to the font size slider on the next Tab", async ({ page }) => {
+    await page.goto(`/room/e2e-settings-editor-tab-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Editor", exact: true }).click();
+
+    const font = page.getByRole("button", { name: "Font family" });
+    const fontSize = page.locator('[role="slider"]');
+    await font.focus();
+    await page.keyboard.press("Tab");
+    await expect(fontSize).toBeFocused();
+  });
+
   test("keeps the runtime action focused while restarting the preview", async ({ page }) => {
     await page.goto(`/room/e2e-settings-runtime-focus-${Date.now()}`, {
       waitUntil: "domcontentloaded",
