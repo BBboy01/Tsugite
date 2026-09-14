@@ -69,6 +69,6 @@ The release workflow validates the version, runs tests, lint, formatting, build,
 
 ## Operational boundaries
 
-- The current server stores rooms in memory. Use a persistent room store before production workloads that require recovery.
+- The server persists room documents as Loro snapshots in SQLite. Docker Compose stores the database in the `tsugite-data` volume, and `DATABASE_PATH` can override the location for standalone deployments.
 - The current deployment has no authentication or authorization. Treat room URLs as shareable capabilities.
 - Each browser installs dependencies and runs a preview independently. Server CPU and memory do not include project preview processes.

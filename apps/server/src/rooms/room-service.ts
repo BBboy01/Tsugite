@@ -15,6 +15,7 @@ import {
   type JoinPayload,
   type PresencePayload,
 } from "./room-schemas";
+import { RoomRepository, type RoomStore } from "./room-repository";
 
 export type RoomSocket = {
   send: (data: string | Uint8Array) => unknown;
@@ -35,6 +36,8 @@ type Room = {
 export class RoomService {
   private readonly rooms = new Map<string, Room>();
   private readonly clients = new Map<RoomSocket, RoomClient>();
+
+  constructor(private readonly repository: RoomStore = new RoomRepository()) {}
 
   join(socket: RoomSocket, roomId: string, message: unknown): boolean {
     if (!isJoinPayload(message)) return false;
@@ -86,6 +89,7 @@ export class RoomService {
 
     try {
       room.doc.import(bytes);
+      this.repository.save(client.roomId, room.doc.export({ mode: "snapshot" }));
     } catch {
       return false;
     }
@@ -148,7 +152,15 @@ export class RoomService {
     const current = this.rooms.get(roomId);
     if (current) return current;
 
-    const room: Room = { doc: createProjectDoc(), clients: new Map() };
+    const doc = new LoroDoc();
+    const stored = this.repository.load(roomId);
+    if (stored) doc.import(stored.snapshot);
+    else {
+      const initial = createProjectDoc();
+      doc.import(initial.export({ mode: "snapshot" }));
+      this.repository.save(roomId, doc.export({ mode: "snapshot" }));
+    }
+    const room: Room = { doc, clients: new Map() };
     this.rooms.set(roomId, room);
     return room;
   }

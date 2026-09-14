@@ -4,6 +4,24 @@ import { LoroDoc } from "loro-crdt";
 import { readSettings, setSharedSetting } from "@iris/shared";
 
 import { RoomService, type RoomSocket } from "./room-service";
+import type { RoomStore, StoredRoom } from "./room-repository";
+
+class MemoryRoomStore implements RoomStore {
+  private readonly rooms = new Map<string, StoredRoom>();
+
+  load(roomId: string): StoredRoom | undefined {
+    return this.rooms.get(roomId);
+  }
+
+  save(roomId: string, snapshot: Uint8Array, now = Date.now()): void {
+    const previous = this.rooms.get(roomId);
+    this.rooms.set(roomId, {
+      snapshot: new Uint8Array(snapshot),
+      createdAt: previous?.createdAt ?? now,
+      updatedAt: now,
+    });
+  }
+}
 
 function createSocket() {
   const messages: Array<string | Uint8Array> = [];
@@ -11,8 +29,12 @@ function createSocket() {
   return { socket, messages };
 }
 
+function createService() {
+  return new RoomService(new MemoryRoomStore());
+}
+
 test("joins a room with a snapshot and presence list", () => {
-  const service = new RoomService();
+  const service = createService();
   const first = createSocket();
 
   expect(
@@ -42,7 +64,7 @@ test("joins a room with a snapshot and presence list", () => {
 });
 
 test("imports updates and broadcasts them to other room members", () => {
-  const service = new RoomService();
+  const service = createService();
   const first = createSocket();
   const second = createSocket();
 
@@ -71,7 +93,7 @@ test("imports updates and broadcasts them to other room members", () => {
 });
 
 test("rejects invalid joins and removes presence on leave", () => {
-  const service = new RoomService();
+  const service = createService();
   const invalid = createSocket();
   const valid = createSocket();
 
@@ -97,7 +119,7 @@ test("rejects invalid joins and removes presence on leave", () => {
 });
 
 test("keeps the room document when the last member reconnects", () => {
-  const service = new RoomService();
+  const service = createService();
   const first = createSocket();
 
   service.join(first.socket, "demo", {
@@ -127,8 +149,39 @@ test("keeps the room document when the last member reconnects", () => {
   expect(readSettings(restoredDoc).theme).toBe("dracula");
 });
 
+test("restores a persisted snapshot in a new service instance", () => {
+  const store = new MemoryRoomStore();
+  const firstService = new RoomService(store);
+  const first = createSocket();
+  firstService.join(first.socket, "persisted", {
+    type: "join",
+    userId: "one",
+    displayName: "Maya",
+    color: "#d88961",
+  });
+
+  const clientDoc = new LoroDoc();
+  clientDoc.import(first.messages[1] as Uint8Array);
+  setSharedSetting(clientDoc, "theme", "nord");
+  clientDoc.commit();
+  firstService.update(first.socket, clientDoc.export({ mode: "update" }));
+
+  const second = createSocket();
+  const secondService = new RoomService(store);
+  secondService.join(second.socket, "persisted", {
+    type: "join",
+    userId: "two",
+    displayName: "Jun",
+    color: "#7389b7",
+  });
+
+  const restoredDoc = new LoroDoc();
+  restoredDoc.import(second.messages[1] as Uint8Array);
+  expect(readSettings(restoredDoc).theme).toBe("nord");
+});
+
 test("rejects identity changes on an already joined socket", () => {
-  const service = new RoomService();
+  const service = createService();
   const socket = createSocket();
   expect(
     service.join(socket.socket, "demo", {
@@ -150,7 +203,7 @@ test("rejects identity changes on an already joined socket", () => {
 });
 
 test("rejects malformed presence fields", () => {
-  const service = new RoomService();
+  const service = createService();
   const socket = createSocket();
   service.join(socket.socket, "demo", {
     type: "join",

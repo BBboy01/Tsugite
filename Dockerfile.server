@@ -4,9 +4,12 @@ WORKDIR /app
 COPY package.json bun.lock .bun-version ./
 COPY apps ./apps
 COPY packages ./packages
+COPY drizzle ./drizzle
+COPY drizzle.config.ts ./drizzle.config.ts
 
 RUN bun install --frozen-lockfile --production --ignore-scripts
 
 ENV PORT=3001
+ENV DATABASE_PATH=/data/tsugite.sqlite
 EXPOSE 3001
 CMD ["bun", "run", "apps/server/src/index.ts"]

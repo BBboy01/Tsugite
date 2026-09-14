@@ -32,6 +32,15 @@ jobs:
         env:
           SKIP_INSTALL_SIMPLE_GIT_HOOKS: "1"
 
+      - name: Check database migrations
+        run: bunx --no-install drizzle-kit check
+
+      - name: Apply migrations to a fresh database
+        run: |
+          temp_db="$(mktemp)"
+          trap 'rm -f "$temp_db"' EXIT
+          DATABASE_PATH="$temp_db" bun run db:migrate
+
       - name: Run tests
         run: bun run test
 
