@@ -42,6 +42,22 @@ test.describe("room shell", () => {
     await expect(result.locator("mark")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   });
 
+  test("keeps inactive file names muted until they are opened", async ({ page }) => {
+    await page.goto(`/room/e2e-file-tree-emphasis-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+
+    const files = page.locator('aside[aria-label="Project files"] [data-context-kind="file"]');
+    const app = files.filter({ hasText: "App.tsx" });
+    const index = files.filter({ hasText: "index.css" });
+    await expect(app).toHaveCSS("color", "rgb(29, 29, 31)");
+    await expect(index).toHaveCSS("color", "rgb(110, 110, 115)");
+    await index.getByRole("button").click();
+    await expect(app).toHaveCSS("color", "rgb(110, 110, 115)");
+    await expect(index).toHaveCSS("color", "rgb(29, 29, 31)");
+  });
+
   test("dismisses file search and command palette by clicking the backdrop", async ({ page }) => {
     await page.goto(`/room/e2e-dialog-backdrop-${Date.now()}`, { waitUntil: "domcontentloaded" });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
