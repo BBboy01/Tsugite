@@ -1,15 +1,17 @@
-export type AppAction = "file.search" | "settings.open" | "command.palette";
+export type AppAction = "file.search" | "settings.open" | "command.palette" | "preview.console";
 export type KeyBinding = { action: AppAction; key: string };
 
 export const KEYMAP_ACTIONS: readonly AppAction[] = [
   "file.search",
   "settings.open",
   "command.palette",
+  "preview.console",
 ];
 export const DEFAULT_KEYMAP: readonly KeyBinding[] = [
   { action: "file.search", key: "Mod-P" },
   { action: "settings.open", key: "Mod-," },
   { action: "command.palette", key: "Mod-K" },
+  { action: "preview.console", key: "Mod-J" },
 ];
 
 export function isMacPlatform(platform: string = globalThis.navigator?.platform ?? ""): boolean {
@@ -20,8 +22,10 @@ export function formatKeyBinding(
   binding: string,
   platform: string = globalThis.navigator?.platform ?? "",
 ) {
-  if (!binding.startsWith("Mod-")) return binding;
-  return `${isMacPlatform(platform) ? "⌘" : "Ctrl"}-${binding.slice(4)}`;
+  const modifier = binding.match(/^(Mod|Cmd|Ctrl)-/i)?.[1];
+  if (!modifier) return binding;
+  const displayModifier = isMacPlatform(platform) ? (modifier === "Ctrl" ? "Ctrl" : "Cmd") : "Ctrl";
+  return `${displayModifier}-${binding.slice(modifier.length + 1)}`;
 }
 
 function comparableKey(binding: string, platform: string) {

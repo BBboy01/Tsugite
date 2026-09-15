@@ -30,10 +30,11 @@ test("custom Cmd and Ctrl bindings stay distinct", () => {
   expect(matchesKeyBinding(event({ metaKey: true }), "Ctrl-P", "Linux x86_64")).toBe(false);
 });
 
-test("Mod bindings display the platform's physical modifier", () => {
-  expect(formatKeyBinding("Mod-P", "MacIntel")).toBe("⌘-P");
+test("Mod bindings display the platform modifier name", () => {
+  expect(formatKeyBinding("Mod-P", "MacIntel")).toBe("Cmd-P");
   expect(formatKeyBinding("Mod-P", "Linux x86_64")).toBe("Ctrl-P");
   expect(formatKeyBinding("Cmd-P", "MacIntel")).toBe("Cmd-P");
+  expect(formatKeyBinding("Ctrl-P", "Linux x86_64")).toBe("Ctrl-P");
 });
 
 test("keymap conflicts use the current platform modifier", () => {

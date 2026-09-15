@@ -9,6 +9,7 @@ import {
   TextCursor,
   ToggleLeft,
   ToggleRight,
+  PanelBottom,
   type LucideIcon,
 } from "lucide-react";
 import type { TFunction } from "i18next";
@@ -23,6 +24,7 @@ export type CommandId =
   | "file.search"
   | "settings.open"
   | "systemClipboard.toggle"
+  | "preview.console.toggle"
   | "language.choose"
   | `runtime.${(typeof RUNTIME_ACTIONS)[number]["id"]}`;
 export type Submenu = "language" | "theme" | "normalCursor" | "packageManager";
@@ -32,7 +34,6 @@ export type PaletteCommand = {
   label: string;
   searchText?: string;
   icon: LucideIcon;
-  iconClassName?: string;
   shortcut?: string;
   selected?: boolean;
 };
@@ -63,7 +64,6 @@ function toggleCommand(id: string, label: string, enabled: boolean): PaletteComm
     label,
     searchText: label,
     icon: enabled ? ToggleRight : ToggleLeft,
-    iconClassName: enabled ? "text-emerald-500" : "text-rose-500",
   };
 }
 
@@ -89,6 +89,12 @@ export function getRootCommands(
       label: t("command.openSettings"),
       icon: Settings,
       shortcut: shortcutFor("settings.open"),
+    },
+    {
+      id: "preview.console.toggle",
+      label: t("preview.output"),
+      icon: PanelBottom,
+      shortcut: shortcutFor("preview.console"),
     },
     { id: "language.choose", label: settingLabel("language"), icon: Languages },
     { id: "theme.random", label: t("settings.theme.random"), icon: Dices },

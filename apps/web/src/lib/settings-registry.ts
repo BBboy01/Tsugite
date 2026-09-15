@@ -94,6 +94,12 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
     labelKey: "settings.commandPaletteKeymap",
   },
   {
+    id: "previewConsoleKeymap",
+    scope: "keyboard",
+    kind: "keymap",
+    labelKey: "settings.previewConsoleKeymap",
+  },
+  {
     id: "packageManager",
     scope: "runtime",
     kind: "select",

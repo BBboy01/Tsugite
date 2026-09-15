@@ -29,6 +29,12 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
   const visibleOutputs = useMemo(() => filterPreviewOutputs(outputs, filter), [outputs, filter]);
 
   useEffect(() => {
+    const toggle = () => setCollapsed((current) => !current);
+    window.addEventListener("iris:toggle-preview-console", toggle);
+    return () => window.removeEventListener("iris:toggle-preview-console", toggle);
+  }, []);
+
+  useEffect(() => {
     if (collapsed || !outputRef.current) return;
     outputRef.current.scrollTop = outputRef.current.scrollHeight;
   }, [collapsed, visibleOutputs]);

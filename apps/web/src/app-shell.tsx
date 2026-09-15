@@ -275,6 +275,12 @@ export function AppShell({ roomId }: AppShellProps) {
       if (binding && matchesKeyBinding(event, binding.key)) {
         event.preventDefault();
         setFileSearchOpen(true);
+        return;
+      }
+      const consoleBinding = keymap.find((candidate) => candidate.action === "preview.console");
+      if (consoleBinding && matchesKeyBinding(event, consoleBinding.key)) {
+        event.preventDefault();
+        window.dispatchEvent(new Event("iris:toggle-preview-console"));
       }
     };
     window.addEventListener("keydown", handleKeyDown, true);
