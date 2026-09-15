@@ -159,6 +159,10 @@ export function CommandPalette({
       case "settings.open":
         selectExternalCommand(command.id);
         return;
+      case "preview.console.toggle":
+        window.dispatchEvent(new Event("iris:toggle-preview-console"));
+        closePalette();
+        return;
       case "language.choose":
         openSubmenu("language");
         return;
@@ -273,6 +277,18 @@ export function CommandPalette({
                     return;
                   }
 
+                  if (event.key === "ArrowDown") {
+                    event.preventDefault();
+                    moveSelection(1);
+                    return;
+                  }
+
+                  if (event.key === "ArrowUp") {
+                    event.preventDefault();
+                    moveSelection(-1);
+                    return;
+                  }
+
                   if ((event.ctrlKey || event.metaKey) && event.key === "n") {
                     event.preventDefault();
                     moveSelection(1);
@@ -309,21 +325,16 @@ export function CommandPalette({
                       className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-none ${
                         selectedIndex === index
                           ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--foreground)]"
-                          : "text-[var(--muted)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
+                          : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
                       }`}
-                      onMouseEnter={() => setSelectedIndex(index)}
                       onClick={() => activate(command)}
                     >
-                      <Icon
-                        size={16}
-                        aria-hidden="true"
-                        className={`shrink-0 ${command.iconClassName ?? ""}`}
-                      />
+                      <Icon size={16} aria-hidden="true" className="shrink-0" />
                       <span className="min-w-0 flex-1 truncate">
                         {highlightCommandLabel(command.label, query)}
                       </span>
                       {command.shortcut ? (
-                        <span className="shrink-0 font-iris-mono text-[10px] text-[color-mix(in_srgb,var(--muted)_62%,transparent)]">
+                        <span className="shrink-0 font-iris-mono text-[10px] text-[color-mix(in_srgb,var(--muted)_45%,transparent)]">
                           {command.shortcut}
                         </span>
                       ) : null}

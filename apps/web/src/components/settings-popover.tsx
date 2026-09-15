@@ -483,7 +483,9 @@ export function SettingsPopover({
                           ? "settings.fileSearchKeymap"
                           : action === "settings.open"
                             ? "settings.openKeymap"
-                            : "settings.commandPaletteKeymap";
+                            : action === "command.palette"
+                              ? "settings.commandPaletteKeymap"
+                              : "settings.previewConsoleKeymap";
                       const binding = keymap.find((item) => item.action === action)?.key ?? "";
                       return (
                         <label
@@ -493,7 +495,9 @@ export function SettingsPopover({
                               ? "fileSearchKeymap"
                               : action === "settings.open"
                                 ? "openSettingsKeymap"
-                                : "commandPaletteKeymap"
+                                : action === "command.palette"
+                                  ? "commandPaletteKeymap"
+                                  : "previewConsoleKeymap"
                           }
                           className="grid gap-2 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
                         >
@@ -519,7 +523,9 @@ export function SettingsPopover({
                                           ? "fileSearchKeymap"
                                           : conflict === "settings.open"
                                             ? "openSettingsKeymap"
-                                            : "commandPaletteKeymap",
+                                            : conflict === "command.palette"
+                                              ? "commandPaletteKeymap"
+                                              : "previewConsoleKeymap",
                                       ),
                                     }),
                                   }));

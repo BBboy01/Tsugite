@@ -40,6 +40,15 @@ test.describe("room shell", () => {
     await expect(result.locator("[data-file-directory]")).toHaveText("src/");
     await expect(result.locator("[data-file-name]")).toContainText("App.tsx");
     await expect(result.locator("mark")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+
+    await search.fill("");
+    const inactiveResult = page.getByRole("dialog").getByRole("button").nth(1);
+    await expect(inactiveResult).toHaveClass(
+      /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
+    );
+    await expect(inactiveResult.locator("[data-file-name]")).toHaveClass(
+      /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
+    );
   });
 
   test("keeps inactive file names muted until they are opened", async ({ page }) => {
@@ -89,6 +98,19 @@ test.describe("room shell", () => {
     await page.locator(".cm-content").focus();
     await page.keyboard.press("ControlOrMeta+,");
     await expect(page.getByRole("dialog")).toBeVisible();
+  });
+
+  test("toggles the preview console with Mod-J", async ({ page }) => {
+    await page.goto(`/room/e2e-preview-console-shortcut-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await expect(page.getByRole("button", { name: "Expand output" })).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+J");
+    await expect(page.getByRole("button", { name: "Collapse output" })).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+J");
+    await expect(page.getByRole("button", { name: "Expand output" })).toBeVisible();
   });
 
   test("exposes the system clipboard setting in Vim keyboard preferences", async ({ page }) => {
@@ -279,7 +301,7 @@ test.describe("room shell", () => {
     await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
     await expect(page.getByRole("button", { name: "Use system clipboard" })).toBeVisible();
     const primaryModifier = await page.evaluate(() =>
-      /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "⌘" : "Ctrl",
+      /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "Cmd" : "Ctrl",
     );
     await expect(page.getByRole("button", { name: "Open file" })).toContainText(
       `${primaryModifier}-P`,
@@ -287,6 +309,12 @@ test.describe("room shell", () => {
     await expect(page.getByRole("button", { name: "Open settings" })).toContainText(
       `${primaryModifier}-,`,
     );
+    await expect(page.getByRole("button", { name: "Open settings" })).toHaveClass(
+      /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
+    );
+    await expect(
+      page.getByRole("button", { name: "Open settings" }).locator("span").last(),
+    ).toHaveClass(/text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/);
     await page.keyboard.press("Escape");
     await page.getByRole("button", { name: "Open shared settings" }).click();
     await page.getByRole("button", { name: "Keyboard" }).click();
@@ -294,9 +322,7 @@ test.describe("room shell", () => {
     await expect(page.getByLabel("Open settings shortcut")).toHaveValue(`${primaryModifier}-,`);
     await expect(page.getByLabel("Command palette shortcut")).toHaveValue(`${primaryModifier}-K`);
     await page.getByLabel("File search shortcut").press("ControlOrMeta+Shift+P");
-    await expect(page.getByLabel("File search shortcut")).toHaveValue(
-      `${primaryModifier === "⌘" ? "Cmd" : "Ctrl"}-Shift-P`,
-    );
+    await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-Shift-P`);
     await page.getByRole("button", { name: "Restore default shortcut" }).first().click();
     await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
     await page.getByLabel("File search shortcut").press("ControlOrMeta+K");
@@ -330,6 +356,40 @@ test.describe("room shell", () => {
     await page.keyboard.press("Enter");
 
     await expect(page.getByPlaceholder("Search files...")).toBeVisible();
+  });
+
+  test("navigates command palette actions with arrow keys", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-arrows-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    const commands = page.getByRole("dialog").locator("button");
+    const firstCommand = commands.first();
+    const secondCommand = commands.nth(1);
+    await expect(firstCommand).toHaveClass(/accent/);
+
+    await page.keyboard.press("ArrowDown");
+    await expect(secondCommand).toHaveClass(/accent/);
+    await expect(firstCommand).not.toHaveClass(/accent/);
+
+    await page.keyboard.press("ArrowUp");
+    await expect(firstCommand).toHaveClass(/accent/);
+  });
+
+  test("wraps command palette selection from the last item to the first", async ({ page }) => {
+    await page.goto(`/room/e2e-command-palette-wrap-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").focus();
+    await page.keyboard.press("ControlOrMeta+K");
+    const commands = page.getByRole("dialog").locator("button");
+    await expect(commands.first()).toBeVisible();
+    await page.keyboard.press("ControlOrMeta+P");
+    await page.keyboard.press("ControlOrMeta+N");
+    await expect(commands.first()).toHaveClass(/accent/);
   });
 
   test("highlights the command selected with keyboard navigation", async ({ page }) => {

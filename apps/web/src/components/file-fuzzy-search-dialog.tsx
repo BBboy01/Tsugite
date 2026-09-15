@@ -88,7 +88,7 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
               <button
                 key={file.id}
                 type="button"
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-iris-mono text-[11px] ${index === selected ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-iris-strong" : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"}`}
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-iris-mono text-[11px] ${index === selected ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-iris-strong" : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"}`}
                 onMouseEnter={() => setSelected(index)}
                 onClick={() => {
                   onSelect(file.path);
@@ -96,7 +96,9 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 }}
               >
                 <FileCode2 width="14" height="14" className="shrink-0 text-[var(--accent)]" />
-                <span className="truncate">{renderHighlightedPath(file.path, query)}</span>
+                <span className="truncate">
+                  {renderHighlightedPath(file.path, query, index === selected)}
+                </span>
               </button>
             ))}
             {matches.length === 0 && (
@@ -111,16 +113,19 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
   );
 }
 
-function renderHighlightedPath(path: string, query: string) {
+function renderHighlightedPath(path: string, query: string, isSelected: boolean) {
   const separator = path.lastIndexOf("/");
   const directory = separator >= 0 ? path.slice(0, separator + 1) : "";
   const fileName = path.slice(separator + 1);
+  const textClassName = isSelected
+    ? "text-iris-strong"
+    : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)]";
   return (
     <>
-      <span data-file-directory className="text-iris-muted">
+      <span data-file-directory className={textClassName}>
         {directory}
       </span>
-      <span data-file-name className="text-iris-strong">
+      <span data-file-name className={textClassName}>
         {renderHighlightedText(
           fileName,
           fuzzyMatchIndexes(path, query)

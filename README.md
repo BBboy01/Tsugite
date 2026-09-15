@@ -7,11 +7,11 @@
 <p align="center">A small, fast shared room for editing code together in the browser.</p>
 
 <p align="center">
-  <a href="https://github.com/BBboy01/Tsugite/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/BBboy01/Tsugite/ci.yml?branch=main&label=CI" alt="CI status" /></a>
-  <a href="https://github.com/BBboy01/Tsugite/actions/workflows/docker-publish.yml"><img src="https://img.shields.io/github/actions/workflow/status/BBboy01/Tsugite/docker-publish.yml?branch=main&label=containers" alt="Container workflow status" /></a>
+  <a href="https://github.com/BBboy01/Tsugite/actions/workflows/ci.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/BBboy01/Tsugite.svg?workflow=ci.yml&amp;branch=main&amp;variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=dark" /><img src="https://shieldcn.dev/github/ci/BBboy01/Tsugite.svg?workflow=ci.yml&amp;branch=main&amp;variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=light" alt="CI status" /></picture></a>
+  <a href="https://github.com/BBboy01/Tsugite/actions/workflows/docker-publish.yml"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/ci/BBboy01/Tsugite.svg?workflow=docker-publish.yml&amp;branch=main&amp;label=containers&amp;variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=dark" /><img src="https://shieldcn.dev/github/ci/BBboy01/Tsugite.svg?workflow=docker-publish.yml&amp;branch=main&amp;label=containers&amp;variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=light" alt="Container workflow status" /></picture></a>
   <a href="https://deepwiki.com/BBboy01/Tsugite"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
-  <a href="https://github.com/BBboy01/Tsugite/commits/main"><img src="https://img.shields.io/github/last-commit/BBboy01/Tsugite" alt="Last commit" /></a>
-  <a href="https://github.com/BBboy01/Tsugite/issues"><img src="https://img.shields.io/github/issues/BBboy01/Tsugite" alt="Open issues" /></a>
+  <a href="https://github.com/BBboy01/Tsugite/commits/main"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/last-commit/BBboy01/Tsugite.svg?variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=dark" /><img src="https://shieldcn.dev/github/last-commit/BBboy01/Tsugite.svg?variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=light" alt="Last commit" /></picture></a>
+  <a href="https://github.com/BBboy01/Tsugite/issues"><picture><source media="(prefers-color-scheme: dark)" srcset="https://shieldcn.dev/github/open-issues/BBboy01/Tsugite.svg?variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=dark" /><img src="https://shieldcn.dev/github/open-issues/BBboy01/Tsugite.svg?variant=secondary&amp;size=sm&amp;font=geist-mono&amp;radius=6&amp;mode=light" alt="Open issues" /></picture></a>
 </p>
 
 <p align="center">
