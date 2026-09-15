@@ -309,7 +309,7 @@ export function EditorPane({
               className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
                 active
                   ? "bg-[color-mix(in_srgb,var(--accent)_18%,var(--editor-surface))] text-iris-ink shadow-[0_1px_2px_rgba(75,67,45,0.06)]"
-                  : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
+                  : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
               }`}
               key={tab.id}
             >
@@ -347,7 +347,7 @@ export function EditorPane({
                 )}
               </button>
               <button
-                className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-iris-muted opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-[color-mix(in_srgb,var(--muted)_45%,transparent)] opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
                 type="button"
                 aria-label={t("editor.closeFile", { path: tab.path })}
                 title={t("editor.closeFile", { path: tab.path })}
@@ -478,9 +478,26 @@ function editorTheme(settings: ProjectSettings) {
     ".cm-gutters": {
       border: "none",
       backgroundColor: "var(--editor-surface)",
-      color: "var(--muted)",
+      color: "color-mix(in srgb, var(--muted) 45%, transparent)",
       minWidth: "56px",
       padding: "0 12px 0 0",
+    },
+    ".cm-gutterElement": {
+      alignItems: "center",
+      display: "flex",
+      lineHeight: "inherit",
+    },
+    ".cm-lineNumbers .cm-gutterElement": {
+      justifyContent: "center",
+    },
+    ".cm-foldGutter": {
+      minWidth: "24px",
+    },
+    ".cm-foldGutter .cm-gutterElement": {
+      justifyContent: "center",
+    },
+    '.cm-foldGutter .cm-gutterElement > span[title="Fold line"]': {
+      transform: "translateY(-2px)",
     },
     ".cm-activeLineGutter": {
       backgroundColor: "transparent",

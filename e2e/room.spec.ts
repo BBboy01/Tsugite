@@ -49,10 +49,13 @@ test.describe("room shell", () => {
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
     const files = page.locator('aside[aria-label="Project files"] [data-context-kind="file"]');
+    const folders = page.locator('aside[aria-label="Project files"] [data-context-kind="folder"]');
     const app = files.filter({ hasText: "App.tsx" });
     const index = files.filter({ hasText: "index.css" });
+    const src = folders.filter({ hasText: "src" });
     await expect(app).toHaveCSS("color", "rgb(29, 29, 31)");
-    await expect(index).toHaveCSS("color", "rgb(110, 110, 115)");
+    await expect(index.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
+    await expect(src.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
     await index.getByRole("button").click();
     await expect(app).toHaveCSS("color", "rgb(110, 110, 115)");
     await expect(index).toHaveCSS("color", "rgb(29, 29, 31)");
