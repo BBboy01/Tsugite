@@ -306,7 +306,7 @@ export function CommandPalette({
                     : t("command.placeholder")
                 }
                 spellCheck={false}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--muted)]"
+                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"
               />
             </div>
             <div
