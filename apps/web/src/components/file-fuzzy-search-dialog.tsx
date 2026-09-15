@@ -78,7 +78,7 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 }
               }}
               placeholder={t("files.searchPlaceholder")}
-              className="min-w-0 flex-1 border-0 bg-transparent font-iris-mono text-sm text-iris-ink outline-none placeholder:text-iris-muted"
+              className="min-w-0 flex-1 border-0 bg-transparent font-iris-mono text-sm text-iris-ink outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"
               autoComplete="off"
               spellCheck={false}
             />
