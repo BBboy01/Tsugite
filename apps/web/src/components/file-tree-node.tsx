@@ -109,7 +109,7 @@ export function FileTreeNodes({
           onClick={() => onSelect(node.file.path)}
         >
           <FileTypeIcon path={node.file.path} width="14" height="14" />
-          <span className="truncate transition-none group-hover:text-iris-strong">{node.name}</span>
+          <span className="truncate transition-none">{node.name}</span>
         </motion.button>
       </motion.div>
     );
