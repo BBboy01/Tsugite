@@ -60,7 +60,7 @@ export function FileTreeNodes({
                 <ChevronRight width="13" height="13" aria-hidden="true" />
               </motion.span>
               <FolderTypeIcon path={node.path} width="15" height="15" />
-              <span className="min-w-0 truncate transition-none group-hover:text-iris-strong">
+              <span className="min-w-0 truncate text-[color-mix(in_srgb,var(--muted)_45%,transparent)] transition-none">
                 {node.name}
               </span>
             </motion.button>
@@ -94,7 +94,7 @@ export function FileTreeNodes({
     const contextSelected = contextTarget?.type === "file" && contextTarget.id === node.file.id;
     return (
       <motion.div
-        className={`group my-px flex min-h-8 items-center gap-[7px] rounded-lg pr-[6px] font-iris-mono text-xs leading-tight ${node.file.path === selectedPath ? "bg-[color-mix(in_srgb,var(--glass-popover)_84%,var(--ink-strong)_16%)] text-iris-strong shadow-[0_1px_2px_rgba(67,72,50,0.05)]" : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--glass-popover)_82%,var(--ink-strong)_18%)]"} ${contextSelected ? "outline outline-1 outline-offset-[-1px] outline-[color-mix(in_srgb,var(--accent)_52%,transparent)]" : ""}`}
+        className={`group my-px flex min-h-7 items-center gap-[7px] rounded-lg pr-[6px] font-iris-mono text-xs leading-tight ${node.file.path === selectedPath ? "bg-[color-mix(in_srgb,var(--glass-popover)_84%,var(--ink-strong)_16%)] text-iris-strong shadow-[0_1px_2px_rgba(67,72,50,0.05)]" : "text-iris-muted hover:bg-[color-mix(in_srgb,var(--glass-popover)_82%,var(--ink-strong)_18%)]"} ${contextSelected ? "outline outline-1 outline-offset-[-1px] outline-[color-mix(in_srgb,var(--accent)_52%,transparent)]" : ""}`}
         data-context-id={node.file.id}
         data-context-kind="file"
         key={node.file.id}
@@ -109,7 +109,11 @@ export function FileTreeNodes({
           onClick={() => onSelect(node.file.path)}
         >
           <FileTypeIcon path={node.file.path} width="14" height="14" />
-          <span className="truncate transition-none">{node.name}</span>
+          <span
+            className={`truncate text-[10px] transition-none ${node.file.path === selectedPath ? "" : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"}`}
+          >
+            {node.name}
+          </span>
         </motion.button>
       </motion.div>
     );
