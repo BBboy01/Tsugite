@@ -7,7 +7,6 @@
 <p align="center">A small, fast shared room for editing code together in the browser.</p>
 
 <p align="center">
-  <a href="https://codecov.io/gh/BBboy01/Tsugite"><img src="https://shieldcn.dev/codecov/github/BBboy01/Tsugite/main.svg?variant=outline&amp;size=xs&amp;mode=dark&amp;font=geist" alt="Unit test coverage" /></a>
   <a href="https://deepwiki.com/BBboy01/Tsugite"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
 </p>
 
