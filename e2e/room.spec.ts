@@ -27,6 +27,19 @@ test.describe("room shell", () => {
     await expect(page.getByRole("dialog")).toBeVisible();
   });
 
+  test("opens the editor context menu with language actions", async ({ page }) => {
+    await page.goto(`/room/e2e-editor-context-menu-${Date.now()}`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.locator(".cm-content").click({ button: "right", position: { x: 80, y: 24 } });
+    await expect(page.getByRole("menu")).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Go to definition" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Find references" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Peek definition" })).toBeVisible();
+    await expect(page.getByRole("menuitem", { name: "Copy" })).toBeVisible();
+  });
+
   test("de-emphasizes file search directories and uses text-only matches", async ({ page }) => {
     await page.goto(`/room/e2e-file-search-highlight-${Date.now()}`, {
       waitUntil: "domcontentloaded",
