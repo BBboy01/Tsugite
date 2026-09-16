@@ -3,9 +3,14 @@ import { createSystem, createVirtualTypeScriptEnvironment } from "@typescript/vf
 
 type TypeScriptModule = typeof import("typescript");
 
-export function createEditorTypeScriptEnvironment(path: string, source: string) {
+export function createEditorTypeScriptEnvironment(
+  path: string,
+  source: string,
+  projectFiles: readonly { path: string; text: string }[] = [],
+) {
   const compilerOptions = {
     allowJs: true,
+    jsx: ts.JsxEmit.Preserve,
     esModuleInterop: true,
     module: ts.ModuleKind.ESNext,
     moduleResolution: ts.ModuleResolutionKind.Bundler,
@@ -14,18 +19,21 @@ export function createEditorTypeScriptEnvironment(path: string, source: string) 
     target: ts.ScriptTarget.ES2022,
   };
   const typescript = ts as unknown as TypeScriptModule;
-  const files = new Map<string, string>([
-    [path, source],
-    ["/lib.d.ts", EDITOR_LIB],
-  ]);
+  const files = new Map<string, string>(
+    projectFiles
+      .filter((file) => /\.[cm]?[jt]sx?$/.test(file.path))
+      .map((projectFile) => [`/${projectFile.path.replace(/^\//, "")}`, projectFile.text]),
+  );
+  const absolutePath = `/${path.replace(/^\//, "")}`;
+  files.set(absolutePath, source);
+  files.set("/lib.d.ts", EDITOR_LIB);
   const system = createSystem(files);
   const environment = createVirtualTypeScriptEnvironment(
     system,
-    [path, "/lib.d.ts"],
+    [...files.keys()],
     typescript,
     compilerOptions,
   );
-  environment.createFile(path, source);
   return environment;
 }
 

@@ -510,6 +510,7 @@ export function AppShell({ roomId }: AppShellProps) {
                 <EditorPane
                   doc={client.doc}
                   file={selectedFile}
+                  files={files}
                   tabs={openFiles}
                   settings={settings}
                   vimMode={vimMode}

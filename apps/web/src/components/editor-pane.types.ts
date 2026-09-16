@@ -4,6 +4,7 @@ import type { LoroDoc } from "loro-crdt";
 export type EditorPaneProps = {
   doc: LoroDoc;
   file: ProjectFile;
+  files: ProjectFile[];
   tabs: ProjectFile[];
   settings: ProjectSettings;
   vimMode: boolean;
