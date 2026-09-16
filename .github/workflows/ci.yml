@@ -18,6 +18,9 @@ jobs:
   quality:
     name: Quality checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     steps:
       - name: Check out repository
         uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
@@ -42,7 +45,15 @@ jobs:
           DATABASE_PATH="$temp_db" bun run db:migrate
 
       - name: Run tests
-        run: bun run test
+        run: bun test apps packages --coverage --coverage-reporter=lcov
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@0b35c9ecc4f0529d0eb674914510c22f85b196b4 # v7.1.0
+        with:
+          use_oidc: true
+          files: coverage/lcov.info
+          fail_ci_if_error: true
+          disable_search: true
 
       - name: Run lint
         run: bun run lint
