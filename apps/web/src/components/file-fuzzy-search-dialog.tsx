@@ -43,6 +43,13 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
       <Dialog.Portal>
         <Dialog.Overlay className="glass-overlay fixed inset-0 z-50" />
         <Dialog.Content
+          onEscapeKeyDown={(event) => event.preventDefault()}
+          onKeyDownCapture={(event) => {
+            if (event.key !== "Escape") return;
+            event.preventDefault();
+            event.stopPropagation();
+            onOpenChange(false);
+          }}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
           }}

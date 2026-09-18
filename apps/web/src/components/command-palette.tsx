@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Theme } from "@radix-ui/themes";
-import { ArrowLeft, Check, Command } from "lucide-react";
+import { ArrowLeft, Command } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
@@ -19,23 +19,8 @@ import type { RuntimeAction } from "@/lib/runtime-actions";
 import type { LanguageCode } from "@/lib/i18n";
 import type { KeyBinding } from "@/lib/keymap";
 
-import { useCommandPaletteSelectionScroll } from "./use-command-palette-selection-scroll";
+import { CommandPaletteResults } from "./command-palette-results";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
-
-function highlightCommandLabel(label: string, query: string) {
-  const normalizedQuery = query.trim();
-  if (!normalizedQuery) return label;
-  const start = label.toLocaleLowerCase().indexOf(normalizedQuery.toLocaleLowerCase());
-  if (start < 0) return label;
-  const end = start + normalizedQuery.length;
-  return (
-    <>
-      {label.slice(0, start)}
-      <mark className="bg-transparent text-[var(--accent-deep)]">{label.slice(start, end)}</mark>
-      {label.slice(end)}
-    </>
-  );
-}
 
 type CommandPaletteProps = {
   open: boolean;
@@ -79,10 +64,6 @@ export function CommandPalette({
 
   const commands = (submenu ? submenuCommands : rootCommands).filter((command) =>
     (command.searchText ?? command.label).toLowerCase().includes(query.toLowerCase()),
-  );
-  const { commandListRef, registerCommand } = useCommandPaletteSelectionScroll(
-    commands,
-    selectedIndex,
   );
 
   useEffect(() => {
@@ -238,11 +219,13 @@ export function CommandPalette({
             onCloseAutoFocus={(event) => {
               event.preventDefault();
             }}
-            onEscapeKeyDown={(event) => {
-              if (submenu) {
-                event.preventDefault();
-                returnToRoot();
-              }
+            onEscapeKeyDown={(event) => event.preventDefault()}
+            onKeyDownCapture={(event) => {
+              if (event.key !== "Escape") return;
+              event.preventDefault();
+              event.stopPropagation();
+              if (submenu) returnToRoot();
+              else closePalette();
             }}
           >
             <Dialog.Title className="sr-only">{t("command.title")}</Dialog.Title>
@@ -309,51 +292,12 @@ export function CommandPalette({
                 className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"
               />
             </div>
-            <div
-              ref={commandListRef}
-              className="max-h-[min(22rem,calc(100vh-12rem))] overflow-y-auto p-1.5"
-            >
-              {commands.length > 0 ? (
-                commands.map((command, index) => {
-                  const Icon = command.icon;
-
-                  return (
-                    <button
-                      key={command.id}
-                      type="button"
-                      ref={(element) => registerCommand(command.id, element)}
-                      className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-none ${
-                        selectedIndex === index
-                          ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--foreground)]"
-                          : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
-                      }`}
-                      onClick={() => activate(command)}
-                    >
-                      <Icon size={16} aria-hidden="true" className="shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">
-                        {highlightCommandLabel(command.label, query)}
-                      </span>
-                      {command.shortcut ? (
-                        <span className="shrink-0 font-iris-mono text-[10px] text-[color-mix(in_srgb,var(--muted)_45%,transparent)]">
-                          {command.shortcut}
-                        </span>
-                      ) : null}
-                      {command.selected ? (
-                        <Check
-                          size={16}
-                          aria-hidden="true"
-                          className="shrink-0 text-[var(--accent)]"
-                        />
-                      ) : null}
-                    </button>
-                  );
-                })
-              ) : (
-                <p className="px-3 py-8 text-center text-sm text-[var(--muted)]">
-                  {t("command.empty")}
-                </p>
-              )}
-            </div>
+            <CommandPaletteResults
+              commands={commands}
+              selectedIndex={selectedIndex}
+              query={query}
+              onSelect={activate}
+            />
           </Dialog.Content>
         </Theme>
       </Dialog.Portal>
