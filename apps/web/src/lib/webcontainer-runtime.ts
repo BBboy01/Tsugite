@@ -45,6 +45,7 @@ export type RuntimeContainer = {
 
 type RuntimeOptions = {
   boot?: () => Promise<RuntimeContainer>;
+  installTimeoutMs?: number;
 };
 
 type StartOptions = {
@@ -65,6 +66,7 @@ type Snapshot = {
 
 export class WebContainerRuntime {
   private readonly boot: () => Promise<RuntimeContainer>;
+  private readonly installTimeoutMs: number;
   private container: RuntimeContainer | undefined;
   private bootPromise: Promise<RuntimeContainer> | undefined;
   private process: RuntimeProcess | undefined;
@@ -76,6 +78,7 @@ export class WebContainerRuntime {
 
   constructor(options: RuntimeOptions = {}) {
     this.boot = options.boot ?? defaultBoot;
+    this.installTimeoutMs = options.installTimeoutMs ?? 120_000;
   }
 
   async start(
@@ -107,11 +110,15 @@ export class WebContainerRuntime {
       if (settings.autoInstall || options.forceInstall) {
         const [installCommand, installArgs] = getInstallCommand(settings.packageManager);
         this.emit({ type: "output", level: "log", message: `${installCommand} install` });
-        const install = await withTimeout(container.spawn(installCommand, installArgs), 15_000);
+        const install = await withTimeout(
+          container.spawn(installCommand, installArgs),
+          15_000,
+          "install-failed",
+        );
         void consumeOutput(install, this.listener);
         let installCode: number;
         try {
-          installCode = await withTimeout(install.exit, 45_000);
+          installCode = await withTimeout(install.exit, this.installTimeoutMs, "install-failed");
         } catch (error) {
           install.kill();
           throw error;
@@ -398,13 +405,17 @@ function isRuntimeError(value: string): value is RuntimeError {
   ].includes(value);
 }
 
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number): Promise<T> {
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  error: RuntimeError = "runtime-unavailable",
+): Promise<T> {
   let timeout: ReturnType<typeof setTimeout> | undefined;
   try {
     return await Promise.race([
       promise,
       new Promise<T>((_, reject) => {
-        timeout = setTimeout(() => reject(new Error("runtime-unavailable")), timeoutMs);
+        timeout = setTimeout(() => reject(new Error(error)), timeoutMs);
       }),
     ]);
   } finally {

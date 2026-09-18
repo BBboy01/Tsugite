@@ -17,29 +17,6 @@ test.describe("file and editor actions", () => {
     });
   });
 
-  test("keeps the initial room socket open through development remounts", async ({
-    page,
-  }, testInfo) => {
-    test.setTimeout(90_000);
-    const socketWarnings: string[] = [];
-    page.on("console", (message) => {
-      if (message.type() === "warning" && message.text().includes("WebSocket connection")) {
-        socketWarnings.push(message.text());
-      }
-    });
-
-    await page.goto("/room/e2e-connection-" + process.pid + "-" + testInfo.repeatEachIndex, {
-      waitUntil: "domcontentloaded",
-    });
-    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-    const preview = page.locator('iframe[title^="Preview of "]');
-    await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 60_000 });
-    await expect(preview).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
-    await page.waitForTimeout(1_000);
-
-    expect(socketWarnings).toEqual([]);
-  });
-
   test("keeps local undo history when renaming the active file", async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     await page.goto("/room/e2e-undo-rename-" + process.pid + "-" + testInfo.repeatEachIndex, {

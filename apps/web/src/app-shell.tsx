@@ -1,418 +1,61 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties } from "react";
 import { Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-
-import {
-  copyFile,
-  createFile,
-  createFolder,
-  deleteFile,
-  deleteFolder,
-  getFileByPath,
-  readWorkspaceSnapshot,
-  renameFolder,
-  renameFile,
-  setSharedSetting,
-  type ProjectFile,
-  type ProjectSettings,
-} from "@iris/shared";
-
 import { EditorPane } from "./components/editor-pane";
 import { FileTree } from "./components/file-tree";
-import type { FileTreeTarget } from "./components/file-tree";
 import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
-import { dispatchRuntimeAction } from "./lib/runtime-actions";
-import type { LanguageCode } from "./lib/i18n";
 import { WorkspaceLayout } from "./components/workspace-layout";
 import { FileFuzzySearchDialog } from "./components/file-fuzzy-search-dialog";
 import { CommandPalette } from "./components/command-palette";
-import { matchesKeyBinding, readKeymap, writeKeymap, type KeyBinding } from "./lib/keymap";
-import { closeEditorTab, openEditorTab } from "./lib/editor-tabs";
-import { WORKSPACE_CHANGE_ORIGIN } from "./lib/editor-undo";
+import { dispatchRuntimeAction } from "./lib/runtime-actions";
 import { isDarkWorkspaceTheme } from "./lib/workspace-theme";
-import { RoomClient, getIdentity } from "./lib/room-client";
-import {
-  toggleMobileWorkspacePanel,
-  type MobileWorkspacePanel,
-} from "./lib/workspace-layout-model";
+import { useWorkspaceController } from "./lib/use-workspace-controller";
 
-type AppShellProps = {
-  roomId: string;
-};
-
-export function AppShell({ roomId }: AppShellProps) {
-  const { i18n, t } = useTranslation();
-  const [client] = useState(() => new RoomClient({ roomId, identity: getIdentity() }));
-  const [documentRevision, setDocumentRevision] = useState(0);
-  const [presenceRevision, setPresenceRevision] = useState(0);
-  const [selectedPath, setSelectedPath] = useState("src/App.tsx");
-  const [openTabPaths, setOpenTabPaths] = useState(["src/App.tsx"]);
-  const [followingUserId, setFollowingUserId] = useState<string | null>(null);
-  const [mobilePanel, setMobilePanel] = useState<MobileWorkspacePanel | null>(null);
-  const [vimMode, setVimMode] = useState(
-    () =>
-      typeof window !== "undefined" && window.localStorage.getItem("tsugite.vim-mode") === "true",
-  );
-  const [fileSearchOpen, setFileSearchOpen] = useState(false);
-  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
-  const [keymap, setKeymap] = useState<KeyBinding[]>(() => readKeymap());
-  const presenceTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const previousFilePathsRef = useRef(new Map<string, string>());
-  const editorFocusRef = useRef<(() => void) | undefined>(undefined);
-  const focusEditorWhenReadyRef = useRef(false);
-  const focusInitialEditorRef = useRef(true);
-  const focusEditorAfterSelectionRef = useRef(false);
-
-  useEffect(() => {
-    if (disconnectTimer.current) {
-      clearTimeout(disconnectTimer.current);
-      disconnectTimer.current = null;
-    }
-    const unsubscribe = client.subscribe((event) => {
-      if (event.type === "document") setDocumentRevision((value) => value + 1);
-      else if (event.type === "presence" || event.type === "status") {
-        setPresenceRevision((value) => value + 1);
-      }
-    });
-    client.connect();
-    return () => {
-      unsubscribe();
-      disconnectTimer.current = setTimeout(() => {
-        client.disconnect();
-        disconnectTimer.current = null;
-      }, 0);
-      if (presenceTimer.current) clearTimeout(presenceTimer.current);
-    };
-  }, [client]);
-
-  const workspaceSnapshot = useMemo(
-    () => readWorkspaceSnapshot(client.doc),
-    [client, documentRevision],
-  );
-  const { files, folders, settings } = workspaceSnapshot;
-  const selectedFile = useMemo(
-    () => (selectedPath ? getFileByPath(client.doc, selectedPath) : undefined),
-    [client, selectedPath, documentRevision],
-  );
-  const previewFile =
-    selectedFile ?? files.find((file) => file.path === "src/main.tsx") ?? files[0];
-  const openFiles = useMemo(
-    () => openTabPaths.map((path) => getFileByPath(client.doc, path)).filter(Boolean),
-    [client, openTabPaths, documentRevision],
-  ) as ProjectFile[];
-
-  useEffect(() => {
-    if (files.length === 0) return;
-    const availablePaths = new Set(files.map((file) => file.path));
-    const currentFilePaths = new Map(files.map((file) => [file.id, file.path]));
-    const renamedPaths = new Map<string, string>();
-    for (const [fileId, previousPath] of previousFilePathsRef.current) {
-      const nextPath = currentFilePaths.get(fileId);
-      if (nextPath && nextPath !== previousPath) renamedPaths.set(previousPath, nextPath);
-    }
-    previousFilePathsRef.current = currentFilePaths;
-
-    const nextTabs = openTabPaths
-      .map((path) => renamedPaths.get(path) ?? path)
-      .filter((path) => availablePaths.has(path));
-    if (
-      nextTabs.length !== openTabPaths.length ||
-      nextTabs.some((path, index) => path !== openTabPaths[index])
-    ) {
-      setOpenTabPaths(nextTabs);
-    }
-
-    const renamedSelectedPath = renamedPaths.get(selectedPath) ?? selectedPath;
-    if (renamedSelectedPath && availablePaths.has(renamedSelectedPath)) {
-      if (renamedSelectedPath !== selectedPath) setSelectedPath(renamedSelectedPath);
-      return;
-    }
-    const nextPath = nextTabs[0] ?? "";
-    if (nextPath !== selectedPath) setSelectedPath(nextPath);
-  }, [files, openTabPaths, selectedPath]);
-
-  const selectFile = useCallback(
-    (path: string) => {
-      if (presenceTimer.current) {
-        clearTimeout(presenceTimer.current);
-        presenceTimer.current = null;
-      }
-      setOpenTabPaths((current) => openEditorTab(current, path));
-      focusEditorAfterSelectionRef.current = true;
-      setSelectedPath(path);
-      client.sendPresence(path);
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (!focusEditorAfterSelectionRef.current) return;
-          focusEditorAfterSelectionRef.current = false;
-          editorFocusRef.current?.();
-        }),
-      );
-    },
-    [client],
-  );
-
-  const activateFile = (path: string) => {
-    setFollowingUserId(null);
-    selectFile(path);
-  };
-
-  const followingMember = useMemo(
-    () =>
-      followingUserId
-        ? client.members.find((member) => member.userId === followingUserId)
-        : undefined,
-    [client, followingUserId, presenceRevision],
-  );
-  const followedSelection = useMemo(
-    () =>
-      followingMember?.selectedPath === selectedPath ? (followingMember.cursor ?? null) : null,
-    [followingMember, selectedPath],
-  );
-
-  useEffect(() => {
-    if (!followingUserId) return;
-    const member = client.members.find((candidate) => candidate.userId === followingUserId);
-    if (!member) {
-      setFollowingUserId(null);
-      return;
-    }
-    if (member.selectedPath && member.selectedPath !== selectedPath) {
-      selectFile(member.selectedPath);
-    }
-  }, [client, followingUserId, presenceRevision, selectedPath, selectFile]);
-
-  const handleFollowMember = (userId: string) => {
-    if (userId === client.identity.userId) return;
-    if (followingUserId === userId) {
-      setFollowingUserId(null);
-      return;
-    }
-    const member = client.members.find((candidate) => candidate.userId === userId);
-    if (!member) return;
-    setFollowingUserId(userId);
-    if (member.selectedPath) selectFile(member.selectedPath);
-  };
-
-  const handleCloseTab = (path: string) => {
-    setFollowingUserId(null);
-    const result = closeEditorTab(openTabPaths, path, selectedPath);
-    setOpenTabPaths(result.paths);
-    if (path === selectedPath) setSelectedPath(result.nextPath);
-  };
-
-  const updateSharedSetting = <K extends keyof ProjectSettings>(
-    key: K,
-    value: ProjectSettings[K],
-  ) => {
-    setFollowingUserId(null);
-    setSharedSetting(client.doc, key, value);
-    client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-  };
-
-  const updateVimMode = (enabled: boolean) => {
-    setVimMode(enabled);
-    window.localStorage.setItem("tsugite.vim-mode", String(enabled));
-  };
-  const updateKeymap = (bindings: KeyBinding[]) => {
-    setKeymap(bindings);
-    writeKeymap(bindings);
-  };
-  const updateLanguage = (language: LanguageCode) => {
-    void i18n.changeLanguage(language);
-  };
-  const focusEditorIfRequested = useCallback(() => {
-    const focus = editorFocusRef.current;
-    if (focus && (focusEditorWhenReadyRef.current || focusInitialEditorRef.current)) {
-      focusEditorWhenReadyRef.current = false;
-      focusInitialEditorRef.current = false;
-      focus();
-    }
-  }, []);
-
-  const handleEditorFocusReady = useCallback(
-    (focus: (() => void) | undefined) => {
-      editorFocusRef.current = focus;
-      focusEditorIfRequested();
-      if (focus && focusEditorAfterSelectionRef.current) {
-        focusEditorAfterSelectionRef.current = false;
-        focus();
-      }
-    },
-    [focusEditorIfRequested],
-  );
-
-  useEffect(() => {
-    if (!fileSearchOpen) focusEditorIfRequested();
-  }, [fileSearchOpen, focusEditorIfRequested]);
-
-  useEffect(() => {
-    const handleKeyDown = (event: KeyboardEvent) => {
-      const target = event.target;
-      if (target instanceof HTMLElement && target.matches("input, textarea")) {
-        return;
-      }
-      if (matchesKeyBinding(event, "Mod-,")) {
-        event.preventDefault();
-        window.dispatchEvent(
-          new CustomEvent("iris:open-settings", {
-            detail: { returnFocus: true },
-          }),
-        );
-        return;
-      }
-      const commandBinding = keymap.find((candidate) => candidate.action === "command.palette");
-      if (commandBinding && matchesKeyBinding(event, commandBinding.key)) {
-        event.preventDefault();
-        setCommandPaletteOpen(true);
-        return;
-      }
-      const binding = keymap.find((candidate) => candidate.action === "file.search");
-      if (binding && matchesKeyBinding(event, binding.key)) {
-        event.preventDefault();
-        setFileSearchOpen(true);
-        return;
-      }
-      const consoleBinding = keymap.find((candidate) => candidate.action === "preview.console");
-      if (consoleBinding && matchesKeyBinding(event, consoleBinding.key)) {
-        event.preventDefault();
-        window.dispatchEvent(new Event("iris:toggle-preview-console"));
-      }
-    };
-    window.addEventListener("keydown", handleKeyDown, true);
-    return () => window.removeEventListener("keydown", handleKeyDown, true);
-  }, [keymap]);
-
-  useEffect(() => {
-    const focusEditor = () =>
-      requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current?.()));
-    window.addEventListener("iris:settings-closed", focusEditor);
-    return () => window.removeEventListener("iris:settings-closed", focusEditor);
-  }, []);
-
-  const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
-    try {
-      const file = createFile(
-        client.doc,
-        nextPath,
-        "typescript",
-        `export const name = '${nextPath.split("/").at(-1)}'`,
-      );
-      activateFile(file.path);
-      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-      return undefined;
-    } catch (error) {
-      return error instanceof Error ? error.message : "Unable to create file";
-    }
-  };
-
-  const handleAddFolder = (_target: FileTreeTarget, nextPath: string): string | undefined => {
-    try {
-      setFollowingUserId(null);
-      createFolder(client.doc, nextPath);
-      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-      return undefined;
-    } catch (error) {
-      return error instanceof Error ? error.message : "Unable to create folder";
-    }
-  };
-
-  const handleRename = (
-    target: Exclude<FileTreeTarget, null>,
-    nextPath: string,
-  ): string | undefined => {
-    const currentPath = target.type === "file" ? target.file.path : target.path;
-    if (!nextPath || nextPath === currentPath) return undefined;
-    try {
-      setFollowingUserId(null);
-      if (target.type === "file") {
-        renameFile(client.doc, target.file.id, nextPath);
-        setOpenTabPaths((current) =>
-          current.map((path) => (path === currentPath ? nextPath : path)),
-        );
-        if (selectedPath === currentPath) setSelectedPath(nextPath);
-      } else {
-        renameFolder(client.doc, currentPath, nextPath);
-        setOpenTabPaths((current) =>
-          current.map((path) =>
-            path.startsWith(`${currentPath}/`)
-              ? `${nextPath}${path.slice(currentPath.length)}`
-              : path,
-          ),
-        );
-        if (selectedPath.startsWith(`${currentPath}/`)) {
-          setSelectedPath(`${nextPath}${selectedPath.slice(currentPath.length)}`);
-        }
-      }
-      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-      return undefined;
-    } catch (error) {
-      return error instanceof Error ? error.message : "Unable to rename item";
-    }
-  };
-
-  const handleCopy = (file: ProjectFile) => {
-    try {
-      const copied = copyFile(client.doc, file.id);
-      client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-      activateFile(copied.path);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Unable to duplicate file");
-    }
-  };
-
-  const handleDelete = (target: Exclude<FileTreeTarget, null>) => {
-    const path = target.type === "file" ? target.file.path : target.path;
-    if (!window.confirm(`Delete ${path}?`)) return;
-    setFollowingUserId(null);
-    if (target.type === "file") {
-      deleteFile(client.doc, target.file.id);
-      if (openTabPaths.includes(path)) {
-        const result = closeEditorTab(openTabPaths, path, selectedPath);
-        setOpenTabPaths(result.paths);
-        if (selectedPath === path) setSelectedPath(result.nextPath);
-      }
-    } else {
-      deleteFolder(client.doc, target.path);
-      const removedPaths = openTabPaths.filter((tabPath) => tabPath.startsWith(`${path}/`));
-      let nextPaths = openTabPaths;
-      let nextSelectedPath = selectedPath;
-      for (const removedPath of removedPaths) {
-        const result = closeEditorTab(nextPaths, removedPath, nextSelectedPath);
-        nextPaths = result.paths;
-        nextSelectedPath = result.nextPath;
-      }
-      setOpenTabPaths(nextPaths);
-      if (selectedPath.startsWith(`${path}/`)) setSelectedPath(nextSelectedPath);
-    }
-    client.doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
-  };
-
-  const handleCursorChange = (cursor: { anchor: number; head: number }) => {
-    setFollowingUserId(null);
-    if (presenceTimer.current) {
-      clearTimeout(presenceTimer.current);
-      presenceTimer.current = null;
-    }
-    presenceTimer.current = setTimeout(() => client.sendPresence(selectedPath, cursor), 120);
-  };
-
-  const handleDisplayNameChange = (displayName: string): boolean => {
-    setFollowingUserId(null);
-    return client.updateDisplayName(displayName);
-  };
-  const handleColorChange = (color: string): boolean => {
-    setFollowingUserId(null);
-    return client.updateColor(color);
-  };
-  const toggleMobilePanel = (panel: MobileWorkspacePanel) => {
-    setFollowingUserId(null);
-    setMobilePanel((current) => toggleMobileWorkspacePanel(current, panel));
-  };
+export function AppShell({ roomId }: { roomId: string }) {
+  const { t } = useTranslation();
+  const {
+    client,
+    settings,
+    files,
+    folders,
+    selectedPath,
+    openFiles,
+    selectedFile,
+    previewFile,
+    followingUserId,
+    followedSelection,
+    mobilePanel,
+    vimMode,
+    fileSearchOpen,
+    commandPaletteOpen,
+    keymap,
+    editorFocusRef,
+    focusEditorWhenReadyRef,
+    focusInitialEditorRef,
+    setCommandPaletteOpen,
+    setFileSearchOpen,
+    setMobilePanel,
+    setFollowingUserId,
+    handleFollowMember,
+    toggleMobilePanel,
+    updateSharedSetting,
+    updateVimMode,
+    updateLanguage,
+    updateKeymap,
+    activateFile,
+    handleAddFile,
+    handleAddFolder,
+    handleRename,
+    handleCopy,
+    handleDelete,
+    handleDisplayNameChange,
+    handleColorChange,
+    handleCloseTab,
+    handleCursorChange,
+    handleEditorFocusReady,
+  } = useWorkspaceController(roomId);
 
   return (
     <Theme
@@ -435,6 +78,7 @@ export function AppShell({ roomId }: AppShellProps) {
           roomId={roomId}
           members={client.members}
           status={client.status}
+          syncError={client.syncError}
           followingUserId={followingUserId}
           onFollowMember={handleFollowMember}
           onOpenFiles={() => toggleMobilePanel("files")}

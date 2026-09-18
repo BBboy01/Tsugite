@@ -132,6 +132,64 @@ test("starts pnpm project and emits ready after server-ready", async () => {
   expect(events.at(-1)).toEqual({ type: "state", state: "ready" });
 });
 
+test("reports install failure and terminates an installation that exceeds its deadline", async () => {
+  const fake = fakeContainer();
+  let killed = false;
+  const install = {
+    ...fakeProcess(),
+    exit: new Promise<number>(() => {}),
+    kill() {
+      killed = true;
+    },
+  };
+  fake.container.spawn = async () => install;
+  const runtime = new WebContainerRuntime({
+    boot: async () => fake.container,
+    installTimeoutMs: 10,
+  });
+  const events: RuntimeEvent[] = [];
+  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
+    events.push(event),
+  );
+  expect(killed).toBe(true);
+  expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "install-failed" });
+  runtime.dispose();
+}, 1000);
+
+test("waits for installation to finish before starting the preview", async () => {
+  const fake = fakeContainer();
+  const originalSpawn = fake.container.spawn;
+  let finish: ((code: number) => void) | undefined;
+  let installing = false;
+  fake.container.spawn = async (command, args) => {
+    if (args[0] !== "install") return originalSpawn(command, args);
+    installing = true;
+    return {
+      ...fakeProcess(),
+      exit: new Promise<number>((resolve) => {
+        finish = resolve;
+      }),
+    };
+  };
+  const runtime = new WebContainerRuntime({
+    boot: async () => fake.container,
+    installTimeoutMs: 100,
+  });
+  const events: RuntimeEvent[] = [];
+  const started = runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    (event) => events.push(event),
+  );
+  await Bun.sleep(20);
+  expect(installing).toBe(true);
+  expect(events.some((event) => event.type === "server-ready")).toBe(false);
+  finish!(0);
+  await started;
+  expect(events.at(-1)).toEqual({ type: "state", state: "ready" });
+  runtime.dispose();
+});
+
 test("forwards preview errors that occur after the server is ready", async () => {
   const fake = fakeContainer();
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });

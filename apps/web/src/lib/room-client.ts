@@ -1,15 +1,16 @@
 import { faker } from "@faker-js/faker";
 import { LoroDoc } from "loro-crdt";
+import { RoomOutbox } from "./room-outbox";
 
 import {
   decodeJsonMessage,
   encodeJsonMessage,
+  MAX_ROOM_UPDATE_BYTES,
   type JoinMessage,
   type PresenceListMessage,
   type PresenceMember,
   type PresenceMessage,
   type PresenceRemovedMessage,
-  type ServerReadyMessage,
 } from "@iris/shared";
 
 export type ConnectionStatus = "connecting" | "live" | "reconnecting" | "offline";
@@ -40,7 +41,7 @@ export type RoomSocket = {
 
 export type RoomClientEvent =
   | { type: "status"; status: ConnectionStatus }
-  | { type: "document" }
+  | { type: "document"; changes: { workspace: boolean; settings: boolean; content: boolean } }
   | { type: "presence"; members: PresenceMember[] };
 
 const OPEN = 1;
@@ -54,11 +55,12 @@ export class RoomClient {
   readonly identity: RoomIdentity;
   private readonly socketFactory: (url: string) => RoomSocket;
   private readonly listeners = new Set<(event: RoomClientEvent) => void>();
-  private readonly queuedUpdates: Uint8Array[] = [];
+  private readonly outbox = new RoomOutbox();
   private socket: RoomSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempt = 0;
   private statusValue: ConnectionStatus = "offline";
+  private syncErrorValue: string | undefined;
   private membersValue: PresenceMember[] = [];
   private selectedPath: string | undefined;
   private cursor: { anchor: number; head: number } | null | undefined;
@@ -69,13 +71,26 @@ export class RoomClient {
     this.socketFactory =
       options.socketFactory ?? ((url) => new WebSocket(url) as unknown as RoomSocket);
 
-    this.doc.subscribeLocalUpdates((bytes) => {
-      if (this.socket?.readyState === OPEN) {
-        this.socket.send(bytes);
-      } else {
-        this.queuedUpdates.push(bytes);
+    this.doc.subscribe((batch) => {
+      const changes = { workspace: false, settings: false, content: false };
+      for (const event of batch.events) {
+        const root = event.path[0];
+        if (typeof root === "string" && root.startsWith("file:")) changes.content = true;
+        else if (root === "settings") changes.settings = true;
+        else if (root === "files" || root === "filePaths" || root === "folders")
+          changes.workspace = true;
+        else changes.workspace = changes.settings = changes.content = true;
       }
-      this.emit({ type: "document" });
+      if (batch.events.length > 0) this.emit({ type: "document", changes });
+    });
+    this.doc.subscribeLocalUpdates((bytes) => {
+      if (bytes.byteLength > MAX_ROOM_UPDATE_BYTES) {
+        this.syncErrorValue =
+          "This edit exceeds 1 MiB. Sync stopped; local changes remain in this tab.";
+        this.disconnect();
+        this.emit({ type: "status", status: this.statusValue });
+      }
+      this.outbox.update(bytes);
     });
   }
 
@@ -83,11 +98,16 @@ export class RoomClient {
     return this.statusValue;
   }
 
+  get syncError(): string | undefined {
+    return this.syncErrorValue;
+  }
+
   get members(): PresenceMember[] {
     return this.membersValue;
   }
 
   connect(): void {
+    if (this.syncErrorValue) return;
     if (this.socket && this.statusValue !== "offline") return;
 
     this.setStatus(this.reconnectAttempt > 0 ? "reconnecting" : "connecting");
@@ -100,7 +120,7 @@ export class RoomClient {
       this.setStatus("live");
       const join: JoinMessage = { type: "join", ...this.identity };
       socket.send(encodeJsonMessage(join));
-      this.flushQueue();
+      this.outbox.connect((data) => socket.send(data));
       if (this.selectedPath !== undefined || this.cursor !== undefined) {
         this.sendPresence();
       }
@@ -114,6 +134,7 @@ export class RoomClient {
     };
     socket.onclose = () => {
       if (this.socket !== socket) return;
+      this.outbox.disconnect();
       this.socket = null;
       if (this.statusValue !== "offline") this.scheduleReconnect();
     };
@@ -125,6 +146,7 @@ export class RoomClient {
       clearTimeout(this.reconnectTimer);
       this.reconnectTimer = null;
     }
+    this.outbox.disconnect();
     this.setStatus("offline");
     this.socket?.close();
     this.socket = null;
@@ -144,7 +166,7 @@ export class RoomClient {
       selectedPath: this.selectedPath,
       cursor: this.cursor,
     };
-    this.socket.send(encodeJsonMessage(message));
+    this.outbox.updatePresence(encodeJsonMessage(message));
   }
 
   updateDisplayName(value: string): boolean {
@@ -186,7 +208,6 @@ export class RoomClient {
   private handleMessage(data: string | ArrayBuffer | Uint8Array): void {
     if (typeof data !== "string") {
       this.doc.import(toUint8Array(data));
-      this.emit({ type: "document" });
       return;
     }
 
@@ -194,8 +215,8 @@ export class RoomClient {
     if (!message || typeof message !== "object" || !("type" in message)) return;
 
     switch (message.type) {
-      case "ready":
-        this.handleReady(message as ServerReadyMessage);
+      case "update:ack":
+        this.outbox.acknowledge();
         break;
       case "presence:list":
         this.membersValue = mergePresenceList(
@@ -213,11 +234,6 @@ export class RoomClient {
     }
   }
 
-  private handleReady(message: ServerReadyMessage): void {
-    if (message.roomId !== this.roomId) return;
-    this.flushQueue();
-  }
-
   private upsertMember(member: PresenceMember): void {
     const previous = this.membersValue.find((item) => item.userId === member.userId);
     const nextMember = mergePresenceMember(previous, member);
@@ -231,13 +247,6 @@ export class RoomClient {
   private removeMember(message: PresenceRemovedMessage): void {
     this.membersValue = this.membersValue.filter((item) => item.userId !== message.userId);
     this.emit({ type: "presence", members: this.membersValue });
-  }
-
-  private flushQueue(): void {
-    if (this.socket?.readyState !== OPEN) return;
-    while (this.queuedUpdates.length > 0) {
-      this.socket.send(this.queuedUpdates.shift()!);
-    }
   }
 
   private scheduleReconnect(): void {

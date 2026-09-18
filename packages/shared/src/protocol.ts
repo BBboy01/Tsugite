@@ -1,3 +1,5 @@
+export const MAX_ROOM_UPDATE_BYTES = 1024 * 1024;
+
 export type JoinMessage = {
   type: "join";
   userId: string;
@@ -32,11 +34,16 @@ export type ServerReadyMessage = {
   roomId: string;
 };
 
+export type UpdateAckMessage = {
+  type: "update:ack";
+};
+
 export type ClientJsonMessage = JoinMessage | PresenceMessage;
 export type ServerJsonMessage =
   | PresenceListMessage
   | PresenceRemovedMessage
   | PresenceMessage
+  | UpdateAckMessage
   | ServerReadyMessage;
 
 export function encodeJsonMessage(message: ClientJsonMessage | ServerJsonMessage): string {

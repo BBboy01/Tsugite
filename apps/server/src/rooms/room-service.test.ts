@@ -165,6 +165,7 @@ test("restores a persisted snapshot in a new service instance", () => {
   setSharedSetting(clientDoc, "theme", "nord");
   clientDoc.commit();
   firstService.update(first.socket, clientDoc.export({ mode: "update" }));
+  expect(firstService.shutdown()).toBe(true);
 
   const second = createSocket();
   const secondService = new RoomService(store);
