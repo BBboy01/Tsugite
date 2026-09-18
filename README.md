@@ -4,7 +4,7 @@
 
 <h1 align="center">Tsugite</h1>
 
-<p align="center">A small, fast shared room for editing code together in the browser.</p>
+<p align="center">Edit code together in the browser, with shared rooms and local live previews.</p>
 
 <p align="center">
   <a href="https://deepwiki.com/BBboy01/Tsugite"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki" /></a>
@@ -22,11 +22,11 @@
 
 Tsugite is a collaborative code editor for small, shared rooms. Multiple people can edit the same project, follow each other's cursors, and see a live preview in the browser.
 
-Each room starts with a React, TypeScript, Vite, and Tailwind project. The shared project document is synchronized with Loro CRDT. When a room contains a root `package.json`, each browser runs that project locally in WebContainer; the server never executes user project code.
+Each new room starts with a React, TypeScript, Vite, and Tailwind project. Loro CRDT synchronizes edits, and SQLite stores the room's files, folders, and shared settings. Each browser runs the project in WebContainer; the server never executes user project code.
 
 ## See it in action
 
-The workspace keeps the file tree, editor, preview, output, and room presence in one place. Open the same room URL in another browser tab to see shared edits and presence update live.
+The workspace keeps the file tree, editor, preview, output, and room presence in one place. Open the same room URL in a separate browser profile to try collaboration with two identities.
 
 <details>
 <summary>Open the shared settings view</summary>
@@ -38,19 +38,12 @@ The workspace keeps the file tree, editor, preview, output, and room presence in
 
 ## What it includes
 
-- Shared files, settings, themes, fonts, cursors, and presence
-- CodeMirror 6 editor with Vim mode, relative line numbers, fuzzy file search, and configurable keymaps
+- Shared files, folders, workspace settings, cursors, and presence, with SQLite persistence for project data
+- CodeMirror 6 with Vim mode, relative line numbers, configurable cursors, fuzzy file search, Command Palette, and keymaps
+- TypeScript navigation, references, hover information, and inline Peek
 - Browser-local live previews with incremental file synchronization and runtime recovery actions
 - Anonymous room identities with editable display names and avatar colors
 - Docker Compose deployment with Caddy serving the web app and proxying WebSocket traffic
-
-## A typical session
-
-1. Share a room URL with a teammate.
-2. Edit files together and use the presence indicators to see who is active.
-3. Follow a collaborator when you need to watch their cursor and selection.
-4. Run the project locally in each browser and inspect the live preview or output panel.
-5. Use fuzzy file search, Vim mode, or keymaps when the project grows beyond a few files.
 
 ## Quick start
 
@@ -59,42 +52,53 @@ Requirements:
 - [Bun](https://bun.sh/) matching [`.bun-version`](.bun-version)
 - A browser that supports cross-origin isolation and WebContainer
 
-Install dependencies, then start each development process in a separate terminal:
+Clone the repository and install its locked dependencies:
 
 ```bash
-bun install
+git clone https://github.com/BBboy01/Tsugite.git
+cd Tsugite
+bun install --frozen-lockfile
+```
+
+Start the server in one terminal:
+
+```bash
 bun run dev:server
+```
+
+Start the web app in another:
+
+```bash
 bun run dev:web
 ```
 
-Open [http://127.0.0.1:5173/room/demo](http://127.0.0.1:5173/room/demo) in two browser tabs to try collaboration.
+Open [http://127.0.0.1:5173/room/demo](http://127.0.0.1:5173/room/demo). The server applies migrations on startup and stores room data in `data/tsugite.sqlite`. Share the room URL with another browser profile or teammate using the same deployment.
+
+For Docker Compose or published images, see the [deployment guide](docs/deployment.md). Use the documentation from the same revision as the code or images you deploy.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md): first run, room usage, and browser requirements
+- [Getting started](docs/getting-started.md): room usage, shortcuts, settings, and preview troubleshooting
 - [Development guide](docs/development.md): repository layout, local workflows, and verification
 - [Deployment guide](docs/deployment.md): Docker Compose, Caddy, images, and configuration
 - [Architecture](docs/architecture.md): runtime boundaries, data flow, and failure boundaries
-- [Contributing](CONTRIBUTING.md): commits, pull requests, releases, and dependency updates
+- [Contributing](CONTRIBUTING.md): focused changes, verification, commits, and dependency updates
 
 ## Verification
 
-Run the checks that match the change before opening a pull request:
+Run unit and integration tests:
 
 ```bash
 bun run test
-bun run lint
-bun run format:check
-bun run knip
-bun run build
-bun run test:e2e
 ```
 
-Playwright automatically starts the web and server processes, or reuses running local instances. The GitHub Actions browser workflow runs Playwright smoke tests for release candidates, version tags, and manual runs.
+Use the [development guide](docs/development.md#verification) for scoped static checks and browser tests. Playwright starts isolated test servers on ports `3003` and `5175`; it does not reuse development servers or the development database. Browser CI runs for release candidates, version tags, and manual runs.
 
 ## Current limitations
 
-- Room documents are persisted as Loro snapshots in SQLite. Docker deployments keep the database in the `tsugite-data` volume.
 - Room access is based on the room URL; there is no authentication or authorization layer yet.
+- Deploy one room-server process. Live room state is not coordinated across replicas.
+- Snapshots normally reach SQLite within about 500 ms. The connection indicator is not a durable-save receipt, and unsent browser edits do not survive a page reload.
 - Project dependencies and preview processes run independently in each collaborator's browser.
 - A project without a root `package.json` uses the single-file Babel iframe fallback instead of WebContainer.
+- See [resource limits and recovery](docs/deployment.md#resource-limits) before exposing a deployment to the internet.
