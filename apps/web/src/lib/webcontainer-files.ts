@@ -12,6 +12,9 @@ export type PreviewScriptResult =
   | PreviewScript
   | { error: "invalid-package-json" | "missing-preview-script" };
 
+const BROKEN_ROLLDOWN_VERSION = "1.2.9";
+const WEBCONTAINER_ROLLDOWN_VERSION = "1.2.8";
+
 export function buildFileSystemTree(files: ProjectFile[], folders: string[]): FileSystemTree {
   const tree: FileSystemTree = {};
 
@@ -32,6 +35,56 @@ export function buildFileSystemTree(files: ProjectFile[], folders: string[]): Fi
     parent[fileName] = { file: { contents: file.text.toString() } };
   }
 
+  return tree;
+}
+
+export function buildPreviewFileSystemTree(
+  files: ProjectFile[],
+  folders: string[],
+  packageManager: PackageManager,
+): FileSystemTree {
+  const tree = buildFileSystemTree(files, folders);
+  const packageFile = files.find((file) => file.path === "package.json");
+  if (!packageFile) return tree;
+
+  const packageJson = parsePackageJson(packageFile.text.toString());
+  if (!packageJson || !usesVite(packageJson) || managesRolldown(packageJson)) return tree;
+
+  if (packageManager === "pnpm") {
+    if (files.some((file) => file.path === "pnpm-workspace.yaml")) return tree;
+    const pnpm = packageJson.pnpm;
+    if (pnpm !== undefined && !isRecord(pnpm)) return tree;
+    const overrides = pnpm?.overrides;
+    if (overrides !== undefined && !isRecord(overrides)) return tree;
+    if (isRecord(overrides) && hasRolldownOverride(overrides)) return tree;
+
+    const selector = `rolldown@${BROKEN_ROLLDOWN_VERSION}`;
+
+    tree["package.json"] = packageJsonFile({
+      ...packageJson,
+      pnpm: {
+        ...pnpm,
+        overrides: { ...overrides, [selector]: WEBCONTAINER_ROLLDOWN_VERSION },
+      },
+    });
+    tree["pnpm-workspace.yaml"] = {
+      file: {
+        contents: `packages:\n  - .\noverrides:\n  ${selector}: ${WEBCONTAINER_ROLLDOWN_VERSION}\n`,
+      },
+    };
+    return tree;
+  }
+
+  const field = packageManager === "npm" ? "overrides" : "resolutions";
+  const selector = packageManager === "npm" ? `rolldown@${BROKEN_ROLLDOWN_VERSION}` : "rolldown";
+  const current = packageJson[field];
+  if (current !== undefined && !isRecord(current)) return tree;
+  if (isRecord(current) && hasRolldownOverride(current)) return tree;
+
+  tree["package.json"] = packageJsonFile({
+    ...packageJson,
+    [field]: { ...current, [selector]: WEBCONTAINER_ROLLDOWN_VERSION },
+  });
   return tree;
 }
 
@@ -87,4 +140,47 @@ function normalizeRelativePath(path: string): string {
 function isScript(value: object, name: string): boolean {
   const script = (value as Record<string, unknown>)[name];
   return typeof script === "string" && script.trim().length > 0;
+}
+
+function parsePackageJson(source: string): Record<string, unknown> | undefined {
+  try {
+    const parsed: unknown = JSON.parse(source);
+    return isRecord(parsed) ? parsed : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function packageJsonFile(packageJson: Record<string, unknown>): FileSystemTree[string] {
+  return { file: { contents: `${JSON.stringify(packageJson, null, 2)}\n` } };
+}
+
+function usesVite(packageJson: Record<string, unknown>): boolean {
+  return (
+    hasDependency(packageJson.dependencies, "vite") ||
+    hasDependency(packageJson.devDependencies, "vite")
+  );
+}
+
+function managesRolldown(packageJson: Record<string, unknown>): boolean {
+  return [
+    packageJson.dependencies,
+    packageJson.devDependencies,
+    packageJson.optionalDependencies,
+    packageJson.peerDependencies,
+  ].some((dependencies) => hasDependency(dependencies, "rolldown"));
+}
+
+function hasDependency(value: unknown, name: string): boolean {
+  return isRecord(value) && typeof value[name] === "string";
+}
+
+function hasRolldownOverride(overrides: Record<string, unknown>): boolean {
+  return Object.keys(overrides).some(
+    (selector) => selector === "rolldown" || selector.startsWith("rolldown@"),
+  );
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
 }

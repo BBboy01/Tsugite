@@ -39,6 +39,34 @@ async function rightClickText(page: Page, line: string, token: string) {
   await expect(page.getByRole("menu")).toBeVisible();
 }
 
+async function hoverText(page: Page, line: string, token: string) {
+  const point = await page
+    .locator(".cm-line")
+    .filter({ hasText: line })
+    .last()
+    .evaluate((element, word) => {
+      const start = element.textContent?.indexOf(word) ?? -1;
+      if (start < 0) throw new Error(`Missing symbol ${word}`);
+      const end = start + word.length;
+      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+      const range = document.createRange();
+      let offset = 0;
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        const length = node.textContent?.length ?? 0;
+        if (start < offset + length && end <= offset + length) {
+          range.setStart(node, start - offset);
+          range.setEnd(node, end - offset);
+          const rect = range.getBoundingClientRect();
+          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
+        }
+        offset += length;
+      }
+      throw new Error(`Missing text node ${word}`);
+    }, token);
+  await page.mouse.move(point.x, point.y);
+}
+
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/context-${crypto.randomUUID()}`);
@@ -73,6 +101,34 @@ test("definition navigation and Peek have different effects and references retai
   await page.keyboard.press("Enter");
   await expect(references).toBeHidden();
   await expect(page.locator(".cm-content")).toBeFocused();
+});
+
+test("TypeScript hover blends its wrapper into the editor surface", async ({ page }) => {
+  await replaceCode(page, "const answer = 42;\nconsole.log(answer);");
+  await hoverText(page, "console.log(answer)", "answer");
+
+  const tooltip = page.locator(".cm-tooltip.cm-tooltip-hover");
+  await expect(tooltip).toBeVisible();
+  const styles = await tooltip.evaluate((element) => {
+    const editor = element.closest(".cm-editor");
+    if (!editor) throw new Error("Hover tooltip is outside the editor");
+    const tooltipStyle = getComputedStyle(element);
+    const inner = element.querySelector(".iris-ts-hover");
+    if (!inner) throw new Error("Missing TypeScript hover content");
+    const innerStyle = getComputedStyle(inner);
+    return {
+      editorBackground: getComputedStyle(editor).backgroundColor,
+      tooltipBackground: tooltipStyle.backgroundColor,
+      tooltipBorderWidth: tooltipStyle.borderWidth,
+      tooltipBorderStyle: tooltipStyle.borderStyle,
+      innerBorderRadius: innerStyle.borderRadius,
+    };
+  });
+
+  expect(styles.tooltipBackground).toBe(styles.editorBackground);
+  expect(styles.tooltipBorderWidth).toBe("0px");
+  expect(styles.tooltipBorderStyle).toBe("none");
+  expect(styles.innerBorderRadius).toBe("8px");
 });
 
 test("navigates to an unopened workspace file and exact target position", async ({ page }) => {

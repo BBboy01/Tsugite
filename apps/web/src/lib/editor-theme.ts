@@ -25,6 +25,28 @@ export function editorTheme(settings: ProjectSettings) {
       fontFamily: "var(--mono-font)",
       fontSize: "11px",
     },
+    ".cm-tooltip.cm-tooltip-hover": {
+      backgroundColor: "var(--editor-surface)",
+      border: "none",
+    },
+    ".cm-vim-search-status": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--editor-surface))",
+      border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--divider))",
+      borderRadius: "4px",
+      boxSizing: "border-box",
+      color: "color-mix(in srgb, var(--ink) 72%, var(--muted))",
+      display: "inline-block",
+      fontFamily: "var(--mono-font)",
+      fontSize: "10px",
+      lineHeight: "14px",
+      marginLeft: "10px",
+      padding: "0 4px",
+      pointerEvents: "none",
+      whiteSpace: "pre",
+    },
+    ".cm-vim-search-count": {
+      marginLeft: "8ch",
+    },
     ".cm-panel.cm-search .cm-textfield": {
       backgroundColor: "color-mix(in srgb, var(--glass-popover) 72%, var(--editor-surface))",
       border: "1px solid var(--divider)",

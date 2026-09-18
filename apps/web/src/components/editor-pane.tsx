@@ -38,6 +38,7 @@ import { editorTheme } from "../lib/editor-theme";
 import type { EditorLocation } from "../lib/editor-navigation";
 import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
 import { attachVimClipboard } from "../lib/vim-clipboard";
+import { attachVimSearch, vimSearchExtension } from "../lib/vim-search";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
 
 class RelativeLineNumberMarker extends GutterMarker {
@@ -142,6 +143,7 @@ export function EditorPane({
     let detachVimStatus: () => void = () => undefined;
     let detachVimCursorStyle: () => void = () => undefined;
     let detachVimClipboard: () => void = () => undefined;
+    let detachVimSearch: () => void = () => undefined;
     const setupEditor = async () => {
       const language = getEditorLanguage(file.path, file.language);
       const typeScriptEnabled = supportsTypeScriptServices(language);
@@ -174,6 +176,7 @@ export function EditorPane({
           doc: source,
           extensions: [
             ...(vimMode ? [vim()] : []),
+            ...(vimMode ? [vimSearchExtension] : []),
             basicSetup,
             relativeLineNumbersCompartment.of(
               relativeLineNumbersRef.current ? relativeLineNumberMarkers : [],
@@ -224,6 +227,7 @@ export function EditorPane({
       detachVimClipboard = vimMode
         ? attachVimClipboard(editorView, systemClipboardRef.current)
         : () => undefined;
+      detachVimSearch = vimMode ? attachVimSearch(editorView) : () => undefined;
       onEditorFocusReady?.(() => editorView.focus());
       if (vimMode) {
         detachVimStatus = attachVimStatus(editorView, setVimStatus);
@@ -268,6 +272,7 @@ export function EditorPane({
       detachVimStatus();
       detachVimCursorStyle();
       detachVimClipboard();
+      detachVimSearch();
       if (view) {
         savedSelectionRef.current = {
           fileId: file.id,

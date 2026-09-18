@@ -2,7 +2,7 @@ import { WebContainer, type FileSystemTree } from "@webcontainer/api";
 
 import type { PackageManager, ProjectFile } from "@iris/shared";
 
-import { buildFileSystemTree, selectPreviewScript } from "./webcontainer-files";
+import { buildPreviewFileSystemTree, selectPreviewScript } from "./webcontainer-files";
 
 export type RuntimeState = "idle" | "installing" | "starting" | "ready" | "paused" | "error";
 export type RuntimeSettings = {
@@ -94,7 +94,7 @@ export class WebContainerRuntime {
       const container = await this.getContainer();
       if (generation !== this.generation) return;
 
-      const tree = buildFileSystemTree(files, folders);
+      const tree = buildPreviewFileSystemTree(files, folders, settings.packageManager);
       await container.mount(tree);
       this.snapshot = createSnapshot(files, folders);
 

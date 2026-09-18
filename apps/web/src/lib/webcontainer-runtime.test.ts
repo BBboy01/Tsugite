@@ -100,7 +100,7 @@ test("starts pnpm project and emits ready after server-ready", async () => {
 
   await runtime.start(
     [
-      projectFile("package.json", '{"scripts":{"dev":"vite"}}'),
+      projectFile("package.json", '{"scripts":{"dev":"vite"},"devDependencies":{"vite":"latest"}}'),
       projectFile("src/main.js", "console.log('ok')"),
     ],
     ["src"],
@@ -108,6 +108,16 @@ test("starts pnpm project and emits ready after server-ready", async () => {
   );
 
   expect(fake.calls.mount).toHaveLength(1);
+  expect(fake.calls.mount[0]).toMatchObject({
+    "package.json": {
+      file: {
+        contents: expect.stringContaining('"pnpm"'),
+      },
+    },
+    "pnpm-workspace.yaml": {
+      file: { contents: "packages:\n  - .\noverrides:\n  rolldown@1.2.9: 1.2.8\n" },
+    },
+  });
   expect(fake.calls.spawn).toEqual([
     ["pnpm", "install", "--reporter=append-only"],
     ["pnpm", "run", "dev"],

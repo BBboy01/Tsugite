@@ -6,15 +6,38 @@ export function attachVimClipboard(view: EditorView, enabled: boolean): () => vo
     return () => undefined;
   }
 
-  // Keep native Vim semantics for linewise, visual, and cursor-aware paste.
-  Vim.map("y", '"+y', "normal");
-  Vim.map("p", '"+p', "normal");
-  Vim.map("P", '"+P', "normal");
+  Vim.noremap("p", '"+p', "normal");
+  Vim.noremap("P", '"+P', "normal");
+  const registerController = Vim.getRegisterController();
+  const getSnapshot = () => {
+    const register = registerController.unnamedRegister;
+    return {
+      text: register.toString(),
+      linewise: register.linewise,
+      blockwise: register.blockwise,
+    };
+  };
+  let lastSnapshot = getSnapshot();
+  const syncRegister = () => {
+    const nextSnapshot = getSnapshot();
+    if (
+      nextSnapshot.text === lastSnapshot.text &&
+      nextSnapshot.linewise === lastSnapshot.linewise &&
+      nextSnapshot.blockwise === lastSnapshot.blockwise
+    ) {
+      return;
+    }
+    lastSnapshot = nextSnapshot;
+    registerController
+      .getRegister("+")
+      .setText(nextSnapshot.text, nextSnapshot.linewise, nextSnapshot.blockwise);
+    void navigator.clipboard.writeText(nextSnapshot.text).catch(() => undefined);
+  };
+  view.dom.addEventListener("keyup", syncRegister, true);
 
   return () => {
-    Vim.unmap("y", "normal");
+    view.dom.removeEventListener("keyup", syncRegister, true);
     Vim.unmap("p", "normal");
     Vim.unmap("P", "normal");
-    void view;
   };
 }
