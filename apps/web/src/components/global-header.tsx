@@ -13,6 +13,7 @@ type GlobalHeaderProps = {
   roomId: string;
   members: PresenceMember[];
   status: ConnectionStatus;
+  syncError?: string;
   followingUserId: string | null;
   onFollowMember: (userId: string) => void;
   onOpenFiles: () => void;
@@ -27,6 +28,7 @@ export function GlobalHeader({
   roomId,
   members,
   status,
+  syncError,
   followingUserId,
   onFollowMember,
   onOpenFiles,
@@ -77,6 +79,7 @@ export function GlobalHeader({
           members={members}
           roomId={roomId}
           status={status}
+          syncError={syncError}
           followingUserId={followingUserId}
           onFollowMember={onFollowMember}
         />

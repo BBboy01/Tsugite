@@ -1,6 +1,8 @@
 import { expect, test } from "playwright/test";
 
-test("follows a collaborator's file and cursor until a local action", async ({ browser }) => {
+test("follows a collaborator's file and cursor until a local action", async ({
+  browser,
+}, testInfo) => {
   test.setTimeout(90_000);
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
@@ -86,6 +88,52 @@ test("follows a collaborator's file and cursor until a local action", async ({ b
 
   await secondPage.keyboard.press("ArrowDown");
   await expect(firstPage.locator('section[aria-label="Editing index.html"]')).toBeVisible();
+
+  await secondPage.locator(".cm-content").click();
+  await secondPage.keyboard.press("ControlOrMeta+End");
+  await secondPage.keyboard.insertText("\n" + "// expanded gutter\n".repeat(1500));
+  await onlineMembers.click();
+  await firstPage.getByRole("button", { name: "Jun", exact: true }).click();
+  await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
+  await expect(firstPage.locator(".cm-lineNumbers")).toContainText("1500");
+
+  await secondPage.getByRole("button", { name: "Open shared settings" }).click();
+  await secondPage.getByRole("button", { name: "Editor", exact: true }).click();
+  await secondPage.locator('[data-setting-id="fontSize"]').getByRole("slider").focus();
+  await secondPage.keyboard.press("End");
+  await secondPage.keyboard.press("Escape");
+
+  for (const viewport of [
+    { width: 1440, height: 960 },
+    { width: 390, height: 844 },
+  ]) {
+    await firstPage.setViewportSize(viewport);
+    await expect(followedEditor).toBeVisible();
+    await expect
+      .poll(() =>
+        followedEditor.evaluate((element) => {
+          const bounds = element.getBoundingClientRect();
+          const gutter = element
+            .parentElement!.querySelector(".cm-gutters")!
+            .getBoundingClientRect();
+          return bounds.left - gutter.right;
+        }),
+      )
+      .toBeGreaterThanOrEqual(0);
+    await expect
+      .poll(() =>
+        firstPage.evaluate(
+          () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
+        ),
+      )
+      .toBe(0);
+    const screenshot = testInfo.outputPath(`following-${viewport.width}.png`);
+    await firstPage.screenshot({ path: screenshot });
+    await testInfo.attach(`following-${viewport.width}`, {
+      path: screenshot,
+      contentType: "image/png",
+    });
+  }
 
   await firstContext.close();
   await secondContext.close();

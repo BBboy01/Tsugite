@@ -12,6 +12,7 @@ import { Vim, getCM } from "@replit/codemirror-vim";
 type VimSearchQuery = SearchQuery & { forVim?: boolean };
 
 const vimSearchNavigated = StateEffect.define<void>();
+const vimSearchRecount = StateEffect.define<void>();
 
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -82,64 +83,86 @@ function getCurrentMatch(view: EditorView, matches: Array<{ from: number; to: nu
   return following >= 0 ? following : 0;
 }
 
-const vimSearchStatus = ViewPlugin.fromClass(
-  class {
-    decorations = Decoration.none;
-    private activeMatchFrom: number | null = null;
-    private activeQuery: SearchQuery | null = null;
+export class VimSearchStatus {
+  decorations = Decoration.none;
+  private activeMatchFrom: number | null = null;
+  private activeQuery: SearchQuery | null = null;
+  private recountTimer: ReturnType<typeof setTimeout> | undefined;
 
-    constructor(readonly view: EditorView) {
-      this.decorations = this.buildDecorations(true);
+  constructor(readonly view: EditorView) {
+    this.decorations = this.buildDecorations(true);
+  }
+
+  update(update: ViewUpdate) {
+    const queryChanged = update.transactions.some((transaction) =>
+      transaction.effects.some((effect) => effect.is(setSearchQuery)),
+    );
+    const searchNavigated = update.transactions.some((transaction) =>
+      transaction.effects.some((effect) => effect.is(vimSearchNavigated)),
+    );
+    const recount = update.transactions.some((transaction) =>
+      transaction.effects.some((effect) => effect.is(vimSearchRecount)),
+    );
+    if (!update.docChanged && !queryChanged && !searchNavigated && !recount) return;
+    if (update.docChanged && this.activeMatchFrom !== null) {
+      this.activeMatchFrom = update.changes.mapPos(this.activeMatchFrom);
+    }
+    if (update.docChanged && !queryChanged && !searchNavigated && !recount) {
+      this.decorations = this.decorations.map(update.changes);
+      if (getVimSearchQuery(this.view) && this.recountTimer === undefined) {
+        this.recountTimer = setTimeout(() => {
+          this.recountTimer = undefined;
+          this.view.dispatch({ effects: vimSearchRecount.of() });
+        }, 100);
+      }
+      return;
+    }
+    clearTimeout(this.recountTimer);
+    this.recountTimer = undefined;
+    this.decorations = this.buildDecorations(queryChanged || searchNavigated);
+  }
+
+  destroy() {
+    clearTimeout(this.recountTimer);
+    this.recountTimer = undefined;
+  }
+
+  buildDecorations(refreshActiveMatch: boolean) {
+    const query = getVimSearchQuery(this.view);
+    if (!query || this.view.state.selection.ranges.length !== 1) {
+      this.activeMatchFrom = null;
+      this.activeQuery = null;
+      return Decoration.none;
     }
 
-    update(update: ViewUpdate) {
-      const queryChanged = update.transactions.some((transaction) =>
-        transaction.effects.some((effect) => effect.is(setSearchQuery)),
-      );
-      const searchNavigated = update.transactions.some((transaction) =>
-        transaction.effects.some((effect) => effect.is(vimSearchNavigated)),
-      );
-      if (!update.docChanged && !queryChanged && !searchNavigated) return;
-      if (update.docChanged && this.activeMatchFrom !== null) {
-        this.activeMatchFrom = update.changes.mapPos(this.activeMatchFrom);
-      }
-      this.decorations = this.buildDecorations(queryChanged || searchNavigated);
-    }
-
-    buildDecorations(refreshActiveMatch: boolean) {
-      const query = getVimSearchQuery(this.view);
-      if (!query || this.view.state.selection.ranges.length !== 1) {
-        this.activeMatchFrom = null;
-        this.activeQuery = null;
-        return Decoration.none;
-      }
-
-      const matches = getSearchMatches(this.view, query);
-      if (matches.length === 0) {
-        this.activeMatchFrom = null;
-        this.activeQuery = query;
-        return Decoration.none;
-      }
-
-      const existingMatch = matches.findIndex(({ from }) => from === this.activeMatchFrom);
-      let current = existingMatch;
-      if (refreshActiveMatch || this.activeQuery !== query || current < 0) {
-        current = getCurrentMatch(this.view, matches);
-      }
-
-      this.activeMatchFrom = matches[current].from;
+    const matches = getSearchMatches(this.view, query);
+    if (matches.length === 0) {
+      this.activeMatchFrom = null;
       this.activeQuery = query;
-      const line = this.view.state.doc.lineAt(matches[current].from);
-      return Decoration.set([
-        Decoration.widget({
-          side: 1,
-          widget: new VimSearchStatusWidget(query.search, current + 1, matches.length),
-        }).range(line.to),
-      ]);
+      return Decoration.none;
     }
-  },
-  { decorations: (value) => value.decorations },
-);
+
+    const existingMatch = matches.findIndex(({ from }) => from === this.activeMatchFrom);
+    let current = existingMatch;
+    if (refreshActiveMatch || this.activeQuery !== query || current < 0) {
+      current = getCurrentMatch(this.view, matches);
+    }
+
+    this.activeMatchFrom = matches[current].from;
+    this.activeQuery = query;
+    const line = this.view.state.doc.lineAt(matches[current].from);
+    return Decoration.set([
+      Decoration.widget({
+        side: 1,
+        widget: new VimSearchStatusWidget(query.search, current + 1, matches.length),
+      }).range(line.to),
+    ]);
+  }
+}
+
+const vimSearchStatus = ViewPlugin.fromClass(VimSearchStatus, {
+  decorations: (value) => value.decorations,
+});
 
 function searchVisualSelection(view: EditorView): boolean {
   const cm = getCM(view);

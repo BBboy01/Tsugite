@@ -24,16 +24,19 @@ test("bootstraps the shared project with files and settings", () => {
   expect(snapshot.files.map((file) => file.path)).toEqual([
     "index.html",
     "package.json",
+    "pnpm-workspace.yaml",
     "src/App.tsx",
     "src/index.css",
     "src/main.tsx",
     "tsconfig.json",
     "vite.config.ts",
   ]);
-  expect(getFileByPath(doc, "package.json")?.text.toString()).toContain('"react": "latest"');
-  expect(getFileByPath(doc, "package.json")?.text.toString()).toContain('"name": "tsugite-room"');
-  expect(getFileByPath(doc, "package.json")?.text.toString()).toContain('"tailwindcss": "latest"');
-  expect(getFileByPath(doc, "package.json")?.text.toString()).toContain('"dev": "vite --host');
+  const manifest = JSON.parse(getFileByPath(doc, "package.json")!.text.toString());
+  expect(manifest.name).toBe("tsugite-room");
+  expect(manifest.scripts.dev).toBe("vite --host 0.0.0.0");
+  for (const version of Object.values({ ...manifest.dependencies, ...manifest.devDependencies })) {
+    expect(version).toMatch(/^\d+\.\d+\.\d+$/);
+  }
   expect(getFileByPath(doc, "index.html")?.text.toString()).toContain(
     "<title>Tsugite React workspace</title>",
   );

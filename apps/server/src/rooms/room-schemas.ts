@@ -1,5 +1,9 @@
 import { t } from "elysia";
 
+export function isRoomId(value: string): boolean {
+  return /^[A-Za-z0-9_-]{1,80}$/.test(value);
+}
+
 export const joinSchema = t.Object({
   type: t.Literal("join"),
   userId: t.String({ minLength: 1, maxLength: 80 }),

@@ -90,6 +90,47 @@ test("updates presence and status events", () => {
   client.disconnect();
 });
 
+test("resends updates when the connection closes before the server acknowledgement", () => {
+  const sockets = [new FakeSocket(), new FakeSocket()];
+  let attempt = 0;
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => sockets[attempt++],
+  });
+  client.connect();
+  sockets[0].open();
+  client.doc.getText("text").insert(0, "retained");
+  client.doc.commit();
+  const update = sockets[0].sent.find((message) => message instanceof Uint8Array);
+  expect(update).toBeInstanceOf(Uint8Array);
+  client.disconnect();
+  client.connect();
+  sockets[1].open();
+  expect(sockets[1].sent).toContainEqual(update!);
+  client.disconnect();
+});
+
+test("does not replay updates already acknowledged by the server", () => {
+  const sockets = [new FakeSocket(), new FakeSocket()];
+  let attempt = 0;
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => sockets[attempt++],
+  });
+  client.connect();
+  sockets[0].open();
+  client.doc.getText("text").insert(0, "acknowledged");
+  client.doc.commit();
+  sockets[0].message(JSON.stringify({ type: "update:ack" }));
+  client.disconnect();
+  client.connect();
+  sockets[1].open();
+  expect(sockets[1].sent.filter((message) => message instanceof Uint8Array)).toHaveLength(0);
+  client.disconnect();
+});
+
 test("replays the initial cursor when presence is sent before the socket opens", () => {
   const socket = new FakeSocket();
   const client = new RoomClient({

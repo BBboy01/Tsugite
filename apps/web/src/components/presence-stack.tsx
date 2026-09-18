@@ -11,6 +11,7 @@ type PresenceStackProps = {
   currentUserId: string;
   roomId: string;
   status: ConnectionStatus;
+  syncError?: string;
   followingUserId: string | null;
   onFollowMember: (userId: string) => void;
 };
@@ -20,6 +21,7 @@ export function PresenceStack({
   currentUserId,
   roomId,
   status,
+  syncError,
   followingUserId,
   onFollowMember,
 }: PresenceStackProps) {
@@ -34,10 +36,15 @@ export function PresenceStack({
         <span
           className="live-dot inline-block h-[7px] w-[7px] shrink-0 rounded-full"
           data-status={status}
-          title={statusLabel}
-          aria-label={statusLabel}
+          title={syncError ?? statusLabel}
+          aria-label={syncError ?? statusLabel}
+          role={syncError ? "alert" : undefined}
         />
-        <span className="status-label truncate max-[420px]:hidden" data-status={status}>
+        <span
+          className="status-label truncate max-[420px]:hidden"
+          data-status={status}
+          title={syncError}
+        >
           {statusLabel}
         </span>
         <span className="max-[760px]:hidden">/</span>

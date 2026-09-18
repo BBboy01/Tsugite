@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
+import type { SQLiteBunDatabase } from "drizzle-orm/bun-sqlite";
 
-import { db } from "../db/database";
 import { rooms } from "../db/schema";
 
 export type StoredRoom = {
@@ -15,25 +15,39 @@ export type RoomStore = {
 };
 
 export class RoomRepository implements RoomStore {
+  constructor(private readonly db: SQLiteBunDatabase) {}
+
   load(roomId: string): StoredRoom | undefined {
-    const row = db.select().from(rooms).where(eq(rooms.roomId, roomId)).get();
+    const row = this.db.select().from(rooms).where(eq(rooms.roomId, roomId)).get();
     if (!row) return undefined;
 
     return {
-      snapshot: Uint8Array.from(JSON.parse(String(row.snapshot)) as number[]),
+      snapshot: row.snapshotBlob ?? decodeLegacySnapshot(row.snapshot),
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
     };
   }
 
   save(roomId: string, snapshot: Uint8Array, now = Date.now()): void {
-    const encoded = JSON.stringify([...snapshot]);
-    db.insert(rooms)
-      .values({ roomId, snapshot: encoded, createdAt: now, updatedAt: now })
+    const snapshotBlob = Buffer.from(snapshot);
+    this.db
+      .insert(rooms)
+      .values({ roomId, snapshot: null, snapshotBlob, createdAt: now, updatedAt: now })
       .onConflictDoUpdate({
         target: rooms.roomId,
-        set: { snapshot: encoded, updatedAt: now },
+        set: { snapshot: null, snapshotBlob, updatedAt: now },
       })
       .run();
   }
+}
+
+function decodeLegacySnapshot(value: unknown): Uint8Array {
+  const bytes: unknown = typeof value === "string" ? JSON.parse(value) : value;
+  if (
+    !Array.isArray(bytes) ||
+    !bytes.every((byte) => Number.isInteger(byte) && byte >= 0 && byte <= 255)
+  ) {
+    throw new Error("Invalid persisted room snapshot");
+  }
+  return Uint8Array.from(bytes);
 }

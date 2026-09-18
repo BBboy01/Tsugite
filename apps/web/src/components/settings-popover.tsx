@@ -1,66 +1,16 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import {
-  ChevronDown,
-  Code2,
-  Keyboard,
-  Palette,
-  RotateCcw,
-  Rocket,
-  Settings,
-  X,
-} from "lucide-react";
-import { IconButton, Switch, Theme } from "@radix-ui/themes";
+import { Settings, X } from "lucide-react";
+import { IconButton, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
-
-import type { PackageManager, ProjectSettings } from "@iris/shared";
-import {
-  DEFAULT_KEYMAP,
-  findKeymapConflict,
-  KEYMAP_ACTIONS,
-  formatKeyBinding,
-  normalizeKey,
-  type AppAction,
-  type KeyBinding,
-} from "../lib/keymap";
-
-import { languageOptions, type LanguageCode } from "../lib/i18n";
 import { isDarkWorkspaceTheme } from "../lib/workspace-theme";
-import { dispatchRuntimeAction, RUNTIME_ACTIONS, type RuntimeAction } from "../lib/runtime-actions";
-import { getSettingDefinition, getSettingsByScope } from "../lib/settings-registry";
+import { SettingsContent } from "./settings-content";
+import type { SettingsDialogProps } from "./settings-types";
 
-import { FontFamilyPicker, FontSizeSlider } from "./editor-settings-controls";
-import { ThemePicker } from "./theme-picker";
-import { useSystemClipboard } from "../lib/use-system-clipboard";
+import { useSettingsNavigation } from "./use-settings-navigation";
 
 export const SETTINGS_DIALOG_THEME_CLASS_NAME = "settings-dialog-theme";
-
-type SettingsDialogProps = {
-  settings: ProjectSettings;
-  onChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
-  vimMode: boolean;
-  onVimModeChange: (enabled: boolean) => void;
-  keymap: KeyBinding[];
-  onKeymapChange: (bindings: KeyBinding[]) => void;
-  onLanguageChange: (language: LanguageCode) => void;
-};
-
-type SettingsSection = "workspace" | "editor" | "keyboard" | "runtime";
-
-type NavigationEntry =
-  | { kind: "section"; id: SettingsSection; label: string; description: string }
-  | {
-      kind: "setting";
-      id: string;
-      scope: SettingsSection;
-      label: string;
-      description: string;
-    };
-
-const sectionScopes: SettingsSection[] = ["workspace", "editor", "keyboard", "runtime"];
-
-const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
 
 function highlightSearchText(text: string, query: string): ReactNode {
   const value = query.trim();
@@ -87,13 +37,7 @@ export function SettingsPopover({
   onKeymapChange,
   onLanguageChange,
 }: SettingsDialogProps) {
-  const { i18n, t } = useTranslation();
-  const [systemClipboard, setSystemClipboard] = useSystemClipboard();
-  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
-  const settingDescription = (id: string) => {
-    const key = getSettingDefinition(id)?.descriptionKey;
-    return key ? t(key) : "";
-  };
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const returnFocusRef = useRef(false);
   useEffect(() => {
@@ -116,134 +60,20 @@ export function SettingsPopover({
       }
     }
   };
-  const [section, setSection] = useState<SettingsSection>("workspace");
-  const [query, setQuery] = useState("");
-  const [activeEntryId, setActiveEntryId] = useState("section:workspace");
-  const [keymapErrors, setKeymapErrors] = useState<Partial<Record<AppAction, string>>>({});
-  const searchRef = useRef<HTMLInputElement>(null);
-  const sidebarEntryRefs = useRef(new Map<string, HTMLButtonElement>());
-  const contentRef = useRef<HTMLDivElement>(null);
-
-  const sections: Array<{ id: SettingsSection; icon: typeof Code2; label: string }> = [
-    { id: "workspace", icon: Palette, label: t("settings.nav.workspace") },
-    { id: "editor", icon: Code2, label: t("settings.nav.editor") },
-    { id: "keyboard", icon: Keyboard, label: t("settings.nav.keyboard") },
-    { id: "runtime", icon: Rocket, label: t("settings.nav.runtime") },
-  ];
-
-  const navigationEntries = useMemo<NavigationEntry[]>(() => {
-    const entries: NavigationEntry[] = [];
-    for (const scope of sectionScopes) {
-      const sectionDefinition = {
-        kind: "section" as const,
-        id: scope,
-        label: t(`settings.nav.${scope}`),
-        description: t(`settings.section.${scope}.description`),
-      };
-      entries.push(sectionDefinition);
-      for (const setting of getSettingsByScope(scope)) {
-        entries.push({
-          kind: "setting",
-          id: setting.id,
-          scope,
-          label: t(setting.labelKey),
-          description: setting.descriptionKey ? t(setting.descriptionKey) : "",
-        });
-      }
-    }
-    return entries;
-  }, [t]);
-
-  const visibleEntries = useMemo(() => {
-    const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return navigationEntries.filter((entry) => entry.kind === "section");
-    const matched = navigationEntries.filter(
-      (entry) =>
-        entry.label.toLocaleLowerCase().includes(normalized) ||
-        entry.description.toLocaleLowerCase().includes(normalized),
-    );
-    const scopes = new Set(
-      matched.map((entry) => (entry.kind === "section" ? entry.id : entry.scope)),
-    );
-    return navigationEntries.filter(
-      (entry) =>
-        scopes.has(entry.kind === "section" ? entry.id : entry.scope) &&
-        (entry.kind === "section" ||
-          matched.some((match) => match.kind === "setting" && match.id === entry.id)),
-    );
-  }, [navigationEntries, query]);
-
-  const activateEntry = (entry: NavigationEntry, behavior: ScrollBehavior = "instant") => {
-    setActiveEntryId(`${entry.kind}:${entry.id}`);
-    setSection(entry.kind === "section" ? entry.id : entry.scope);
-    if (entry.kind === "setting") {
-      requestAnimationFrame(() => {
-        const target = contentRef.current?.querySelector<HTMLElement>(
-          `[data-setting-id="${entry.id}"]`,
-        );
-        target?.scrollIntoView({ block: "nearest", behavior });
-      });
-    }
-  };
-
-  useEffect(() => {
-    const first = query.trim()
-      ? (visibleEntries.find((entry) => entry.kind === "setting") ?? visibleEntries[0])
-      : visibleEntries[0];
-    if (first) activateEntry(first);
-  }, [query, visibleEntries]);
-
-  const focusVisibleEntry = (offset: number) => {
-    const currentIndex = Math.max(
-      0,
-      visibleEntries.findIndex((entry) => `${entry.kind}:${entry.id}` === activeEntryId),
-    );
-    const next =
-      visibleEntries[(currentIndex + offset + visibleEntries.length) % visibleEntries.length];
-    if (!next) return;
-    activateEntry(next);
-    requestAnimationFrame(() => sidebarEntryRefs.current.get(`${next.kind}:${next.id}`)?.focus());
-  };
-
-  const focusContentEdge = (fromStart: boolean) => {
-    const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
-      'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
-    );
-    const target = focusables?.[fromStart ? 0 : Math.max(0, focusables.length - 1)];
-    target?.focus();
-  };
-
-  const handleSidebarEntryKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusVisibleEntry(1);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      focusVisibleEntry(-1);
-    } else if (event.key === "Tab" && !event.shiftKey) {
-      event.preventDefault();
-      searchRef.current?.focus();
-    } else if (event.key === "Tab" && event.shiftKey) {
-      event.preventDefault();
-      focusContentEdge(false);
-    }
-  };
-
-  const handleSearchKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === "ArrowDown") {
-      event.preventDefault();
-      focusVisibleEntry(1);
-    } else if (event.key === "ArrowUp") {
-      event.preventDefault();
-      focusVisibleEntry(-1);
-    } else if (event.key === "Tab" && !event.shiftKey) {
-      event.preventDefault();
-      focusContentEdge(true);
-    } else if (event.key === "Tab" && event.shiftKey) {
-      event.preventDefault();
-      sidebarEntryRefs.current.get(activeEntryId)?.focus();
-    }
-  };
+  const {
+    section,
+    query,
+    setQuery,
+    activeEntryId,
+    searchRef,
+    sidebarEntryRefs,
+    contentRef,
+    sections,
+    visibleEntries,
+    activateEntry,
+    handleSidebarEntryKeyDown,
+    handleSearchKeyDown,
+  } = useSettingsNavigation();
 
   return (
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
@@ -385,364 +215,23 @@ export function SettingsPopover({
                   }
                 }}
               >
-                {section === "workspace" && (
-                  <div className="grid gap-4">
-                    <SettingSelect
-                      settingId="language"
-                      label={settingLabel("language")}
-                      value={i18n.resolvedLanguage ?? "en"}
-                      onChange={(value) => {
-                        if (languageOptions.some((option) => option.code === value)) {
-                          onLanguageChange(value as LanguageCode);
-                        }
-                      }}
-                    >
-                      {languageOptions.map((option) => (
-                        <option key={option.code} value={option.code}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </SettingSelect>
-                    <div data-setting-id="theme">
-                      <ThemePicker
-                        value={settings.theme}
-                        onChange={(value) => onChange("theme", value as ProjectSettings["theme"])}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {section === "editor" && (
-                  <div className="grid gap-4">
-                    <div data-setting-id="fontFamily">
-                      <FontFamilyPicker
-                        label={t("settings.fontFamily")}
-                        value={settings.fontFamily}
-                        theme={settings.theme}
-                        onChange={(value) => onChange("fontFamily", value)}
-                      />
-                    </div>
-                    <div data-setting-id="fontSize">
-                      <FontSizeSlider
-                        label={t("settings.fontSize")}
-                        value={settings.fontSize}
-                        onChange={(value) => onChange("fontSize", value)}
-                      />
-                    </div>
-                    <SettingSwitch
-                      settingId="wordWrap"
-                      label={settingLabel("wordWrap")}
-                      description={settingDescription("wordWrap")}
-                      checked={settings.wordWrap}
-                      onCheckedChange={(checked) => onChange("wordWrap", checked)}
-                    />
-                    <SettingSwitch
-                      settingId="relativeLineNumbers"
-                      label={settingLabel("relativeLineNumbers")}
-                      description={settingDescription("relativeLineNumbers")}
-                      checked={settings.relativeLineNumbers}
-                      onCheckedChange={(checked) => onChange("relativeLineNumbers", checked)}
-                    />
-                    <SettingSelect
-                      settingId="normalCursorStyle"
-                      label={settingLabel("normalCursorStyle")}
-                      value={settings.normalCursorStyle}
-                      onChange={(value) =>
-                        onChange("normalCursorStyle", value as ProjectSettings["normalCursorStyle"])
-                      }
-                    >
-                      <option value="block">{t("settings.cursor.block")}</option>
-                      <option value="line">{t("settings.cursor.line")}</option>
-                      <option value="underline">{t("settings.cursor.underline")}</option>
-                      <option value="block-blink">{t("settings.cursor.blockBlink")}</option>
-                      <option value="line-blink">{t("settings.cursor.lineBlink")}</option>
-                      <option value="underline-blink">{t("settings.cursor.underlineBlink")}</option>
-                    </SettingSelect>
-                  </div>
-                )}
-
-                {section === "keyboard" && (
-                  <div className="grid gap-4">
-                    <SettingSwitch
-                      settingId="vimMode"
-                      label={settingLabel("vimMode")}
-                      description={settingDescription("vimMode")}
-                      checked={vimMode}
-                      onCheckedChange={onVimModeChange}
-                    />
-                    <SettingSwitch
-                      settingId="systemClipboard"
-                      label={settingLabel("systemClipboard")}
-                      description={settingDescription("systemClipboard")}
-                      checked={systemClipboard}
-                      onCheckedChange={setSystemClipboard}
-                    />
-                    {KEYMAP_ACTIONS.map((action) => {
-                      const labelKey =
-                        action === "file.search"
-                          ? "settings.fileSearchKeymap"
-                          : action === "settings.open"
-                            ? "settings.openKeymap"
-                            : action === "command.palette"
-                              ? "settings.commandPaletteKeymap"
-                              : "settings.previewConsoleKeymap";
-                      const binding = keymap.find((item) => item.action === action)?.key ?? "";
-                      return (
-                        <label
-                          key={action}
-                          data-setting-id={
-                            action === "file.search"
-                              ? "fileSearchKeymap"
-                              : action === "settings.open"
-                                ? "openSettingsKeymap"
-                                : action === "command.palette"
-                                  ? "commandPaletteKeymap"
-                                  : "previewConsoleKeymap"
-                          }
-                          className="grid gap-2 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
-                        >
-                          {t(labelKey)}
-                          <div className="flex items-center gap-2">
-                            <input
-                              className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
-                              value={formatKeyBinding(binding)}
-                              readOnly
-                              onKeyDown={(event) => {
-                                if (event.key === "Tab" || event.key === "Escape") return;
-                                event.stopPropagation();
-                                const key = normalizeKey(event.nativeEvent);
-                                if (!key) return;
-                                event.preventDefault();
-                                const conflict = findKeymapConflict(keymap, action, key);
-                                if (conflict) {
-                                  setKeymapErrors((current) => ({
-                                    ...current,
-                                    [action]: t("settings.keymapConflict", {
-                                      action: settingLabel(
-                                        conflict === "file.search"
-                                          ? "fileSearchKeymap"
-                                          : conflict === "settings.open"
-                                            ? "openSettingsKeymap"
-                                            : conflict === "command.palette"
-                                              ? "commandPaletteKeymap"
-                                              : "previewConsoleKeymap",
-                                      ),
-                                    }),
-                                  }));
-                                  return;
-                                }
-                                setKeymapErrors((current) => {
-                                  const next = { ...current };
-                                  delete next[action];
-                                  return next;
-                                });
-                                onKeymapChange(
-                                  KEYMAP_ACTIONS.map((item) => ({
-                                    action: item,
-                                    key:
-                                      item === action
-                                        ? key
-                                        : (keymap.find((candidate) => candidate.action === item)
-                                            ?.key ?? ""),
-                                  })),
-                                );
-                              }}
-                              aria-label={t(labelKey)}
-                            />
-                            <IconButton
-                              size="1"
-                              variant="ghost"
-                              color="gray"
-                              type="button"
-                              aria-label={t("settings.resetKeymap")}
-                              title={t("settings.resetKeymap")}
-                              onClick={() => {
-                                setKeymapErrors((current) => {
-                                  const next = { ...current };
-                                  delete next[action];
-                                  return next;
-                                });
-                                onKeymapChange(
-                                  KEYMAP_ACTIONS.map((item) => ({
-                                    action: item,
-                                    key:
-                                      item === action
-                                        ? DEFAULT_KEYMAP.find(
-                                            (candidate) => candidate.action === item,
-                                          )!.key
-                                        : (keymap.find((candidate) => candidate.action === item)
-                                            ?.key ?? ""),
-                                  })),
-                                );
-                              }}
-                            >
-                              <RotateCcw width="13" height="13" />
-                            </IconButton>
-                          </div>
-                          {keymapErrors[action] && (
-                            <span
-                              className="text-[10px] normal-case tracking-normal text-rose-600"
-                              role="alert"
-                            >
-                              {keymapErrors[action]}
-                            </span>
-                          )}
-                        </label>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {section === "runtime" && (
-                  <div className="grid gap-3">
-                    <SettingSelect
-                      settingId="packageManager"
-                      label={settingLabel("packageManager")}
-                      value={settings.packageManager}
-                      onChange={(value) => onChange("packageManager", value as PackageManager)}
-                    >
-                      {packageManagers.map((manager) => (
-                        <option key={manager} value={manager}>
-                          {manager}
-                        </option>
-                      ))}
-                    </SettingSelect>
-                    <SettingSwitch
-                      settingId="autoInstall"
-                      label={settingLabel("autoInstall")}
-                      description={settingDescription("autoInstall")}
-                      checked={settings.autoInstall}
-                      onCheckedChange={(checked) => onChange("autoInstall", checked)}
-                    />
-                    <SettingSwitch
-                      settingId="autoStartPreview"
-                      label={settingLabel("autoStartPreview")}
-                      description={settingDescription("autoStartPreview")}
-                      checked={settings.autoStartPreview}
-                      onCheckedChange={(checked) => onChange("autoStartPreview", checked)}
-                    />
-                    <div className="mt-2 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-2.5 font-iris-mono text-[10px] leading-[1.5] text-iris-muted">
-                      {t("settings.runtimeNote", { manager: settings.packageManager })}
-                    </div>
-                    <RuntimeActions t={t} />
-                  </div>
-                )}
+                <SettingsContent
+                  section={section}
+                  {...{
+                    settings,
+                    onChange,
+                    vimMode,
+                    onVimModeChange,
+                    keymap,
+                    onKeymapChange,
+                    onLanguageChange,
+                  }}
+                />
               </div>
             </div>
           </Dialog.Content>
         </Theme>
       </Dialog.Portal>
     </Dialog.Root>
-  );
-}
-
-function RuntimeActions({ t }: { t: (key: string) => string }) {
-  const [pending, setPending] = useState<RuntimeAction | undefined>();
-
-  useEffect(() => {
-    const handleComplete = (event: Event) => {
-      const detail = (event as CustomEvent<{ action?: RuntimeAction }>).detail;
-      if (detail.action === pending) setPending(undefined);
-    };
-    window.addEventListener("iris:runtime-action-complete", handleComplete);
-    return () => window.removeEventListener("iris:runtime-action-complete", handleComplete);
-  }, [pending]);
-
-  const run = (action: RuntimeAction, button: HTMLButtonElement) => {
-    if (pending) return;
-    setPending(action);
-    dispatchRuntimeAction(action);
-    requestAnimationFrame(() => button.focus());
-  };
-
-  return (
-    <div className="grid gap-2 border-t border-iris-divider pt-3">
-      {RUNTIME_ACTIONS.map((action) => (
-        <button
-          data-setting-id={action.id === "restart" ? "runtimeRestart" : "runtimeReinstall"}
-          className="flex min-h-9 items-center justify-center gap-2 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-[10px] text-iris-strong transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] disabled:cursor-wait disabled:opacity-55"
-          key={action.id}
-          type="button"
-          disabled={Boolean(pending) && pending !== action.id}
-          aria-label={t(action.labelKey)}
-          title={t(action.labelKey)}
-          onClick={(event) => run(action.id, event.currentTarget)}
-        >
-          <action.icon
-            width="13"
-            height="13"
-            className={pending === action.id ? "animate-spin" : undefined}
-          />
-          {pending === action.id ? t(action.pendingLabelKey) : t(action.labelKey)}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function SettingSelect({
-  settingId,
-  label,
-  value,
-  onChange,
-  children,
-}: {
-  settingId?: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  children: ReactNode;
-}) {
-  return (
-    <label
-      data-setting-id={settingId}
-      className="flex min-w-0 items-center justify-between gap-4 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
-    >
-      <span className="shrink-0">{label}</span>
-      <span className="relative min-w-0 flex-1">
-        <select
-          className="w-full appearance-none rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 pr-10 text-base normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_72%,white)] focus-visible:outline-offset-2 min-[760px]:text-xs"
-          value={value}
-          onChange={(event) => onChange(event.target.value)}
-        >
-          {children}
-        </select>
-        <ChevronDown
-          aria-hidden="true"
-          className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-iris-muted"
-          width="14"
-          height="14"
-        />
-      </span>
-    </label>
-  );
-}
-
-function SettingSwitch({
-  settingId,
-  label,
-  description,
-  checked,
-  onCheckedChange,
-}: {
-  settingId?: string;
-  label: string;
-  description: string;
-  checked: boolean;
-  onCheckedChange: (checked: boolean) => void;
-}) {
-  return (
-    <div
-      data-setting-id={settingId}
-      className="flex items-center justify-between gap-4 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-3"
-    >
-      <div className="min-w-0">
-        <p className="m-0 font-iris-mono text-xs text-iris-strong">{label}</p>
-        <p className="m-[4px_0_0] font-iris-mono text-[10px] leading-[1.4] text-iris-muted">
-          {description}
-        </p>
-      </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
-    </div>
   );
 }

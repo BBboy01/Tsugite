@@ -1,40 +1,40 @@
-import cors from "@elysiajs/cors";
-import { Elysia } from "elysia";
-
-import { decodeJsonMessage } from "@iris/shared";
-
-import { RoomService, isJoinMessage, isPresenceMessage } from "./rooms/room-service";
+import { RoomService } from "./rooms/room-service";
+import { RoomRepository } from "./rooms/room-repository";
+import { createRoomDatabase } from "./db/database";
+import { createRoomApp } from "./room-app";
 
 const port = Number(Bun.env.PORT ?? 3001);
-const rooms = new RoomService();
+const { db, sqlite } = createRoomDatabase(Bun.env.DATABASE_PATH ?? "./data/tsugite.sqlite");
+const rooms = new RoomService(new RoomRepository(db));
 
-new Elysia()
-  .use(cors({ origin: true }))
-  .get("/health", () => ({ ok: true }))
-  .ws("/ws/:roomId", {
-    open() {},
-    message(ws, message) {
-      const roomId = ws.data.params.roomId;
-      const socket = ws.raw;
+const app = createRoomApp(rooms).listen(port);
 
-      const payload =
-        typeof message === "string"
-          ? decodeJsonMessage(message)
-          : message instanceof Uint8Array
-            ? decodeJsonMessage(new TextDecoder().decode(message))
-            : message;
-      if (isJoinMessage(payload)) {
-        rooms.join(socket, roomId, payload);
-      } else if (isPresenceMessage(payload)) {
-        rooms.presence(socket, payload);
-      } else if (message instanceof Uint8Array) {
-        rooms.update(socket, message);
-      }
-    },
-    close(ws) {
-      rooms.leave(ws.raw);
-    },
-  })
-  .listen(port);
+console.log(`Tsugite server listening on http://127.0.0.1:${app.server!.port}`);
 
-console.log(`Tsugite server listening on http://127.0.0.1:${port}`);
+let shuttingDown = false;
+async function shutdown() {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  // Shutdown owns the retry deadline; SQLite must not add a wait to every attempt.
+  sqlite.run("PRAGMA busy_timeout = 0");
+  let saved = rooms.shutdown();
+  await app.stop(true);
+  const retryDelayMs = 500;
+  const maxRetries = 10;
+  for (let attempt = 0; !saved && attempt < maxRetries; attempt++) {
+    await Bun.sleep(retryDelayMs);
+    saved = rooms.shutdown();
+  }
+  if (!saved) console.error("Shutdown failed to persist all room snapshots");
+  sqlite.close();
+  process.exit(saved ? 0 : 1);
+}
+
+for (const signal of ["SIGINT", "SIGTERM"] as const) {
+  process.on(signal, () => {
+    void shutdown().catch((error) => {
+      console.error("Server shutdown failed", error);
+      process.exit(1);
+    });
+  });
+}
