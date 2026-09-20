@@ -49,7 +49,7 @@ export function PreviewPane(props: PreviewPaneProps) {
   return (
     <motion.section
       ref={sectionRef}
-      className="glass-panel flex h-full min-h-0 flex-col overflow-hidden bg-iris-preview px-[6px] text-iris-ink"
+      className="preview-panel glass-panel flex h-full min-h-0 flex-col overflow-hidden bg-iris-preview px-[6px] text-iris-ink"
       aria-label={t("preview.title")}
       initial={{ opacity: 0, x: 10 }}
       animate={{ opacity: 1, x: 0 }}

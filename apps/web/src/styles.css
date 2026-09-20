@@ -532,6 +532,14 @@
   box-shadow: none;
 }
 
+.preview-panel.glass-panel {
+  background-color: var(--editor-surface) !important;
+}
+
+.preview-panel .glass-toolbar {
+  background-color: var(--editor-surface) !important;
+}
+
 .editor-toolbar {
   background-color: var(--editor-surface) !important;
 }
