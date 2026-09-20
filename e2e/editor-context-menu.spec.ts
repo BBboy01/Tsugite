@@ -68,7 +68,9 @@ async function hoverText(page: Page, line: string, token: string) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("iris.language", "en");
+  });
   await page.goto(`/room/context-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15000 });
 });
