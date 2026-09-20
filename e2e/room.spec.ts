@@ -174,6 +174,31 @@ test("uses the active workspace theme", async ({ page }) => {
   });
 });
 
+for (const theme of ["Ink Dark", "GitHub Dark", "Solarized Dark", "Tokyo Night"]) {
+  test(`${theme} keeps the preview surface aligned with the editor`, async ({ page }) => {
+    await page.goto(
+      `/room/e2e-preview-theme-${theme.replaceAll(" ", "-").toLowerCase()}-${Date.now()}`,
+      {
+        waitUntil: "domcontentloaded",
+      },
+    );
+    await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: theme }).click();
+    await page.getByRole("button", { name: "Close settings" }).click();
+
+    const colors = await page.evaluate(() => {
+      const editor = document.querySelector<HTMLElement>('[aria-label^="Editing "]');
+      const preview = document.querySelector<HTMLElement>('[aria-label="Live preview"]');
+      return {
+        editor: editor ? getComputedStyle(editor).backgroundColor : "",
+        preview: preview ? getComputedStyle(preview).backgroundColor : "",
+      };
+    });
+    expect(colors.preview).toBe(colors.editor);
+  });
+}
+
 test("returns focus to the editor after closing file search", async ({ page }) => {
   await page.goto(`/room/e2e-search-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
