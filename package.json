@@ -25,7 +25,7 @@
     "lint": "oxlint apps/web/src apps/server/src packages/shared/src e2e playwright.config.ts && tsc --noEmit"
   },
   "dependencies": {
-    "@babel/standalone": "8.0.5",
+    "@babel/standalone": "8.0.6",
     "@codemirror/lang-css": "^6.3.1",
     "@codemirror/lang-html": "^6.4.12",
     "@codemirror/lang-javascript": "6.2.5",
