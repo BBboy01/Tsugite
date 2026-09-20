@@ -88,7 +88,7 @@ export function PreviewPane(props: PreviewPaneProps) {
       </header>
       <div className="relative min-h-[220px] flex-1 p-0 max-[760px]:min-h-0">
         <iframe
-          key={previewLoadKey}
+          key={`${previewLoadKey}-${previewUrl ? "runtime" : "fallback"}`}
           ref={iframeRef}
           title={`Preview of ${file.path}`}
           src={previewUrl}
