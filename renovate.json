@@ -1,65 +1,65 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "extends": ["config:recommended", "helpers:pinGitHubActionDigests"],
-  "dependencyDashboard": true,
+  "extends": [
+    "config:recommended",
+    ":dependencyDashboard",
+    "helpers:pinGitHubActionDigests",
+    "schedule:weekly",
+    ":prHourlyLimitNone",
+    ":semanticPrefixFixDepsChoreOthers",
+    "group:monorepos",
+    "group:recommended",
+    "replacements:all",
+    "workarounds:all"
+  ],
   "automerge": false,
-  "separateMajorMinor": true,
-  "timezone": "Asia/Shanghai",
-  "schedule": ["before 5am on monday"],
-  "prConcurrentLimit": 5,
-  "prHourlyLimit": 2,
-  "rangeStrategy": "bump",
+  "dependencyDashboard": true,
+  "ignoreDeps": [],
   "labels": ["dependencies", "renovate"],
+  "prConcurrentLimit": 5,
+  "prHourlyLimit": 0,
+  "rangeStrategy": "bump",
+  "rebaseWhen": "conflicted",
+  "schedule": "on monday before 5:00am",
+  "separateMajorMinor": true,
+  "separateMinorPatch": false,
+  "timezone": "Asia/Shanghai",
+  "updateNotScheduled": false,
   "packageRules": [
     {
-      "description": "Group Bun and build tool updates",
-      "groupName": "bun toolchain",
-      "matchPackageNames": [
-        "@tailwindcss/vite",
-        "@vitejs/plugin-react",
-        "oxfmt",
-        "oxlint",
-        "rolldown",
-        "tailwindcss",
-        "vite",
-        "vite-plugin-wasm"
-      ]
+      "description": "Un-group tilde ranges",
+      "matchManagers": ["npm", "bun"],
+      "matchCurrentValue": "^~.*$",
+      "groupName": null,
+      "groupSlug": null,
+      "separateMajorMinor": true,
+      "separateMinorPatch": true
     },
     {
-      "description": "Group React editor updates",
-      "groupName": "react editor stack",
-      "matchPackageNames": [
-        "@codemirror/**",
-        "@radix-ui/**",
-        "@react-symbols/icons",
-        "@types/react",
-        "@types/react-dom",
-        "cn",
-        "codemirror",
-        "lucide-react",
-        "loro-codemirror",
-        "motion",
-        "react",
-        "react-dom",
-        "react-aria-components",
-        "shiki"
-      ]
+      "description": "Un-group pinned dependencies",
+      "matchManagers": ["npm", "bun"],
+      "matchCurrentValue": "/^\\d+\\.\\d+\\.\\d+([+-][0-9A-Za-z.-]+)?$/",
+      "groupName": null,
+      "groupSlug": null,
+      "separateMajorMinor": true,
+      "separateMinorPatch": true
     },
     {
-      "description": "Group collaboration and runtime updates",
-      "groupName": "collaboration runtime",
-      "matchPackageNames": [
-        "@elysiajs/cors",
-        "@faker-js/faker",
-        "elysia",
-        "loro-crdt",
-        "@webcontainer/api"
-      ]
+      "description": "Un-group experimental caret ranges",
+      "matchManagers": ["npm", "bun"],
+      "matchCurrentValue": "/^\\^0\\.\\d+(\\.\\d+)?([+-][0-9A-Za-z.-]+)?$/",
+      "groupName": null,
+      "groupSlug": null,
+      "separateMajorMinor": true,
+      "separateMinorPatch": true
     },
     {
-      "description": "Keep major updates separate",
-      "matchUpdateTypes": ["major"],
-      "automerge": false
+      "description": "Group stable non-major updates",
+      "matchManagers": ["npm", "bun"],
+      "matchCurrentValue": "/^\\^[1-9]+[0-9]*(\\.\\d+){0,2}([+-][0-9A-Za-z.-]+)?$/",
+      "matchUpdateTypes": ["minor", "patch"],
+      "groupName": "all non-major dependencies",
+      "groupSlug": "all-non-major-dependencies"
     }
   ]
 }
