@@ -27,39 +27,37 @@
   "updateNotScheduled": false,
   "packageRules": [
     {
-      "description": "Un-group tilde ranges",
+      "description": "Keep application updates separate unless explicitly grouped below",
       "matchManagers": ["npm", "bun"],
-      "matchCurrentValue": "^~.*$",
       "groupName": null,
       "groupSlug": null,
       "separateMajorMinor": true,
-      "separateMinorPatch": true
+      "separateMinorPatch": false
     },
     {
-      "description": "Un-group pinned dependencies",
+      "description": "Group stable non-major updates across exact, caret and tilde versions",
       "matchManagers": ["npm", "bun"],
-      "matchCurrentValue": "/^\\d+\\.\\d+\\.\\d+([+-][0-9A-Za-z.-]+)?$/",
-      "groupName": null,
-      "groupSlug": null,
-      "separateMajorMinor": true,
-      "separateMinorPatch": true
-    },
-    {
-      "description": "Un-group experimental caret ranges",
-      "matchManagers": ["npm", "bun"],
-      "matchCurrentValue": "/^\\^0\\.\\d+(\\.\\d+)?([+-][0-9A-Za-z.-]+)?$/",
-      "groupName": null,
-      "groupSlug": null,
-      "separateMajorMinor": true,
-      "separateMinorPatch": true
-    },
-    {
-      "description": "Group stable non-major updates",
-      "matchManagers": ["npm", "bun"],
-      "matchCurrentValue": "/^\\^[1-9]+[0-9]*(\\.\\d+){0,2}([+-][0-9A-Za-z.-]+)?$/",
+      "matchCurrentValue": "/^[~^]?[1-9]\\d*\\.\\d+\\.\\d+(\\+[0-9A-Za-z.-]+)?$/",
       "matchUpdateTypes": ["minor", "patch"],
       "groupName": "all non-major dependencies",
       "groupSlug": "all-non-major-dependencies"
+    },
+    {
+      "description": "Update Drizzle ORM and Kit together, including release candidates",
+      "matchManagers": ["npm", "bun"],
+      "matchPackageNames": ["drizzle-orm", "drizzle-kit"],
+      "groupName": "drizzle",
+      "groupSlug": "drizzle",
+      "separateMajorMinor": true,
+      "separateMinorPatch": false
+    },
+    {
+      "description": "Group GitHub Actions updates while keeping major upgrades separate",
+      "matchManagers": ["github-actions"],
+      "groupName": "github actions",
+      "groupSlug": "github-actions",
+      "separateMajorMinor": true,
+      "separateMinorPatch": false
     }
   ]
 }
