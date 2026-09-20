@@ -7,7 +7,9 @@ test("keeps an oversized edit local and exposes the synchronization limit", asyn
   test.setTimeout(60_000);
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("iris.language", "en");
+  });
   await page.goto(`/room/e2e-sync-limit-${Date.now()}`);
   const editor = page.locator(".cm-content");
   await expect(editor).toBeVisible();
