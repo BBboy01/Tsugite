@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next";
 
 import type { PresenceMember } from "@iris/shared";
 import type { ConnectionStatus } from "../lib/room-client";
+import type { DraftState } from "../lib/room-drafts";
 
 import { PresenceStack } from "./presence-stack";
 
@@ -14,6 +15,8 @@ type GlobalHeaderProps = {
   members: PresenceMember[];
   status: ConnectionStatus;
   syncError?: string;
+  hasPendingChanges?: boolean;
+  draftBackup?: DraftState["backup"];
   followingUserId: string | null;
   onFollowMember: (userId: string) => void;
   onOpenFiles: () => void;
@@ -29,6 +32,8 @@ export function GlobalHeader({
   members,
   status,
   syncError,
+  hasPendingChanges,
+  draftBackup,
   followingUserId,
   onFollowMember,
   onOpenFiles,
@@ -80,6 +85,8 @@ export function GlobalHeader({
           roomId={roomId}
           status={status}
           syncError={syncError}
+          hasPendingChanges={hasPendingChanges}
+          draftBackup={draftBackup}
           followingUserId={followingUserId}
           onFollowMember={onFollowMember}
         />

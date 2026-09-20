@@ -189,9 +189,12 @@ test.describe("file and editor actions", () => {
     await closeCopy.click();
     await expect(closeCopy).toHaveCount(0);
 
-    page.once("dialog", (dialog) => dialog.accept());
     await renamedFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+    await page
+      .getByRole("alertdialog")
+      .getByRole("button", { name: "Delete", exact: true })
+      .click();
     await expect(renamedFile).toHaveCount(0);
     await expect(page.locator(".cm-editor")).toBeVisible();
   });

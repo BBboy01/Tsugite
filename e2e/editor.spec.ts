@@ -87,7 +87,7 @@ test("shows relative line numbers when enabled in editor settings", async ({ pag
   await page.keyboard.press("ArrowDown");
   await page.keyboard.press("ArrowDown");
 
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
   const relativeLineNumbers = page.getByRole("switch", { name: "Relative line numbers" });
   await expect(relativeLineNumbers).toBeVisible();
@@ -107,7 +107,7 @@ test("shows relative line numbers when enabled in editor settings", async ({ pag
 
   await expect.poll(readVisibleLineNumbers).toEqual(["2", "1", "3", "1", "2", "3", "4", "5"]);
 
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
   const relativeLineNumbersAfterEnable = page.getByRole("switch", {
     name: "Relative line numbers",
@@ -122,7 +122,7 @@ test("applies the configured Vim normal cursor style", async ({ page }) => {
   await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
   await page.goto(`/room/e2e-cursor-style-${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
   await page.getByLabel("Normal mode cursor").selectOption("block");
   await page.getByRole("button", { name: "Close settings" }).click();

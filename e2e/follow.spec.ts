@@ -97,7 +97,7 @@ test("follows a collaborator's file and cursor until a local action", async ({
   await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
   await expect(firstPage.locator(".cm-lineNumbers")).toContainText("1500");
 
-  await secondPage.getByRole("button", { name: "Open shared settings" }).click();
+  await secondPage.getByRole("button", { name: "Open settings" }).click();
   await secondPage.getByRole("button", { name: "Editor", exact: true }).click();
   await secondPage.locator('[data-setting-id="fontSize"]').getByRole("slider").focus();
   await secondPage.keyboard.press("End");

@@ -4,6 +4,7 @@ export type SettingKind = "select" | "multi-select" | "toggle" | "custom" | "act
 export type SettingDefinition = {
   id: string;
   scope: SettingScope;
+  sharing: "device" | "room";
   kind: SettingKind;
   labelKey: string;
   descriptionKey?: string;
@@ -13,6 +14,7 @@ export type SettingDefinition = {
 export const SETTINGS_REGISTRY: SettingDefinition[] = [
   {
     id: "language",
+    sharing: "device",
     scope: "workspace",
     kind: "select",
     labelKey: "settings.language",
@@ -20,6 +22,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "theme",
+    sharing: "room",
     scope: "workspace",
     kind: "custom",
     labelKey: "settings.theme",
@@ -27,18 +30,21 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "fontFamily",
+    sharing: "room",
     scope: "editor",
     kind: "custom",
     labelKey: "settings.fontFamily",
   },
   {
     id: "fontSize",
+    sharing: "room",
     scope: "editor",
     kind: "custom",
     labelKey: "settings.fontSize",
   },
   {
     id: "wordWrap",
+    sharing: "room",
     scope: "editor",
     kind: "toggle",
     labelKey: "settings.wordWrap",
@@ -47,6 +53,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "relativeLineNumbers",
+    sharing: "room",
     scope: "editor",
     kind: "toggle",
     labelKey: "settings.relativeLineNumbers",
@@ -55,6 +62,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "normalCursorStyle",
+    sharing: "room",
     scope: "editor",
     kind: "select",
     labelKey: "settings.normalCursorStyle",
@@ -62,6 +70,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "vimMode",
+    sharing: "device",
     scope: "keyboard",
     kind: "toggle",
     labelKey: "settings.vimMode",
@@ -70,6 +79,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "systemClipboard",
+    sharing: "device",
     scope: "keyboard",
     kind: "toggle",
     labelKey: "settings.systemClipboard",
@@ -77,30 +87,35 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "fileSearchKeymap",
+    sharing: "device",
     scope: "keyboard",
     kind: "keymap",
     labelKey: "settings.fileSearchKeymap",
   },
   {
     id: "openSettingsKeymap",
+    sharing: "device",
     scope: "keyboard",
     kind: "keymap",
     labelKey: "settings.openKeymap",
   },
   {
     id: "commandPaletteKeymap",
+    sharing: "device",
     scope: "keyboard",
     kind: "keymap",
     labelKey: "settings.commandPaletteKeymap",
   },
   {
     id: "previewConsoleKeymap",
+    sharing: "device",
     scope: "keyboard",
     kind: "keymap",
     labelKey: "settings.previewConsoleKeymap",
   },
   {
     id: "packageManager",
+    sharing: "room",
     scope: "runtime",
     kind: "select",
     labelKey: "settings.packageManager",
@@ -108,6 +123,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "autoInstall",
+    sharing: "room",
     scope: "runtime",
     kind: "toggle",
     labelKey: "settings.autoInstall",
@@ -116,6 +132,7 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "autoStartPreview",
+    sharing: "room",
     scope: "runtime",
     kind: "toggle",
     labelKey: "settings.autoStartPreview",
@@ -124,12 +141,14 @@ export const SETTINGS_REGISTRY: SettingDefinition[] = [
   },
   {
     id: "runtimeRestart",
+    sharing: "device",
     scope: "runtime",
     kind: "action",
     labelKey: "settings.runtimeRestart",
   },
   {
     id: "runtimeReinstall",
+    sharing: "device",
     scope: "runtime",
     kind: "action",
     labelKey: "settings.runtimeReinstall",

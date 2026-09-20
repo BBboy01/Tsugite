@@ -7,6 +7,7 @@ import { FontFamilyPicker, FontSizeSlider } from "./editor-settings-controls";
 import { ThemePicker } from "./theme-picker";
 import { RuntimeActions, SettingSelect, SettingSwitch } from "./settings-controls";
 import { KeyboardSettings } from "./settings-keyboard";
+import { SettingSharingLabel } from "./setting-sharing-label";
 import type { SettingsSection } from "./settings-types";
 const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
 
@@ -39,6 +40,7 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             ))}
           </SettingSelect>
           <div data-setting-id="theme">
+            <SettingSharingLabel settingId="theme" />
             <ThemePicker
               value={settings.theme}
               onChange={(value) => onChange("theme", value as ProjectSettings["theme"])}
@@ -50,6 +52,7 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
       {section === "editor" && (
         <div className="grid gap-4">
           <div data-setting-id="fontFamily">
+            <SettingSharingLabel settingId="fontFamily" />
             <FontFamilyPicker
               label={t("settings.fontFamily")}
               value={settings.fontFamily}
@@ -58,6 +61,7 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             />
           </div>
           <div data-setting-id="fontSize">
+            <SettingSharingLabel settingId="fontSize" />
             <FontSizeSlider
               label={t("settings.fontSize")}
               value={settings.fontSize}

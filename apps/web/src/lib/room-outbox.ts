@@ -11,6 +11,19 @@ export class RoomOutbox {
   private sent = 0;
   private timer: ReturnType<typeof setTimeout> | undefined;
 
+  constructor(
+    private readonly onPendingChange: (pending: boolean) => void = () => {},
+    private readonly onChange: () => void = () => {},
+  ) {}
+
+  get pendingUpdates(): readonly Uint8Array[] {
+    return this.updates;
+  }
+
+  get hasPendingChanges(): boolean {
+    return this.updates.length > 0;
+  }
+
   connect(send: (data: string | Uint8Array) => void): void {
     this.send = send;
     this.inFlight = 0;
@@ -29,6 +42,8 @@ export class RoomOutbox {
 
   update(bytes: Uint8Array): void {
     this.updates.push(bytes);
+    if (this.updates.length === 1) this.onPendingChange(true);
+    this.onChange();
     this.flush();
   }
 
@@ -41,6 +56,8 @@ export class RoomOutbox {
     if (this.inFlight === 0) return;
     this.updates.shift();
     this.inFlight--;
+    if (!this.hasPendingChanges) this.onPendingChange(false);
+    this.onChange();
     this.flush();
   }
 

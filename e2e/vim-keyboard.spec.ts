@@ -27,11 +27,11 @@ test.beforeEach(async ({ page }) => {
 
 for (const style of ["block", "line", "underline"]) {
   test(`repeated l reaches the last character with ${style} cursor`, async ({ page }) => {
-    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Open settings" }).click();
     await page.getByRole("button", { name: "Editor", exact: true }).click();
     await page.getByLabel("Normal mode cursor").selectOption(style);
     await page.getByRole("button", { name: "Close settings" }).click();
-    await expect(page.getByRole("button", { name: "Open shared settings" })).toBeFocused();
+    await expect(page.getByRole("button", { name: "Open settings" })).toBeFocused();
     await page.locator(".cm-content").focus();
     await keys(page, "gg0");
     for (let i = 0; i < 20; i++) await page.keyboard.down("l");

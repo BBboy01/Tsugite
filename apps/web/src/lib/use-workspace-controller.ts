@@ -31,10 +31,13 @@ export function useWorkspaceController(roomId: string) {
   const focusEditorAfterSelectionRef = useRef(false);
 
   useEffect(() => {
+    if (presenceTimer.current) clearTimeout(presenceTimer.current);
+    presenceTimer.current = null;
+    client.sendPresence(selectedPath);
     return () => {
       if (presenceTimer.current) clearTimeout(presenceTimer.current);
     };
-  }, []);
+  }, [client, selectedPath]);
 
   const filesByPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
   const selectedFile = useMemo(() => filesByPath.get(selectedPath), [filesByPath, selectedPath]);
@@ -46,7 +49,7 @@ export function useWorkspaceController(roomId: string) {
   ) as ProjectFile[];
 
   useEffect(() => {
-    if (files.length === 0) return;
+    if (files.length === 0 && previousFilePathsRef.current.size === 0) return;
     const availablePaths = new Set(files.map((file) => file.path));
     const currentFilePaths = new Map(files.map((file) => [file.id, file.path]));
     const renamedPaths = new Map<string, string>();
@@ -66,6 +69,7 @@ export function useWorkspaceController(roomId: string) {
       setOpenTabPaths(nextTabs);
     }
 
+    if (!selectedPath) return;
     const renamedSelectedPath = renamedPaths.get(selectedPath) ?? selectedPath;
     if (renamedSelectedPath && availablePaths.has(renamedSelectedPath)) {
       if (renamedSelectedPath !== selectedPath) setSelectedPath(renamedSelectedPath);
@@ -75,26 +79,24 @@ export function useWorkspaceController(roomId: string) {
     if (nextPath !== selectedPath) setSelectedPath(nextPath);
   }, [files, openTabPaths, selectedPath]);
 
-  const selectFile = useCallback(
-    (path: string) => {
-      if (presenceTimer.current) {
-        clearTimeout(presenceTimer.current);
-        presenceTimer.current = null;
-      }
-      setOpenTabPaths((current) => openEditorTab(current, path));
-      focusEditorAfterSelectionRef.current = true;
-      setSelectedPath(path);
-      client.sendPresence(path);
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          if (!focusEditorAfterSelectionRef.current) return;
-          focusEditorAfterSelectionRef.current = false;
-          editorFocusRef.current?.();
-        }),
-      );
-    },
-    [client],
-  );
+  const selectFile = useCallback((path: string) => {
+    if (presenceTimer.current) {
+      clearTimeout(presenceTimer.current);
+      presenceTimer.current = null;
+    }
+    if (path) setOpenTabPaths((current) => openEditorTab(current, path));
+    focusEditorAfterSelectionRef.current = true;
+    setSelectedPath(path);
+    requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        if (!focusEditorAfterSelectionRef.current) return;
+        const focus = editorFocusRef.current;
+        if (!focus) return;
+        focusEditorAfterSelectionRef.current = false;
+        focus();
+      }),
+    );
+  }, []);
 
   const activateFile = (path: string) => {
     setFollowingUserId(null);
@@ -121,8 +123,8 @@ export function useWorkspaceController(roomId: string) {
       setFollowingUserId(null);
       return;
     }
-    if (member.selectedPath && member.selectedPath !== selectedPath) {
-      selectFile(member.selectedPath);
+    if (member.selectedPath !== undefined && member.selectedPath !== selectedPath) {
+      selectFile(member.selectedPath ?? "");
     }
   }, [client, followingUserId, presenceRevision, selectedPath, selectFile]);
 
@@ -135,14 +137,14 @@ export function useWorkspaceController(roomId: string) {
     const member = client.members.find((candidate) => candidate.userId === userId);
     if (!member) return;
     setFollowingUserId(userId);
-    if (member.selectedPath) selectFile(member.selectedPath);
+    if (member.selectedPath !== undefined) selectFile(member.selectedPath ?? "");
   };
 
   const handleCloseTab = (path: string) => {
     setFollowingUserId(null);
     const result = closeEditorTab(openTabPaths, path, selectedPath);
     setOpenTabPaths(result.paths);
-    if (path === selectedPath) setSelectedPath(result.nextPath);
+    if (path === selectedPath) selectFile(result.nextPath);
   };
 
   const updateSharedSetting = <K extends keyof ProjectSettings>(
@@ -192,6 +194,7 @@ export function useWorkspaceController(roomId: string) {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
+      if (document.querySelector("[data-draft-recovery]")) return;
       const target = event.target;
       if (target instanceof HTMLElement && target.matches("input, textarea")) {
         return;

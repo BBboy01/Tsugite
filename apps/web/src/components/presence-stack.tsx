@@ -4,6 +4,7 @@ import type { PresenceMember } from "@iris/shared";
 import { useTranslation } from "react-i18next";
 
 import type { ConnectionStatus } from "../lib/room-client";
+import type { DraftState } from "../lib/room-drafts";
 import { isPresenceCurrentUser, prioritizeCurrentUser } from "../lib/presence";
 
 type PresenceStackProps = {
@@ -12,6 +13,8 @@ type PresenceStackProps = {
   roomId: string;
   status: ConnectionStatus;
   syncError?: string;
+  hasPendingChanges?: boolean;
+  draftBackup?: DraftState["backup"];
   followingUserId: string | null;
   onFollowMember: (userId: string) => void;
 };
@@ -22,12 +25,22 @@ export function PresenceStack({
   roomId,
   status,
   syncError,
+  hasPendingChanges = false,
+  draftBackup,
   followingUserId,
   onFollowMember,
 }: PresenceStackProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
-  const statusLabel = t(`status.${status}`);
+  const statusLabel = hasPendingChanges ? t("status.unsynced") : t(`status.${status}`);
+  const statusDescription =
+    syncError ?? (hasPendingChanges ? t("status.unsyncedDescription") : undefined);
+  const backupDescription =
+    draftBackup === "error"
+      ? t("drafts.storageError")
+      : hasPendingChanges && draftBackup && draftBackup !== "idle"
+        ? t(`drafts.${draftBackup}`)
+        : undefined;
   const orderedMembers = prioritizeCurrentUser(members, currentUserId);
 
   return (
@@ -36,16 +49,20 @@ export function PresenceStack({
         <span
           className="live-dot inline-block h-[7px] w-[7px] shrink-0 rounded-full"
           data-status={status}
-          title={syncError ?? statusLabel}
-          aria-label={syncError ?? statusLabel}
+          title={statusDescription ?? statusLabel}
+          aria-label={statusDescription ?? statusLabel}
           role={syncError ? "alert" : undefined}
         />
         <span
-          className="status-label truncate max-[420px]:hidden"
+          className={`status-label truncate ${hasPendingChanges ? "" : "max-[420px]:hidden"}`}
           data-status={status}
-          title={syncError}
+          data-sync-pending={hasPendingChanges || undefined}
+          data-draft-backup={draftBackup}
+          role="status"
+          title={[statusDescription, backupDescription].filter(Boolean).join(" ") || undefined}
         >
           {statusLabel}
+          {backupDescription && <span> · {backupDescription}</span>}
         </span>
         <span className="max-[760px]:hidden">/</span>
         <span className="max-[760px]:hidden">{roomId}</span>

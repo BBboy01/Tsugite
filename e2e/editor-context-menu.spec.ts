@@ -68,7 +68,9 @@ async function hoverText(page: Page, line: string, token: string) {
 }
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+  await page.addInitScript(() => {
+    if (window === window.top) localStorage.setItem("iris.language", "en");
+  });
   await page.goto(`/room/context-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15000 });
 });
@@ -300,7 +302,7 @@ test("renders themed menus and Peek within desktop and narrow viewports", async 
   await rightClickText(page, "console.log(answer)", "answer");
   await page.screenshot({ path: "/tmp/tsugite-editor-menu-light.png" });
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Dracula", exact: true }).click();
   await page.getByRole("button", { name: "Close settings" }).click();
   await rightClickText(page, "console.log(answer)", "answer");

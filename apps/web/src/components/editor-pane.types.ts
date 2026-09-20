@@ -1,5 +1,6 @@
 import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
 import type { LoroDoc } from "loro-crdt";
+import type { EditorLocation } from "../lib/editor-navigation";
 
 export type EditorPaneProps = {
   doc: LoroDoc;
@@ -17,4 +18,6 @@ export type EditorPaneProps = {
   remoteMembers: readonly PresenceMember[];
   currentUserId: string;
   onEditorFocusReady?: (focus: (() => void) | undefined) => void;
+  requestedLocation?: EditorLocation;
+  onLocationHandled?: () => void;
 };

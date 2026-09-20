@@ -74,7 +74,7 @@ test("opens the command palette and exposes extensible keymap actions", async ({
     page.getByRole("button", { name: "Open settings" }).locator("span").last(),
   ).toHaveClass(/text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/);
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Keyboard" }).click();
   await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
   await expect(page.getByLabel("Open settings shortcut")).toHaveValue(`${primaryModifier}-,`);

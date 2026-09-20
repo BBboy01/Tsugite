@@ -10,6 +10,7 @@ import {
 import type { RuntimeAction } from "./runtime-actions";
 import type { PreviewPaneProps } from "../components/preview-pane.types";
 import { getRuntimeSettingsKey } from "./preview-runtime-model";
+import { getPreviewSourceLocation, type PreviewSourceError } from "./preview-error-model";
 type WebContainerRuntimeInstance = import("./webcontainer-runtime").WebContainerRuntime;
 
 export function usePreviewRuntime({ file, files, folders, settings }: PreviewPaneProps) {
@@ -23,6 +24,7 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
   const [previewLoadKey, setPreviewLoadKey] = useState(0);
   const [fallbackDocument, setFallbackDocument] = useState("");
   const [previewBuildError, setPreviewBuildError] = useState<string>();
+  const [previewSourceError, setPreviewSourceError] = useState<PreviewSourceError>();
   const [runKey, setRunKey] = useState(0);
   const [contentRevision, setContentRevision] = useState(0);
   const runtimeRef = useRef<WebContainerRuntimeInstance | undefined>(undefined);
@@ -73,19 +75,23 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
 
   useEffect(() => {
     let cancelled = false;
+    setPreviewSourceError(undefined);
     const packageFile = files.find((item) => item.path === "package.json");
     if (!packageFile) {
+      syntaxErrorActiveRef.current = false;
       const fallbackTimer = setTimeout(() => {
         void (async () => {
           try {
             const { createPreviewDocument, runPreview } = await import("./preview-runner");
             if (cancelled) return;
-            const result = runPreview(file.text.toString(), file.language);
+            const source = file.text.toString();
+            const result = runPreview(source, file.language);
             if (cancelled) return;
             if (result.error) {
               setFallbackDocument("");
               setOutputs([{ level: "error", message: result.error }]);
               setPreviewBuildError(result.error);
+              setPreviewSourceError({ path: file.path, source, location: result.location });
               setRuntimeState("error");
               return;
             }
@@ -125,27 +131,28 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
       }
       const runtime = runtimeRef.current;
       if (!runtime || cancelled) return;
-      if (runtimeStartedRef.current) {
-        const { validateSourceSyntax } = await import("./preview-runner");
-        const syntaxError = validateSourceSyntax(file.text.toString(), file.language);
-        if (cancelled) return;
-        if (syntaxError) {
-          syntaxErrorActiveRef.current = true;
-          setRuntimeState("error");
-          setPreviewBuildError(syntaxError);
-          setOutputs([{ level: "error", message: syntaxError }]);
-          return;
-        }
-        if (syntaxErrorActiveRef.current) {
-          syntaxErrorActiveRef.current = false;
-          setRuntimeError(undefined);
-          setRuntimeState("ready");
-          setPreviewBuildError(undefined);
-          setOutputs([]);
-        }
+      const { validateSourceSyntaxDetails } = await import("./preview-runner");
+      const source = file.text.toString();
+      const syntaxError = validateSourceSyntaxDetails(source, file.language, file.path);
+      if (cancelled) return;
+      if (syntaxError) {
+        syntaxErrorActiveRef.current = true;
+        setRuntimeState("error");
+        setPreviewBuildError(syntaxError.message);
+        setPreviewSourceError({ path: file.path, source, location: syntaxError.location });
+        setOutputs([{ level: "error", message: syntaxError.message }]);
+        return;
+      }
+      if (syntaxErrorActiveRef.current) {
+        syntaxErrorActiveRef.current = false;
+        setRuntimeError(undefined);
+        setRuntimeState(runtimeStartedRef.current ? "ready" : "idle");
+        setPreviewBuildError(undefined);
+        setOutputs([]);
       }
       const onRuntimeEvent = (event: RuntimeEvent) => {
         if (cancelled) return;
+        if (syntaxErrorActiveRef.current) return;
         if (event.type === "output") {
           setOutputs((current) => [...current, event].slice(-80));
           if (event.level === "error") {
@@ -162,6 +169,7 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
         setRuntimeState(event.state);
         setRuntimeError(event.error);
         if (event.error) {
+          setPreviewSourceError(undefined);
           setPreviewLoaded(false);
           setPreviewUrl(undefined);
           const runtimeMessage = translateRef.current(`preview.runtime.${event.error}`, {
@@ -304,6 +312,12 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
     previewLoadKey,
     fallbackDocument,
     previewBuildError,
+    previewSourceLocation: getPreviewSourceLocation(
+      previewSourceError,
+      file.path,
+      file.text.toString(),
+    ),
+    hasSyntaxError: Boolean(previewSourceError),
     iframeRef,
     handlePreviewLoad,
     rerun,
