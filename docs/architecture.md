@@ -86,6 +86,31 @@ JSON carries join, presence, ready, and acknowledgement messages; binary frames 
 
 Presence and cursor updates use a separate state-invalidation path but the same transport budget. They should not rebuild full project structures or invalidate preview inputs.
 
+### Local draft recovery
+
+`RoomDrafts` observes outbox changes independently of workspace invalidation. While updates remain pending, it checkpoints a binary Loro snapshot and the exact pending update queue to `tsugite-drafts` in IndexedDB. A fixed 250 ms deadline coalesces rapid edits; serialized transactions prevent an older write from overtaking an acknowledgement cleanup. Only transaction completion means the checkpoint is saved.
+
+Each mounted room session has a unique draft ID and holds its Web Lock. Drafts are scoped by the resolved server WebSocket URL, including room ID, inside the browser origin. Recovery claims only unlocked records and re-reads them after obtaining the lock, so active tabs and simultaneous recovery dialogs cannot overwrite or claim one another's data.
+
+```mermaid
+flowchart TD
+  Edit["Local edit"] --> Queue["Unacknowledged outbox"]
+  Queue --> Checkpoint["250 ms checkpoint"]
+  Checkpoint --> Local["IndexedDB snapshot and pending updates"]
+  Local --> Reopen["Reopen same server and room"]
+  Reopen --> Claim["Claim an inactive draft with Web Lock"]
+  Claim --> Decision["Restore or discard"]
+  Decision -->|Restore| Validate["Validate and merge CRDT history"]
+  Validate --> Queue
+  Decision -->|Discard| Delete["Delete selected local draft only"]
+  Queue --> Ack["Server acknowledgement"]
+  Ack --> Cleanup["Remove acknowledged backup"]
+```
+
+Recovery does not import or transmit the old snapshot before explicit consent. It validates bytes in a temporary Loro document, merges history instead of replacing file strings, and replays pending updates through the existing bounded outbox. The original draft remains until its replacement checkpoint succeeds or the updates are acknowledged. A leftover draft already covered by the received room snapshot can be removed without asking. Corrupt or incompatible records remain available for explicit discard; failed restoration does not silently erase the stored copy.
+
+The recovery dialog uses the existing theme and Radix focus trap. If merging succeeds but saving the replacement fails, it offers a backup retry and disables discard until the original copy is safely replaced. Retrying does not enqueue the same updates again. Backup state updates are separate from presence and document updates; unchanged backup states do not cause React renders. No extra database dependency or server protocol is introduced.
+
 ### Frontend invalidation ownership
 
 `RoomClient` classifies each Loro event batch by its changed root containers. Mixed batches can invalidate more than one category. `useRoomSession` only rebuilds workspace metadata or shared settings when their corresponding category changes; text-only updates do not trigger its React state setters.
@@ -118,6 +143,8 @@ Vim search maps existing decorations during edits and schedules one recount afte
 - Package metadata changes restart the local preview process.
 - A syntax error is reported in the preview surface without destroying the runtime.
 - Without `package.json`, the selected source is transpiled into a single-file iframe fallback.
+- Single-file previews use an opaque-origin script sandbox and cannot access the application's storage or parent DOM. WebContainer previews retain their separate-origin runtime permissions.
+- JavaScript and TypeScript source preflight applies only to script extensions; HTML, CSS, JSON and other resources are checked by the project runtime.
 
 The starter manifest is pinned for new rooms. A compatibility transform can adjust the browser-mounted manifest of an older Vite room without changing its shared source. Explicit project overrides take precedence. Runtime restart reuses the container and restarts its process; reinstall additionally forces the package-manager install step. Neither action is a room-server restart.
 
@@ -133,14 +160,14 @@ The starter manifest is pinned for new rooms. A compatibility transform can adju
 - Presence, cursors, follow mode, WebContainer dependencies, and preview processes are intentionally not persisted.
 - Docker mounts `/data` as the `tsugite-data` volume. Set `DATABASE_PATH` when running the server outside Docker.
 
-| State                                                                             | Lifetime and storage                                |
-| --------------------------------------------------------------------------------- | --------------------------------------------------- |
-| File contents, paths, empty folders, shared settings                              | Loro snapshot in SQLite                             |
-| Identity, interface language, Vim preference, keymap, system-clipboard preference | Browser local storage, scoped to origin             |
-| Unacknowledged updates                                                            | Browser memory until acknowledgement or tab closure |
-| Cursors and active-file presence                                                  | Live room connections                               |
-| Open tabs, selection, follow state, undo history                                  | Current editor session                              |
-| Installed project dependencies and preview processes                              | Each browser's WebContainer runtime                 |
+| State                                                                             | Lifetime and storage                                                       |
+| --------------------------------------------------------------------------------- | -------------------------------------------------------------------------- |
+| File contents, paths, empty folders, shared settings                              | Loro snapshot in SQLite                                                    |
+| Identity, interface language, Vim preference, keymap, system-clipboard preference | Browser local storage, scoped to origin                                    |
+| Unacknowledged updates                                                            | Browser memory plus best-effort IndexedDB checkpoint until acknowledgement |
+| Cursors and active-file presence                                                  | Live room connections                                                      |
+| Open tabs, selection, follow state, undo history                                  | Current editor session                                                     |
+| Installed project dependencies and preview processes                              | Each browser's WebContainer runtime                                        |
 
 ```mermaid
 flowchart TD
@@ -158,7 +185,8 @@ flowchart TD
 
 - Startup or migration failure prevents the server from starting. Save failures after startup retain dirty room state and retry, but a process crash can still lose that unsaved state.
 - Network interruption pauses synchronization but must not corrupt the local editor document.
-- An encoded local update above 1 MiB stops synchronization and exposes an offline error. The browser retains local changes, but cannot resume that tab's synchronization or preserve those changes across a reload. This avoids an endless reconnect loop for an update the server cannot accept.
+- An encoded local update above 1 MiB stops synchronization and exposes an offline error. A completed local draft checkpoint can recover its content, but restoring it does not bypass the transport limit or resume synchronization. Copy the content and reapply it as smaller edits.
+- Browser draft storage is best-effort recovery, not a server backup: quota/privacy failures are visible, and browser eviction or termination before transaction completion can lose recent edits. Unsupported Web Locks disables local backup rather than risking concurrent writers. Existing unload protection remains active for unacknowledged edits.
 - WebContainer capability or browser policy failures are surfaced as preview runtime errors.
 - Preview process failures are local to a browser and do not affect collaboration state.
 - Dependency installation has a two-minute deadline. Exceeding it terminates the install process and reports an installation failure, not a browser capability failure.

@@ -40,7 +40,10 @@ export type RoomSocket = {
 };
 
 export type RoomClientEvent =
+  | { type: "outbox" }
+  | { type: "snapshot" }
   | { type: "status"; status: ConnectionStatus }
+  | { type: "sync"; pending: boolean }
   | { type: "document"; changes: { workspace: boolean; settings: boolean; content: boolean } }
   | { type: "presence"; members: PresenceMember[] };
 
@@ -55,7 +58,10 @@ export class RoomClient {
   readonly identity: RoomIdentity;
   private readonly socketFactory: (url: string) => RoomSocket;
   private readonly listeners = new Set<(event: RoomClientEvent) => void>();
-  private readonly outbox = new RoomOutbox();
+  private readonly outbox = new RoomOutbox(
+    (pending) => this.emit({ type: "sync", pending }),
+    () => this.emit({ type: "outbox" }),
+  );
   private socket: RoomSocket | null = null;
   private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
   private reconnectAttempt = 0;
@@ -64,6 +70,7 @@ export class RoomClient {
   private membersValue: PresenceMember[] = [];
   private selectedPath: string | undefined;
   private cursor: { anchor: number; head: number } | null | undefined;
+  hasReceivedSnapshot = false;
 
   constructor(options: RoomClientOptions) {
     this.roomId = options.roomId;
@@ -102,6 +109,47 @@ export class RoomClient {
     return this.syncErrorValue;
   }
 
+  get hasPendingChanges(): boolean {
+    return this.outbox.hasPendingChanges;
+  }
+
+  get pendingUpdates(): readonly Uint8Array[] {
+    return this.outbox.pendingUpdates;
+  }
+
+  get draftScope(): string {
+    return this.getSocketUrl();
+  }
+
+  restorePendingDraft(snapshot: Uint8Array, updates: readonly Uint8Array[]): void {
+    const validation = new LoroDoc();
+    try {
+      validation.import(this.doc.export({ mode: "snapshot" }));
+      validation.importBatch([snapshot, ...updates]);
+    } finally {
+      validation.free();
+    }
+    this.doc.importBatch([snapshot, ...updates]);
+    if (updates.some((update) => update.byteLength > MAX_ROOM_UPDATE_BYTES)) {
+      this.syncErrorValue =
+        "This draft contains an edit exceeding 1 MiB. Sync stopped; copy your changes into smaller edits.";
+      this.disconnect();
+    }
+    for (const update of updates) this.outbox.update(update);
+  }
+
+  containsDraft(snapshot: Uint8Array, updates: readonly Uint8Array[]): boolean {
+    if (!this.hasReceivedSnapshot) return false;
+    const validation = new LoroDoc();
+    try {
+      validation.import(this.doc.export({ mode: "snapshot" }));
+      validation.importBatch([snapshot, ...updates]);
+      return validation.version().compare(this.doc.version()) === 0;
+    } finally {
+      validation.free();
+    }
+  }
+
   get members(): PresenceMember[] {
     return this.membersValue;
   }
@@ -113,6 +161,7 @@ export class RoomClient {
     this.setStatus(this.reconnectAttempt > 0 ? "reconnecting" : "connecting");
     const url = this.getSocketUrl();
     const socket = this.socketFactory(url);
+    let receivedSnapshot = false;
     socket.binaryType = "arraybuffer";
     socket.onopen = () => {
       if (this.socket !== socket) return;
@@ -126,7 +175,13 @@ export class RoomClient {
       }
     };
     socket.onmessage = (event) => {
-      if (this.socket === socket) this.handleMessage(event.data);
+      if (this.socket !== socket) return;
+      this.handleMessage(event.data);
+      if (typeof event.data !== "string" && !receivedSnapshot) {
+        receivedSnapshot = true;
+        this.hasReceivedSnapshot = true;
+        this.emit({ type: "snapshot" });
+      }
     };
     socket.onerror = () => {
       if (this.socket !== socket) return;

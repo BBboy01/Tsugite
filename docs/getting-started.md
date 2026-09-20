@@ -44,6 +44,8 @@ Room IDs contain 1-80 ASCII letters, digits, underscores, or hyphens. Opening an
 2. Edit a file in one tab and watch the change arrive in the other.
 3. Open the presence list to follow another collaborator.
 4. Use the file tree context menu to create, rename, copy, or delete files.
+
+Deletion asks for confirmation and offers a separate undo action. Undo refuses conflicting paths created by collaborators. Large restored contents are sent in bounded updates through the existing synchronization queue; collaborators may briefly see a partially restored file until the queue is acknowledged.
 5. Open shared settings to change the theme, editor behavior, Vim mode, keymaps, or preview runtime.
 
 New rooms start from the shared example project and open `src/App.tsx`. The user card lets you change your anonymous display name and avatar color.
@@ -105,7 +107,13 @@ A project without `package.json` uses the single-file Babel iframe fallback. It 
 | Preview is paused                | Enable automatic start or use Run preview.                                                                                    |
 | Offline indicator mentions 1 MiB | A single encoded edit exceeded the limit. Copy local changes before reloading, then reapply them in smaller edits.            |
 
-Automatic reconnect retains unacknowledged edits only while the tab remains open. Do not reload an offline tab to recover unsynchronized work. A live connection does not prove that the latest edit has reached SQLite. See [persistence guarantees](deployment.md#persistence-and-upgrades).
+Automatic reconnect retries unacknowledged edits. The browser also checkpoints them to IndexedDB while pending; the connection indicator reports when the local draft has been saved. Reopening the same room offers **Restore draft** or **Discard draft**. Restore merges the draft with the current room and sends pending edits when connected; discard permanently removes only that local copy. Another active tab's draft is not offered for recovery.
+
+Local drafts require IndexedDB and Web Locks (HTTPS or localhost). If local backup is unavailable, keep the tab open until synchronized or copy your changes elsewhere. Drafts belong to this browser profile and server/room address, not your account. Browser storage clearing/eviction, private-session closure, or termination before a checkpoint finishes can still lose them. This is not a fully offline application cache: the application itself must be loadable to recover a draft.
+
+If restoration merges successfully but the new backup cannot be saved, the dialog offers **Retry backup**. The original copy remains protected and cannot be discarded until replacement succeeds; retrying does not duplicate the edits.
+
+The unload warning remains while edits are unacknowledged, even with a saved draft. A live connection or a server acknowledgement does not prove that the latest edit has reached SQLite. See [persistence guarantees](deployment.md#persistence-and-upgrades).
 
 ## Stop and resume
 

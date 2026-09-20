@@ -146,6 +146,8 @@ Limits reject excess traffic rather than delete projects. Reopening a persisted 
 
 A local edit whose encoded update exceeds 1 MiB stops synchronization for that tab instead of repeatedly reconnecting. The offline indicator exposes the reason; the edit and subsequent changes remain local. Copy those changes before reloading or closing the tab, then reapply them in smaller edits. This limit applies to an individual encoded update, not the total project size.
 
+The browser can retain unacknowledged changes in IndexedDB and offer explicit draft recovery on reopening the same server/room. This requires HTTPS (or localhost), IndexedDB and Web Locks. A completed local checkpoint can preserve oversized edits for recovery, but cannot make them acceptable to the server. Browser storage is not a substitute for database backups: eviction, privacy settings and incomplete writes can lose drafts. Neither local draft saves nor server acceptance acknowledgements change the approximately 500 ms SQLite persistence window.
+
 The limits are code defaults, not environment-variable settings. See [room-limits.ts](../apps/server/src/rooms/room-limits.ts) and [room-app.ts](../apps/server/src/room-app.ts) for their enforcement.
 
 ## Operational checks

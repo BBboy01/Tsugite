@@ -36,13 +36,13 @@ test("de-emphasizes file search directories and uses text-only matches", async (
   await page.keyboard.press("ControlOrMeta+P");
   const search = page.getByPlaceholder("Search files...");
   await search.fill("App");
-  const result = page.getByRole("button", { name: /App\.tsx/ }).first();
+  const result = page.getByRole("option", { name: /App\.tsx/ }).first();
   await expect(result.locator("[data-file-directory]")).toHaveText("src/");
   await expect(result.locator("[data-file-name]")).toContainText("App.tsx");
   await expect(result.locator("mark")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   await search.fill("");
-  const inactiveResult = page.getByRole("dialog").getByRole("button").nth(1);
+  const inactiveResult = page.getByRole("dialog").getByRole("option").nth(1);
   await expect(inactiveResult).toHaveClass(
     /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
   );
@@ -88,7 +88,7 @@ test("exposes the system clipboard setting in Vim keyboard preferences", async (
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Keyboard" }).click();
   await expect(page.getByRole("switch", { name: "Use system clipboard" })).toBeVisible();
 });
@@ -98,7 +98,7 @@ test("cycles focus from the current menu through search and right content", asyn
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
 
   const currentMenu = page.getByRole("button", { name: "Workspace" });
   const search = page.getByLabel("Search settings");
@@ -154,7 +154,7 @@ test("uses the active workspace theme", async ({ page }) => {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Dracula" }).click();
   await page.getByRole("button", { name: "Close settings" }).click();
   await page.locator(".cm-content").focus();
@@ -183,7 +183,7 @@ for (const theme of ["Ink Dark", "GitHub Dark", "Solarized Dark", "Tokyo Night"]
       },
     );
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "Open shared settings" }).click();
+    await page.getByRole("button", { name: "Open settings" }).click();
     await page.getByRole("button", { name: theme }).click();
     await page.getByRole("button", { name: "Close settings" }).click();
 
@@ -220,7 +220,7 @@ test("focuses the editor after opening a file from file search", async ({ page }
   await page.keyboard.press("ControlOrMeta+P");
   await expect(page.getByPlaceholder("Search files...")).toBeVisible();
   await page.getByPlaceholder("Search files...").fill("App.tsx");
-  await page.getByRole("button", { name: "src/App.tsx" }).click();
+  await page.getByRole("option", { name: "src/App.tsx" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible();
   await expect
@@ -236,7 +236,7 @@ test("keeps Vim navigation focused after opening a file from search", async ({ p
   await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
   await page.keyboard.press("ControlOrMeta+P");
   await page.getByPlaceholder("Search files...").fill("App.tsx");
-  await page.getByRole("button", { name: "src/App.tsx" }).click();
+  await page.getByRole("option", { name: "src/App.tsx" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.className))

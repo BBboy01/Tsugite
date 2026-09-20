@@ -1,12 +1,16 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
 import { detectLanguage, languageOptions } from "./i18n-config";
+import { uxTranslations } from "./i18n-ux";
+import { draftTranslations } from "./i18n-drafts";
 
 export { languageOptions, type LanguageCode } from "./i18n-config";
 
 const resources = {
   en: {
     translation: {
+      ...uxTranslations.en,
+      ...draftTranslations.en,
       "app.name": "Tsugite",
       "app.workspace": "Workspace",
       "app.version": "v0.1.0",
@@ -50,8 +54,8 @@ const resources = {
       "user.color.periwinkle": "Periwinkle",
       "user.color.sage": "Sage",
       "user.color.orchid": "Orchid",
-      "settings.open": "Open shared settings",
-      "settings.title": "Shared settings",
+      "settings.open": "Open settings",
+      "settings.title": "Settings",
       "settings.workspaceTone": "Workspace tone",
       "settings.theme": "Theme",
       "settings.theme.random": "Random theme",
@@ -144,7 +148,7 @@ const resources = {
       "settings.section.style.title": "Style",
       "settings.section.style.description": "Tune the shared visual language of this room.",
       "settings.section.workspace.title": "Workspace",
-      "settings.section.workspace.description": "Set the language and visual theme for this room.",
+      "settings.section.workspace.description": "Set your language and the room's visual theme.",
       "settings.section.keyboard.title": "Keyboard",
       "settings.section.keyboard.description": "Configure Vim behavior and editor shortcuts.",
       "settings.section.editor.title": "Editor",
@@ -214,6 +218,8 @@ const resources = {
   },
   "zh-CN": {
     translation: {
+      ...uxTranslations["zh-CN"],
+      ...draftTranslations["zh-CN"],
       "app.name": "Tsugite",
       "app.workspace": "工作区",
       "app.version": "v0.1.0",
@@ -257,8 +263,8 @@ const resources = {
       "user.color.periwinkle": "长春花蓝",
       "user.color.sage": "鼠尾草绿",
       "user.color.orchid": "兰花紫",
-      "settings.open": "打开共享设置",
-      "settings.title": "共享设置",
+      "settings.open": "打开设置",
+      "settings.title": "设置",
       "settings.workspaceTone": "工作区风格",
       "settings.theme": "主题",
       "settings.theme.random": "随机主题",
@@ -343,7 +349,7 @@ const resources = {
       "settings.section.style.title": "样式",
       "settings.section.style.description": "调整当前房间共享的视觉风格。",
       "settings.section.workspace.title": "工作区",
-      "settings.section.workspace.description": "设置当前房间的语言和视觉主题。",
+      "settings.section.workspace.description": "设置你的界面语言和房间共享主题。",
       "settings.section.keyboard.title": "键盘",
       "settings.section.keyboard.description": "配置 Vim 行为和编辑器快捷键。",
       "settings.section.editor.title": "编辑器",
@@ -410,6 +416,8 @@ const resources = {
   },
   "zh-TW": {
     translation: {
+      ...uxTranslations["zh-TW"],
+      ...draftTranslations["zh-TW"],
       "app.name": "Tsugite",
       "app.workspace": "工作區",
       "app.version": "v0.1.0",
@@ -453,8 +461,8 @@ const resources = {
       "user.color.periwinkle": "長春花藍",
       "user.color.sage": "鼠尾草綠",
       "user.color.orchid": "蘭花紫",
-      "settings.open": "開啟共享設定",
-      "settings.title": "共享設定",
+      "settings.open": "開啟設定",
+      "settings.title": "設定",
       "settings.workspaceTone": "工作區風格",
       "settings.theme": "主題",
       "settings.theme.random": "隨機主題",
@@ -553,6 +561,8 @@ const resources = {
   },
   ja: {
     translation: {
+      ...uxTranslations.ja,
+      ...draftTranslations.ja,
       "app.name": "Tsugite",
       "app.workspace": "ワークスペース",
       "app.version": "v0.1.0",
@@ -596,8 +606,8 @@ const resources = {
       "user.color.periwinkle": "ペリウィンクル",
       "user.color.sage": "セージ",
       "user.color.orchid": "オーキッド",
-      "settings.open": "共有設定を開く",
-      "settings.title": "共有設定",
+      "settings.open": "設定を開く",
+      "settings.title": "設定",
       "settings.workspaceTone": "ワークスペースの雰囲気",
       "settings.theme": "テーマ",
       "settings.theme.random": "ランダムテーマ",

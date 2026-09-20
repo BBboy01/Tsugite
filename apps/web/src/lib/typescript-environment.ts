@@ -18,7 +18,6 @@ export function createEditorTypeScriptEnvironment(
     strict: true,
     target: ts.ScriptTarget.ES2022,
   };
-  const typescript = ts as unknown as TypeScriptModule;
   const files = new Map<string, string>(
     projectFiles
       .filter((file) => /\.[cm]?[jt]sx?$/.test(file.path))
@@ -28,6 +27,20 @@ export function createEditorTypeScriptEnvironment(
   files.set(absolutePath, source);
   files.set("/lib.d.ts", EDITOR_LIB);
   const system = createSystem(files);
+  const typescript = {
+    ...ts,
+    createLanguageService(host: ts.LanguageServiceHost) {
+      // VFS 1.6 treats empty strings as missing snapshots; retain actual empty files.
+      return ts.createLanguageService({
+        ...host,
+        getScriptSnapshot(fileName) {
+          return system.readFile(fileName) === ""
+            ? ts.ScriptSnapshot.fromString("")
+            : host.getScriptSnapshot(fileName);
+        },
+      });
+    },
+  } as unknown as TypeScriptModule;
   const environment = createVirtualTypeScriptEnvironment(
     system,
     [...files.keys()],

@@ -300,7 +300,7 @@ test("renders themed menus and Peek within desktop and narrow viewports", async 
   await rightClickText(page, "console.log(answer)", "answer");
   await page.screenshot({ path: "/tmp/tsugite-editor-menu-light.png" });
   await page.keyboard.press("Escape");
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Dracula", exact: true }).click();
   await page.getByRole("button", { name: "Close settings" }).click();
   await rightClickText(page, "console.log(answer)", "answer");

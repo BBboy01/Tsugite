@@ -3,7 +3,7 @@ import { RefreshCw } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import { getLatestPreviewError } from "../lib/preview-error-model";
+import { getLatestPreviewError, getPreviewRecoveryActions } from "../lib/preview-error-model";
 import { getPreviewRunState } from "../lib/preview-runtime-model";
 import { usePreviewRuntime } from "../lib/use-preview-runtime";
 import { PreviewConsole } from "./preview-console";
@@ -24,6 +24,8 @@ export function PreviewPane(props: PreviewPaneProps) {
     previewLoadKey,
     fallbackDocument,
     previewBuildError,
+    previewSourceLocation,
+    hasSyntaxError,
     iframeRef,
     handlePreviewLoad,
     rerun,
@@ -34,6 +36,8 @@ export function PreviewPane(props: PreviewPaneProps) {
   const previewErrorMessage = previewBuildError
     ? (getLatestPreviewError(outputs) ?? previewBuildError)
     : undefined;
+  const hasRuntime = props.files.some((item) => item.path === "package.json");
+  const recoveryActions = getPreviewRecoveryActions(runtimeError, hasSyntaxError, hasRuntime);
   const showPreviewLoader =
     !runtimeError &&
     (runtimeState === "installing" ||
@@ -89,7 +93,7 @@ export function PreviewPane(props: PreviewPaneProps) {
           title={`Preview of ${file.path}`}
           src={previewUrl}
           srcDoc={previewUrl ? undefined : fallbackDocument}
-          sandbox="allow-scripts allow-same-origin"
+          sandbox={previewUrl ? "allow-scripts allow-same-origin" : "allow-scripts"}
           className="block h-full min-h-[260px] w-full border-0 bg-white shadow-none"
           onLoad={handlePreviewLoad}
         />
@@ -109,7 +113,15 @@ export function PreviewPane(props: PreviewPaneProps) {
             </motion.div>
           ) : null}
         </AnimatePresence>
-        {previewErrorMessage ? <PreviewError message={previewErrorMessage} /> : null}
+        {previewErrorMessage ? (
+          <PreviewError
+            message={previewErrorMessage}
+            location={previewSourceLocation}
+            onNavigateToSource={props.onNavigateToSource}
+            recoveryActions={recoveryActions}
+            onRetry={!hasRuntime && !hasSyntaxError ? rerun : undefined}
+          />
+        ) : null}
       </div>
       <PreviewConsole
         outputs={outputs}

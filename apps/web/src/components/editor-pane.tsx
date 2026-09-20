@@ -35,7 +35,7 @@ import { EditorFileTabs } from "./editor-file-tabs";
 import { EditorFollowingOutline } from "./editor-following-outline";
 import { EditorContextMenu } from "./editor-context-menu";
 import { editorTheme } from "../lib/editor-theme";
-import type { EditorLocation } from "../lib/editor-navigation";
+import { useEditorLocation } from "../lib/use-editor-location";
 import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
 import { attachVimClipboard } from "../lib/vim-clipboard";
 import { attachVimSearch, vimSearchExtension } from "../lib/vim-search";
@@ -101,6 +101,8 @@ export function EditorPane({
   remoteMembers,
   currentUserId,
   onEditorFocusReady,
+  requestedLocation,
+  onLocationHandled,
 }: EditorPaneProps) {
   const { t } = useTranslation();
   const [systemClipboard] = useSystemClipboard();
@@ -118,7 +120,14 @@ export function EditorPane({
   const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
-  const pendingLocationRef = useRef<EditorLocation | null>(null);
+  const { navigateToLocation, applyPendingLocation } = useEditorLocation({
+    path: file.path,
+    viewRef,
+    requestedLocation,
+    onLocationHandled,
+    onLocalInteraction,
+    onSelectTab,
+  });
   const typeScriptEnvironmentRef = useRef<VirtualTypeScriptEnvironment | null>(null);
   const projectFilesRef = useRef(files);
   const tabViewModels = useMemo(
@@ -241,19 +250,7 @@ export function EditorPane({
           view.state.doc.length,
         ),
       );
-      const pending = pendingLocationRef.current;
-      if (pending?.path === file.path) {
-        pendingLocationRef.current = null;
-        if (pending.source === view.state.doc.toString()) {
-          view.focus();
-          view.dispatch({
-            selection: { anchor: pending.from, head: pending.to },
-            scrollIntoView: true,
-            userEvent: "select",
-          });
-          return;
-        }
-      }
+      if (applyPendingLocation(view)) return;
       const savedSelection = savedSelectionRef.current;
       const selection =
         followedSelectionRef.current ??
@@ -303,22 +300,6 @@ export function EditorPane({
     vimMode,
     undoManager,
   ]);
-
-  const navigateToLocation = (location: EditorLocation) => {
-    localInteractionRef.current();
-    if (location.path === file.path && viewRef.current) {
-      const view = viewRef.current;
-      view.focus();
-      view.dispatch({
-        selection: { anchor: location.from, head: location.to },
-        scrollIntoView: true,
-        userEvent: "select",
-      });
-    } else {
-      pendingLocationRef.current = location;
-      onSelectTab(location.path);
-    }
-  };
 
   useEffect(() => {
     const view = viewRef.current;

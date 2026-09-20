@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { FileCode2 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ProjectFile, WorkspaceTheme } from "@iris/shared";
@@ -20,6 +20,8 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const selectedRef = useRef<HTMLButtonElement>(null);
+  const listId = useId();
   const matches = useMemo(() => (open ? fuzzyMatchFiles(files, query) : []), [files, open, query]);
   useEffect(() => {
     if (open) {
@@ -31,6 +33,17 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
   useEffect(() => {
     setSelected((value) => Math.min(value, Math.max(0, matches.length - 1)));
   }, [matches.length]);
+  useLayoutEffect(() => {
+    selectedRef.current?.scrollIntoView({
+      block: "nearest",
+      inline: "nearest",
+      behavior: "instant",
+    });
+  }, [matches, selected]);
+  const moveSelection = (offset: number) => {
+    if (!matches.length) return;
+    setSelected((value) => (value + offset + matches.length) % matches.length);
+  };
   const choose = () => {
     const file = matches[selected];
     if (file) {
@@ -60,6 +73,12 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
             <Dialog.Title className="sr-only">{t("files.searchTitle")}</Dialog.Title>
             <input
               ref={inputRef}
+              role="combobox"
+              aria-label={t("files.searchTitle")}
+              aria-expanded={open}
+              aria-controls={listId}
+              aria-autocomplete="list"
+              aria-activedescendant={matches[selected] ? `${listId}-${selected}` : undefined}
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -68,20 +87,16 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
               onKeyDown={(event) => {
                 if (event.key === "ArrowDown") {
                   event.preventDefault();
-                  setSelected((value) => Math.min(value + 1, matches.length - 1));
+                  moveSelection(1);
                 } else if (event.key === "ArrowUp") {
                   event.preventDefault();
-                  setSelected((value) => Math.max(value - 1, 0));
+                  moveSelection(-1);
                 } else if (event.key === "Enter") {
                   event.preventDefault();
                   choose();
                 } else if (event.ctrlKey && (event.key === "n" || event.key === "p")) {
                   event.preventDefault();
-                  setSelected((value) =>
-                    event.key === "n"
-                      ? Math.min(value + 1, matches.length - 1)
-                      : Math.max(value - 1, 0),
-                  );
+                  moveSelection(event.key === "n" ? 1 : -1);
                 }
               }}
               placeholder={t("files.searchPlaceholder")}
@@ -90,13 +105,24 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
               spellCheck={false}
             />
           </div>
-          <div className="max-h-[min(52vh,360px)] overflow-auto p-2">
+          <div
+            id={listId}
+            role="listbox"
+            aria-label={t("files.searchTitle")}
+            className="max-h-[min(52vh,360px)] overflow-auto p-2"
+          >
             {matches.map((file, index) => (
               <button
                 key={file.id}
+                id={`${listId}-${index}`}
+                ref={index === selected ? selectedRef : undefined}
                 type="button"
+                role="option"
+                aria-selected={index === selected}
+                tabIndex={-1}
                 className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-iris-mono text-[11px] ${index === selected ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-iris-strong" : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"}`}
                 onMouseEnter={() => setSelected(index)}
+                onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
                   onSelect(file.path);
                   onOpenChange(false);

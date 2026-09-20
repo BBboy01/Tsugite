@@ -13,6 +13,11 @@ import {
 import type { FileTreeTarget } from "../components/file-tree";
 import { closeEditorTab } from "./editor-tabs";
 import { WORKSPACE_CHANGE_ORIGIN } from "./editor-undo";
+import {
+  captureDeletedItem,
+  restoreDeletedItem,
+  type FileDeletionRecovery,
+} from "./file-deletion-recovery";
 
 type FileActionOptions = {
   doc: LoroDoc;
@@ -35,12 +40,8 @@ export function createWorkspaceFileActions({
 }: FileActionOptions) {
   const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
     try {
-      const file = createFile(
-        doc,
-        nextPath,
-        "typescript",
-        `export const name = '${nextPath.split("/").at(-1)}'`,
-      );
+      const language = /\.(?:[cm]?js|jsx)$/i.test(nextPath.trim()) ? "javascript" : "typescript";
+      const file = createFile(doc, nextPath, language);
       activateFile(file.path);
       doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
@@ -104,9 +105,12 @@ export function createWorkspaceFileActions({
     }
   };
 
-  const handleDelete = (target: Exclude<FileTreeTarget, null>) => {
-    const path = target.type === "file" ? target.file.path : target.path;
-    if (!window.confirm(`Delete ${path}?`)) return;
+  const handleDelete = (
+    target: Exclude<FileTreeTarget, null>,
+  ): FileDeletionRecovery | undefined => {
+    const deleted = captureDeletedItem(doc, target);
+    if (!deleted) return undefined;
+    const { path } = deleted;
     stopFollowing();
     if (target.type === "file") {
       deleteFile(doc, target.file.id);
@@ -129,6 +133,18 @@ export function createWorkspaceFileActions({
       if (selectedPath.startsWith(`${path}/`)) setSelectedPath(nextSelectedPath);
     }
     doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
+    let restored = false;
+    return {
+      path,
+      undo: () => {
+        if (restored || !restoreDeletedItem(doc, deleted)) return false;
+        restored = true;
+        stopFollowing();
+        const selectedFile = deleted.files.find((file) => file.path === selectedPath);
+        if (selectedFile) activateFile(selectedFile.path);
+        return true;
+      },
+    };
   };
 
   return { handleAddFile, handleAddFolder, handleRename, handleCopy, handleDelete };

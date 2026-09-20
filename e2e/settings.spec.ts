@@ -17,7 +17,7 @@ test("keeps workspace settings controls in the Tab order", async ({ page }) => {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
 
   const language = page.getByLabel("Language");
   await language.focus();
@@ -38,7 +38,7 @@ test("searches settings hierarchically and updates the right panel automatically
 }) => {
   await page.goto(`/room/e2e-settings-search-${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
 
   const search = page.getByLabel("Search settings");
   await search.fill("relative line");
@@ -57,7 +57,7 @@ test("focuses the current settings menu item when opened", async ({ page }) => {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await expect(page.getByRole("button", { name: "Workspace" })).toBeFocused();
 });
 
@@ -66,7 +66,7 @@ test("keeps settings navigation focused after changing a font", async ({ page })
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
 
   const font = page.locator('[data-slot="select-trigger"]').first();
@@ -83,7 +83,7 @@ test("moves from the editor font to the font size slider on the next Tab", async
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
 
   const font = page.getByRole("button", { name: "Font family" });
@@ -96,7 +96,7 @@ test("moves from the editor font to the font size slider on the next Tab", async
 test("exposes WebContainer recovery actions in runtime settings", async ({ page }) => {
   await page.goto(`/room/e2e-runtime-actions-${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Runtime" }).click();
   await expect(page.getByRole("button", { name: "Restart preview runtime" })).toBeVisible();
   await expect(
@@ -123,7 +123,7 @@ test("returns focus after settings opened by its button", async ({ page }) => {
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Close settings" }).click();
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.className))

@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { buildEditorTabViewModels } from "../lib/editor-tab-model";
 import { FileTypeIcon } from "../lib/file-icon";
@@ -14,8 +15,13 @@ export function EditorFileTabs({
   onCloseTab: (path: string) => void;
 }) {
   const { t } = useTranslation();
+  const activePath = tabViewModels.find((tab) => tab.active)?.file.path;
+  const [focusedPath, setFocusedPath] = useState<string>();
+  const tabStopPath = tabViewModels.some((tab) => tab.file.path === focusedPath)
+    ? focusedPath
+    : activePath;
   return (
-    <EditorTabs label={t("editor.openFiles")}>
+    <EditorTabs label={t("editor.openFiles")} activeValue={activePath}>
       {tabViewModels.map(({ file: tab, label, active, collaboratorCount }) => {
         return (
           <div
@@ -31,6 +37,15 @@ export function EditorFileTabs({
               type="button"
               role="tab"
               aria-selected={active}
+              tabIndex={tab.path === tabStopPath ? 0 : -1}
+              onFocus={() => setFocusedPath(tab.path)}
+              onBlur={(event) => {
+                if (
+                  !event.currentTarget.closest('[role="tablist"]')?.contains(event.relatedTarget)
+                ) {
+                  setFocusedPath(undefined);
+                }
+              }}
               aria-label={
                 collaboratorCount > 0
                   ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`

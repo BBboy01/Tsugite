@@ -1,9 +1,10 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 import { Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { EditorPane } from "./components/editor-pane";
-import { FileTree } from "./components/file-tree";
+import { FileTree, type FileTreeTarget } from "./components/file-tree";
+import { FileDeletionControl } from "./components/file-deletion-control";
 import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
 import { WorkspaceLayout } from "./components/workspace-layout";
@@ -12,9 +13,14 @@ import { CommandPalette } from "./components/command-palette";
 import { dispatchRuntimeAction } from "./lib/runtime-actions";
 import { isDarkWorkspaceTheme } from "./lib/workspace-theme";
 import { useWorkspaceController } from "./lib/use-workspace-controller";
+import type { EditorLocation } from "./lib/editor-navigation";
+import { useRoomDrafts } from "./lib/use-room-drafts";
+import { RoomDraftRecovery } from "./components/room-draft-recovery";
 
 export function AppShell({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
+  const [requestedLocation, setRequestedLocation] = useState<EditorLocation>();
+  const [deleteTarget, setDeleteTarget] = useState<FileTreeTarget>(null);
   const {
     client,
     settings,
@@ -56,6 +62,7 @@ export function AppShell({ roomId }: { roomId: string }) {
     handleCursorChange,
     handleEditorFocusReady,
   } = useWorkspaceController(roomId);
+  const { state: draftState, session: draftSession } = useRoomDrafts(client);
 
   return (
     <Theme
@@ -79,10 +86,18 @@ export function AppShell({ roomId }: { roomId: string }) {
           members={client.members}
           status={client.status}
           syncError={client.syncError}
+          hasPendingChanges={client.hasPendingChanges}
+          draftBackup={draftState.backup}
           followingUserId={followingUserId}
           onFollowMember={handleFollowMember}
           onOpenFiles={() => toggleMobilePanel("files")}
           onOpenPreview={() => toggleMobilePanel("preview")}
+        />
+        <RoomDraftRecovery
+          state={draftState}
+          session={draftSession}
+          theme={settings.theme}
+          onClose={() => editorFocusRef.current?.()}
         />
         <CommandPalette
           open={commandPaletteOpen}
@@ -105,6 +120,13 @@ export function AppShell({ roomId }: { roomId: string }) {
               );
           }}
         />
+        <FileDeletionControl
+          target={deleteTarget}
+          files={files}
+          theme={settings.theme}
+          onClose={() => setDeleteTarget(null)}
+          onDelete={handleDelete}
+        />
 
         <WorkspaceLayout
           files={
@@ -123,7 +145,7 @@ export function AppShell({ roomId }: { roomId: string }) {
                 onCreateFolder={handleAddFolder}
                 onRename={handleRename}
                 onCopy={handleCopy}
-                onDelete={handleDelete}
+                onDelete={setDeleteTarget}
                 currentUser={client.identity}
                 onDisplayNameChange={handleDisplayNameChange}
                 onColorChange={handleColorChange}
@@ -167,6 +189,8 @@ export function AppShell({ roomId }: { roomId: string }) {
                   remoteMembers={client.members}
                   currentUserId={client.identity.userId}
                   onEditorFocusReady={handleEditorFocusReady}
+                  requestedLocation={requestedLocation}
+                  onLocationHandled={() => setRequestedLocation(undefined)}
                 />
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center font-iris-mono text-xs leading-6 text-iris-muted">
@@ -185,6 +209,13 @@ export function AppShell({ roomId }: { roomId: string }) {
                   files={files}
                   folders={folders}
                   settings={settings}
+                  onNavigateToSource={(location) => {
+                    const file = files.find((item) => item.path === location.path);
+                    if (file?.text.toString() !== location.source) return;
+                    setRequestedLocation({ ...location });
+                    activateFile(location.path);
+                    setMobilePanel(null);
+                  }}
                 />
               ) : (
                 <div className="grid min-h-0 flex-1 place-items-center font-iris-mono text-xs leading-6 text-iris-muted">

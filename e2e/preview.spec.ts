@@ -48,7 +48,7 @@ test("keeps the runtime action focused while restarting the preview", async ({ p
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Runtime" }).click();
 
   const restart = page.getByRole("button", { name: "Restart preview runtime" });
@@ -69,7 +69,7 @@ test("restores the preview after either runtime recovery action", async ({ page 
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
   await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
 
-  await page.getByRole("button", { name: "Open shared settings" }).click();
+  await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Runtime" }).click();
 
   const restart = page.getByRole("button", { name: "Restart preview runtime" });

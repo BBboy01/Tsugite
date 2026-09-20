@@ -2,14 +2,21 @@ import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Switch } from "@radix-ui/themes";
 import { dispatchRuntimeAction, RUNTIME_ACTIONS, type RuntimeAction } from "../lib/runtime-actions";
+import { SettingSharingLabel } from "./setting-sharing-label";
 
-export function RuntimeActions({ t }: { t: (key: string) => string }) {
+export function RuntimeActions({
+  t,
+  actions,
+}: {
+  t: (key: string) => string;
+  actions?: readonly RuntimeAction[];
+}) {
   const [pending, setPending] = useState<RuntimeAction | undefined>();
 
   useEffect(() => {
     const handleComplete = (event: Event) => {
       const detail = (event as CustomEvent<{ action?: RuntimeAction }>).detail;
-      if (detail.action === pending) setPending(undefined);
+      if (detail?.action === pending) setPending(undefined);
     };
     window.addEventListener("iris:runtime-action-complete", handleComplete);
     return () => window.removeEventListener("iris:runtime-action-complete", handleComplete);
@@ -24,13 +31,15 @@ export function RuntimeActions({ t }: { t: (key: string) => string }) {
 
   return (
     <div className="grid gap-2 border-t border-iris-divider pt-3">
-      {RUNTIME_ACTIONS.map((action) => (
+      {RUNTIME_ACTIONS.filter((action) => !actions || actions.includes(action.id)).map((action) => (
         <button
           data-setting-id={action.id === "restart" ? "runtimeRestart" : "runtimeReinstall"}
           className="flex min-h-9 items-center justify-center gap-2 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-[10px] text-iris-strong transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] disabled:cursor-wait disabled:opacity-55"
           key={action.id}
           type="button"
           disabled={Boolean(pending) && pending !== action.id}
+          aria-disabled={Boolean(pending)}
+          aria-busy={pending === action.id}
           aria-label={t(action.labelKey)}
           title={t(action.labelKey)}
           onClick={(event) => run(action.id, event.currentTarget)}
@@ -65,9 +74,13 @@ export function SettingSelect({
       data-setting-id={settingId}
       className="flex min-w-0 items-center justify-between gap-4 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
     >
-      <span className="shrink-0">{label}</span>
+      <span className="shrink-0">
+        {label}
+        <SettingSharingLabel settingId={settingId} />
+      </span>
       <span className="relative min-w-0 flex-1">
         <select
+          aria-label={label}
           className="w-full appearance-none rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 pr-10 text-base normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_72%,white)] focus-visible:outline-offset-2 min-[760px]:text-xs"
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -105,6 +118,7 @@ export function SettingSwitch({
     >
       <div className="min-w-0">
         <p className="m-0 font-iris-mono text-xs text-iris-strong">{label}</p>
+        <SettingSharingLabel settingId={settingId} />
         <p className="m-[4px_0_0] font-iris-mono text-[10px] leading-[1.4] text-iris-muted">
           {description}
         </p>
