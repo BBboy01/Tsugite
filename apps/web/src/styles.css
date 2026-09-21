@@ -571,21 +571,6 @@
   backdrop-filter: blur(8px) saturate(1.1);
 }
 
-.settings-overlay {
-  -webkit-backdrop-filter: blur(4px) saturate(1.05);
-  backdrop-filter: blur(4px) saturate(1.05);
-}
-
-.settings-sidebar-glass {
-  border-color: color-mix(in srgb, var(--glass-border) 56%, transparent);
-  background-color: color-mix(in srgb, var(--glass-chrome) 86%, transparent);
-  -webkit-backdrop-filter: saturate(1.3) blur(24px);
-  backdrop-filter: saturate(1.3) blur(24px);
-  box-shadow:
-    inset -1px 0 color-mix(in srgb, var(--glass-border) 46%, transparent),
-    inset 0 1px color-mix(in srgb, white 18%, transparent);
-}
-
 .settings-dialog-theme
   :is(button, input, select, [role="radio"], [role="slider"], [role="switch"]):focus-visible {
   outline: 2px solid color-mix(in srgb, var(--accent) 72%, white);
@@ -600,12 +585,6 @@
   .glass-popover,
   .glass-dialog,
   .glass-console {
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-  }
-
-  .settings-sidebar-glass,
-  .settings-overlay {
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
   }

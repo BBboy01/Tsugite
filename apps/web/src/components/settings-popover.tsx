@@ -101,9 +101,9 @@ export function SettingsPopover({
           scaling="100%"
           className={SETTINGS_DIALOG_THEME_CLASS_NAME}
         >
-          <Dialog.Overlay className="glass-overlay settings-overlay fixed inset-0 z-50" />
+          <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
           <Dialog.Content
-            className={`theme-${settings.theme} glass-dialog fixed left-1/2 top-1/2 z-50 grid h-[min(78vh,560px)] w-[min(92vw,760px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[180px_minmax(0,1fr)] overflow-visible rounded-[14px] border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_24px_70px_rgba(38,49,41,0.22)] focus:outline-none max-[760px]:h-[min(86vh,680px)] max-[760px]:w-[min(94vw,560px)] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[auto_minmax(0,1fr)]`}
+            className={`theme-${settings.theme} fixed left-1/2 top-1/2 z-50 grid h-[min(78vh,560px)] w-[min(92vw,760px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[180px_minmax(0,1fr)] overflow-visible rounded-[14px] border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_24px_70px_rgba(38,49,41,0.22)] focus:outline-none max-[760px]:h-[min(86vh,680px)] max-[760px]:w-[min(94vw,560px)] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[auto_minmax(0,1fr)]`}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
               requestAnimationFrame(() => sidebarEntryRefs.current.get(activeEntryId)?.focus());
@@ -112,7 +112,7 @@ export function SettingsPopover({
               if (returnFocusRef.current) event.preventDefault();
             }}
           >
-            <aside className="settings-sidebar-glass flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:overflow-y-auto max-[760px]:border-b max-[760px]:border-r-0">
+            <aside className="flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider bg-iris-rail p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:overflow-y-auto max-[760px]:border-b max-[760px]:border-r-0">
               <div className="mb-4 px-2 max-[760px]:mb-3">
                 <p className="m-0 font-iris-mono text-[9px] uppercase tracking-[0.13em] text-iris-muted">
                   {t("settings.title")}

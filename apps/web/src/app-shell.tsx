@@ -3,7 +3,7 @@ import { Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import { EditorPane } from "./components/editor-pane";
-import { FileTree, type FileTreeTarget } from "./components/file-tree";
+import { FileTree } from "./components/file-tree";
 import { FileDeletionControl } from "./components/file-deletion-control";
 import { GlobalHeader } from "./components/global-header";
 import { PreviewPane } from "./components/preview-pane";
@@ -16,11 +16,13 @@ import { useWorkspaceController } from "./lib/use-workspace-controller";
 import type { EditorLocation } from "./lib/editor-navigation";
 import { useRoomDrafts } from "./lib/use-room-drafts";
 import { RoomDraftRecovery } from "./components/room-draft-recovery";
+import type { FileDeletionRecovery } from "./lib/file-deletion-recovery";
+import type { ProjectSettings, WorkspaceTheme } from "@iris/shared";
 
 export function AppShell({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
   const [requestedLocation, setRequestedLocation] = useState<EditorLocation>();
-  const [deleteTarget, setDeleteTarget] = useState<FileTreeTarget>(null);
+  const [deletionRecovery, setDeletionRecovery] = useState<FileDeletionRecovery>();
   const {
     client,
     settings,
@@ -63,19 +65,28 @@ export function AppShell({ roomId }: { roomId: string }) {
     handleEditorFocusReady,
   } = useWorkspaceController(roomId);
   const { state: draftState, session: draftSession } = useRoomDrafts(client);
+  const [themePreview, setThemePreview] = useState<WorkspaceTheme | null>(null);
+  const visualSettings = themePreview ? { ...settings, theme: themePreview } : settings;
+  const handlePaletteSettingChange = <K extends keyof ProjectSettings>(
+    key: K,
+    value: ProjectSettings[K],
+  ) => {
+    if (key === "theme") setThemePreview(null);
+    updateSharedSetting(key, value);
+  };
 
   return (
     <Theme
       asChild
-      appearance={isDarkWorkspaceTheme(settings.theme) ? "dark" : "light"}
+      appearance={isDarkWorkspaceTheme(visualSettings.theme) ? "dark" : "light"}
       accentColor="blue"
       grayColor="gray"
       radius="medium"
       scaling="100%"
     >
       <motion.main
-        className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas pb-1 max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${settings.theme}`}
-        style={{ "--code-font": `'${settings.fontFamily}'` } as CSSProperties}
+        className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas pb-1 max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${visualSettings.theme}`}
+        style={{ "--code-font": `'${visualSettings.fontFamily}'` } as CSSProperties}
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.24, ease: "easeOut" }}
@@ -96,15 +107,17 @@ export function AppShell({ roomId }: { roomId: string }) {
         <RoomDraftRecovery
           state={draftState}
           session={draftSession}
-          theme={settings.theme}
+          theme={visualSettings.theme}
           onClose={() => editorFocusRef.current?.()}
         />
         <CommandPalette
           open={commandPaletteOpen}
           settings={settings}
+          previewTheme={themePreview}
           vimMode={vimMode}
           onOpenChange={setCommandPaletteOpen}
-          onSettingChange={updateSharedSetting}
+          onSettingChange={handlePaletteSettingChange}
+          onThemePreview={setThemePreview}
           onVimModeChange={updateVimMode}
           onRuntimeAction={dispatchRuntimeAction}
           onLanguageChange={updateLanguage}
@@ -121,11 +134,9 @@ export function AppShell({ roomId }: { roomId: string }) {
           }}
         />
         <FileDeletionControl
-          target={deleteTarget}
-          files={files}
-          theme={settings.theme}
-          onClose={() => setDeleteTarget(null)}
-          onDelete={handleDelete}
+          recovery={deletionRecovery}
+          theme={visualSettings.theme}
+          onClose={() => setDeletionRecovery(undefined)}
         />
 
         <WorkspaceLayout
@@ -145,11 +156,14 @@ export function AppShell({ roomId }: { roomId: string }) {
                 onCreateFolder={handleAddFolder}
                 onRename={handleRename}
                 onCopy={handleCopy}
-                onDelete={setDeleteTarget}
+                onDelete={(target) => {
+                  const recovery = handleDelete(target);
+                  if (recovery) setDeletionRecovery(recovery);
+                }}
                 currentUser={client.identity}
                 onDisplayNameChange={handleDisplayNameChange}
                 onColorChange={handleColorChange}
-                settings={settings}
+                settings={visualSettings}
                 onSettingChange={updateSharedSetting}
                 vimMode={vimMode}
                 onVimModeChange={updateVimMode}
@@ -160,7 +174,7 @@ export function AppShell({ roomId }: { roomId: string }) {
               <FileFuzzySearchDialog
                 open={fileSearchOpen}
                 files={files}
-                theme={settings.theme}
+                theme={visualSettings.theme}
                 onOpenChange={(open) => {
                   focusEditorWhenReadyRef.current = !open;
                   if (open) focusInitialEditorRef.current = false;
@@ -178,7 +192,7 @@ export function AppShell({ roomId }: { roomId: string }) {
                   file={selectedFile}
                   files={files}
                   tabs={openFiles}
-                  settings={settings}
+                  settings={visualSettings}
                   vimMode={vimMode}
                   onSelectTab={activateFile}
                   onCloseTab={handleCloseTab}
@@ -208,7 +222,7 @@ export function AppShell({ roomId }: { roomId: string }) {
                   file={previewFile}
                   files={files}
                   folders={folders}
-                  settings={settings}
+                  settings={visualSettings}
                   onNavigateToSource={(location) => {
                     const file = files.find((item) => item.path === location.path);
                     if (file?.text.toString() !== location.source) return;

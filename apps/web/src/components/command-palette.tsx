@@ -25,10 +25,12 @@ import { useSystemClipboard } from "../lib/use-system-clipboard";
 type CommandPaletteProps = {
   open: boolean;
   settings: ProjectSettings;
+  previewTheme: WorkspaceTheme | null;
   vimMode: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (command: CommandId) => void;
   onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  onThemePreview: (theme: WorkspaceTheme | null) => void;
   onVimModeChange: (enabled: boolean) => void;
   onRuntimeAction: (action: RuntimeAction) => void;
   onLanguageChange: (language: LanguageCode) => void;
@@ -39,10 +41,12 @@ type CommandPaletteProps = {
 export function CommandPalette({
   open,
   settings,
+  previewTheme,
   vimMode,
   onOpenChange,
   onSelect,
   onSettingChange,
+  onThemePreview,
   onVimModeChange,
   onRuntimeAction,
   onLanguageChange,
@@ -56,7 +60,8 @@ export function CommandPalette({
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [submenu, setSubmenu] = useState<Submenu | null>(null);
-  const isDark = isDarkWorkspaceTheme(settings.theme);
+  const visualTheme = previewTheme ?? settings.theme;
+  const isDark = isDarkWorkspaceTheme(visualTheme);
 
   const rootCommands = getRootCommands(settings, vimMode, systemClipboard, t, keymap);
   const submenuLabel = submenu ? getSubmenuLabel(submenu, t) : null;
@@ -72,17 +77,25 @@ export function CommandPalette({
     }
 
     shouldReturnFocusRef.current = true;
+    onThemePreview(null);
     setQuery("");
     setSelectedIndex(0);
     setSubmenu(null);
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [open]);
+  }, [onThemePreview, open]);
 
   useEffect(() => {
     setSelectedIndex((index) => Math.min(index, Math.max(commands.length - 1, 0)));
   }, [commands.length]);
 
+  const selectedCommand = commands[selectedIndex];
+  useEffect(() => {
+    if (!open || submenu !== "theme") return;
+    onThemePreview((selectedCommand?.id as WorkspaceTheme | undefined) ?? settings.theme);
+  }, [onThemePreview, open, selectedCommand?.id, settings.theme, submenu]);
+
   const returnToRoot = () => {
+    if (submenu === "theme") onThemePreview(null);
     setQuery("");
     setSelectedIndex(0);
     setSubmenu(null);
@@ -91,7 +104,9 @@ export function CommandPalette({
 
   const openSubmenu = (nextSubmenu: Submenu) => {
     setQuery("");
-    setSelectedIndex(0);
+    const nextCommands = getSubmenuCommands(nextSubmenu, settings, t);
+    const currentIndex = nextCommands.findIndex((command) => command.selected);
+    setSelectedIndex(currentIndex >= 0 ? currentIndex : 0);
     setSubmenu(nextSubmenu);
     requestAnimationFrame(() => inputRef.current?.focus());
   };
@@ -103,6 +118,7 @@ export function CommandPalette({
   };
 
   const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) onThemePreview(null);
     onOpenChange(nextOpen);
     if (!nextOpen && shouldReturnFocusRef.current) {
       requestAnimationFrame(() => requestAnimationFrame(onCloseAutoFocus));
@@ -119,6 +135,7 @@ export function CommandPalette({
     }
     if (submenu === "theme") {
       onSettingChange("theme", command.id as WorkspaceTheme);
+      onThemePreview(null);
       closePalette();
       return;
     }
@@ -210,12 +227,12 @@ export function CommandPalette({
           hasBackground={false}
           radius="medium"
           scaling="100%"
-          className={`theme-${settings.theme}`}
+          className={`theme-${visualTheme}`}
         >
-          <Dialog.Overlay className="glass-overlay fixed inset-0 z-50 bg-black/30 backdrop-blur-[1px]" />
+          <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
           <Dialog.Content
             aria-describedby={undefined}
-            className="glass-dialog fixed left-1/2 top-[18%] z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--surface)] text-iris-ink shadow-2xl outline-none"
+            className="fixed left-1/2 top-[18%] z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-iris-divider bg-iris-canvas text-iris-ink shadow-2xl outline-none"
             onCloseAutoFocus={(event) => {
               event.preventDefault();
             }}
@@ -296,6 +313,7 @@ export function CommandPalette({
               commands={commands}
               selectedIndex={selectedIndex}
               query={query}
+              onHighlight={setSelectedIndex}
               onSelect={activate}
             />
           </Dialog.Content>

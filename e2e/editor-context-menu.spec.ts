@@ -136,8 +136,9 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
 test("navigates to an unopened workspace file and exact target position", async ({ page }) => {
   await page.locator('[data-context-path="src"]').first().click({ button: "right" });
   await page.getByRole("menuitem", { name: "New file", exact: true }).click();
-  await page.getByLabel("Path", { exact: true }).fill("src/value.ts");
-  await page.getByRole("button", { name: "Create", exact: true }).click();
+  const pathInput = page.getByLabel("Path", { exact: true });
+  await pathInput.fill("src/value.ts");
+  await pathInput.press("Enter");
   await replaceCode(page, "// definition\n\nexport const answer = 42;");
   await page.getByRole("tab", { name: "src/App.tsx", exact: true }).click();
   await replaceCode(page, "import { answer } from './value';\nconsole.log(answer);");
