@@ -22,7 +22,7 @@ test("dismisses file search and command palette by clicking the backdrop", async
   await page.keyboard.press("ControlOrMeta+P");
   await expect(page.getByPlaceholder("Search files...")).toBeVisible();
   await page
-    .locator(".glass-overlay")
+    .locator("[data-dialog-overlay]")
     .last()
     .click({ position: { x: 4, y: 4 } });
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -30,7 +30,7 @@ test("dismisses file search and command palette by clicking the backdrop", async
   await page.keyboard.press("ControlOrMeta+K");
   await expect(page.getByRole("dialog")).toBeVisible();
   await page
-    .locator(".glass-overlay")
+    .locator("[data-dialog-overlay]")
     .last()
     .click({ position: { x: 4, y: 4 } });
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -47,6 +47,68 @@ test("changes the workspace language from the command palette", async ({ page })
   await page.getByRole("button", { name: "简体中文" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect.poll(() => page.evaluate(() => localStorage.getItem("iris.language"))).toBe("zh-CN");
+});
+
+test("previews themes on highlight and restores the committed theme on escape", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-command-palette-theme-preview-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-status="live"]').first()).toBeVisible({ timeout: 15_000 });
+  const main = page.locator("main");
+  await page.locator(".cm-content").focus();
+  await page.keyboard.press("ControlOrMeta+K");
+  await page.waitForTimeout(500);
+  const committedThemeClass = await main.getAttribute("class");
+  const committedTheme = committedThemeClass?.match(/theme-[\w-]+/)?.[0];
+  expect(committedTheme).toBeTruthy();
+  await page.getByRole("button", { name: "Choose theme" }).click();
+  const committedThemeOption = page
+    .getByRole("dialog")
+    .getByRole("button")
+    .filter({ has: page.locator("svg.lucide-check") });
+  await expect(committedThemeOption).toHaveCount(1);
+  const committedThemeLabel = await committedThemeOption.textContent();
+  await page.getByRole("button", { name: "Dracula" }).hover();
+  await expect(committedThemeOption).toHaveText(committedThemeLabel ?? "");
+  await expect(main).toHaveClass(/theme-dracula/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("button", { name: "Choose theme" })).toBeVisible();
+  await expect(main).toHaveClass(new RegExp(committedTheme as string));
+
+  await page.getByRole("button", { name: "Choose theme" }).click();
+  await page.getByRole("button", { name: "Dracula" }).click();
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await expect(main).toHaveClass(/theme-dracula/);
+});
+
+test("uses opaque dialog surfaces for transient search and command dialogs", async ({ page }) => {
+  await page.goto(`/room/e2e-dialog-surfaces-${Date.now()}`, { waitUntil: "domcontentloaded" });
+  await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await page.locator(".cm-content").focus();
+
+  await page.keyboard.press("ControlOrMeta+P");
+  const fileSearch = page.getByRole("dialog");
+  await expect(fileSearch).toBeVisible();
+  await expect(fileSearch).not.toHaveClass(/glass-dialog/);
+  await expect(fileSearch).toHaveCSS("backdrop-filter", "none");
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("ControlOrMeta+K");
+  const commandPalette = page.getByRole("dialog");
+  await expect(commandPalette).toBeVisible();
+  await expect(commandPalette).not.toHaveClass(/glass-dialog/);
+  await expect(commandPalette).toHaveCSS("backdrop-filter", "none");
+  await expect(commandPalette).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await page.keyboard.press("Escape");
+
+  await page.keyboard.press("ControlOrMeta+,");
+  const settings = page.getByRole("dialog");
+  await expect(settings).toBeVisible();
+  await expect(settings).not.toHaveClass(/glass-dialog/);
+  await expect(settings).toHaveCSS("backdrop-filter", "none");
 });
 
 test("opens the command palette and exposes extensible keymap actions", async ({ page }) => {
@@ -231,7 +293,7 @@ test("returns focus to the editor when the command palette is dismissed", async 
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await page.locator(".glass-overlay").click({ position: { x: 12, y: 12 } });
+  await page.locator("[data-dialog-overlay]").click({ position: { x: 12, y: 12 } });
   await expect(dialog).toBeHidden();
   await expect
     .poll(() =>

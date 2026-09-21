@@ -9,9 +9,16 @@ type Props = {
   selectedIndex: number;
   query: string;
   onSelect: (command: PaletteCommand) => void;
+  onHighlight: (index: number) => void;
 };
 
-export function CommandPaletteResults({ commands, selectedIndex, query, onSelect }: Props) {
+export function CommandPaletteResults({
+  commands,
+  selectedIndex,
+  query,
+  onSelect,
+  onHighlight,
+}: Props) {
   const { t } = useTranslation();
   const { commandListRef, registerCommand } = useCommandPaletteSelectionScroll(
     commands,
@@ -36,6 +43,8 @@ export function CommandPaletteResults({ commands, selectedIndex, query, onSelect
                   ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--foreground)]"
                   : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
               }`}
+              onMouseMove={() => onHighlight(index)}
+              onFocus={() => onHighlight(index)}
               onClick={() => onSelect(command)}
             >
               <Icon size={16} aria-hidden="true" className="shrink-0" />

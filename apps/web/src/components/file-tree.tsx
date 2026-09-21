@@ -2,15 +2,19 @@ import * as ContextMenu from "@radix-ui/react-context-menu";
 import { Copy, FilePlus2, Pencil, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useState, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import type { ProjectFile, ProjectSettings } from "@iris/shared";
 
 import { buildFileTree, folderAncestors } from "../lib/file-tree-model";
-import { resolveDialogPath } from "../lib/file-tree-path";
+import {
+  getInlineEditDefaultValue,
+  getInlineEditDirectory,
+  resolveInlineEdit,
+  type InlineEditMode,
+} from "../lib/file-tree-edit-model";
 import { CurrentUserCard } from "./current-user-card";
-import { FileTreeNodes } from "./file-tree-node";
-import { FileTreeDialog, type FileDialogMode } from "./file-tree-dialog";
+import { FileTreeNodes, type InlineEditState } from "./file-tree-node";
 import { SettingsPopover } from "./settings-popover";
 import type { KeyBinding } from "../lib/keymap";
 import type { LanguageCode } from "../lib/i18n";
@@ -20,12 +24,7 @@ export type FileTreeTarget =
   | { type: "folder"; path: string }
   | null;
 
-export function getDialogDirectory(target: FileTreeTarget): string {
-  if (!target) return "";
-  return target.type === "folder"
-    ? target.path
-    : target.file.path.split("/").slice(0, -1).join("/");
-}
+export type FileTreeDeleteTarget = Exclude<FileTreeTarget, null> & { anchorRect: DOMRect };
 
 type FileTreeProps = {
   files: ProjectFile[];
@@ -75,10 +74,10 @@ export function FileTree({
 }: FileTreeProps) {
   const { t } = useTranslation();
   const [contextTarget, setContextTarget] = useState<FileTreeTarget>(null);
-  const [dialogMode, setDialogMode] = useState<FileDialogMode | null>(null);
-  const [dialogDefaultPath, setDialogDefaultPath] = useState("");
-  const [dialogError, setDialogError] = useState<string>();
-  const [dialogTarget, setDialogTarget] = useState<FileTreeTarget>(null);
+  const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<FileTreeDeleteTarget | null>(null);
+  const deleteItemRef = useRef<HTMLDivElement>(null);
+  const pendingMenuAction = useRef<(() => void) | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
   const tree = useMemo(() => buildFileTree(files, folders), [files, folders]);
 
@@ -114,41 +113,59 @@ export function FileTree({
     setContextTarget(null);
   };
 
-  const openPathDialog = (mode: FileDialogMode, target: FileTreeTarget) => {
-    const targetPath = target ? (target.type === "file" ? target.file.path : target.path) : "";
-    const directory = getDialogDirectory(target);
-    const defaultPath =
-      mode === "create-file"
-        ? `${directory ? `${directory}/` : ""}new-${files.length + 1}.ts`
-        : mode === "create-folder"
-          ? `${directory ? `${directory}/` : ""}new-folder`
-          : targetPath;
-    setDialogError(undefined);
-    setDialogDefaultPath(defaultPath);
-    setDialogTarget(target);
-    setDialogMode(mode);
+  const startInlineEdit = (mode: InlineEditMode, target: FileTreeTarget) => {
+    const inlineTarget = target
+      ? target.type === "file"
+        ? { type: "file" as const, path: target.file.path }
+        : { type: "folder" as const, path: target.path }
+      : null;
+    const nextInlineEdit: InlineEditState = {
+      mode,
+      target,
+      directory: getInlineEditDirectory(inlineTarget, mode),
+      value: getInlineEditDefaultValue(mode, inlineTarget, files.length),
+    };
+    setDeleteTarget(null);
+    pendingMenuAction.current = () => {
+      setInlineEdit(nextInlineEdit);
+      if (mode.startsWith("create") && target?.type === "folder") {
+        setCollapsedFolders((current) => {
+          if (!current.has(target.path)) return current;
+          const next = new Set(current);
+          next.delete(target.path);
+          return next;
+        });
+      }
+    };
   };
 
-  const handleDialogSubmit = (path: string) => {
-    if (!dialogMode) return;
-    const target = dialogTarget;
-    const directory = getDialogDirectory(target);
-    const resolvedPath = resolveDialogPath(dialogMode, directory, path);
-    const result =
-      dialogMode === "create-file"
-        ? onCreateFile(target, resolvedPath)
-        : dialogMode === "create-folder"
-          ? onCreateFolder(target, resolvedPath)
-          : target
-            ? onRename(target, resolvedPath)
-            : "Select an item to rename";
-    if (result) {
-      setDialogError(result);
+  const handleInlineSubmit = () => {
+    if (!inlineEdit) return;
+    const resolved = resolveInlineEdit(inlineEdit.mode, inlineEdit.directory, inlineEdit.value);
+    if (resolved.status === "cancel") {
+      setInlineEdit(null);
       return;
     }
-    setDialogMode(null);
-    setDialogTarget(null);
-    setDialogError(undefined);
+    if (resolved.status === "invalid") {
+      setInlineEdit((current) =>
+        current ? { ...current, error: t("dialog.pathRequired") } : null,
+      );
+      return;
+    }
+    const target = inlineEdit.target;
+    const result =
+      inlineEdit.mode === "create-file"
+        ? onCreateFile(target, resolved.path)
+        : inlineEdit.mode === "create-folder"
+          ? onCreateFolder(target, resolved.path)
+          : target
+            ? onRename(target, resolved.path)
+            : "Select an item to rename";
+    if (result) {
+      setInlineEdit((current) => (current ? { ...current, error: result } : null));
+      return;
+    }
+    setInlineEdit(null);
   };
 
   const toggleFolder = (path: string) => {
@@ -175,6 +192,7 @@ export function FileTree({
             <div className="min-h-0 flex-1 overflow-auto px-2.5 pb-5 pt-1">
               <FileTreeNodes
                 nodes={tree}
+                theme={settings.theme}
                 selectedPath={selectedPath}
                 collapsedFolders={collapsedFolders}
                 contextTarget={
@@ -184,8 +202,23 @@ export function FileTree({
                       : contextTarget
                     : null
                 }
+                inlineEdit={inlineEdit}
+                deleteTarget={deleteTarget}
                 onSelect={onSelect}
                 onToggleFolder={toggleFolder}
+                onInlineChange={(value) =>
+                  setInlineEdit((current) =>
+                    current ? { ...current, value, error: undefined } : null,
+                  )
+                }
+                onInlineSubmit={handleInlineSubmit}
+                onInlineCancel={() => setInlineEdit(null)}
+                onDeleteConfirm={() => {
+                  if (!deleteTarget) return;
+                  onDelete(deleteTarget);
+                  setDeleteTarget(null);
+                }}
+                onDeleteCancel={() => setDeleteTarget(null)}
               />
             </div>
 
@@ -213,18 +246,25 @@ export function FileTree({
 
         <ContextMenu.Portal>
           <ContextMenu.Content
+            onCloseAutoFocus={(event) => {
+              const action = pendingMenuAction.current;
+              pendingMenuAction.current = null;
+              if (!action) return;
+              event.preventDefault();
+              action();
+            }}
             className={`theme-${settings.theme} glass-popover z-40 min-w-[190px] rounded-[9px] border border-iris-divider bg-iris-preview p-1.5 font-iris-mono text-[11px] leading-[1.2] text-iris-ink shadow-[0_14px_30px_rgba(65,66,45,0.16)]`}
           >
             <ContextMenu.Item
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
-              onSelect={() => openPathDialog("create-file", contextTarget)}
+              onSelect={() => startInlineEdit("create-file", contextTarget)}
             >
               <FilePlus2 width="14" height="14" />
               {t("files.newFile")}
             </ContextMenu.Item>
             <ContextMenu.Item
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
-              onSelect={() => openPathDialog("create-folder", contextTarget)}
+              onSelect={() => startInlineEdit("create-folder", contextTarget)}
             >
               <Plus width="14" height="14" />
               {t("files.newFolder")}
@@ -235,7 +275,7 @@ export function FileTree({
               disabled={!contextTarget}
               onSelect={() =>
                 contextTarget &&
-                openPathDialog(
+                startInlineEdit(
                   contextTarget.type === "file" ? "rename-file" : "rename-folder",
                   contextTarget,
                 )
@@ -253,9 +293,18 @@ export function FileTree({
               {t("files.copy")}
             </ContextMenu.Item>
             <ContextMenu.Item
+              ref={deleteItemRef}
               className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 text-[#a55f5f] outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[highlighted]:bg-[rgba(165,95,95,0.1)]"
               disabled={!contextTarget}
-              onSelect={() => contextTarget && onDelete(contextTarget)}
+              onSelect={() => {
+                const anchorRect = deleteItemRef.current?.getBoundingClientRect();
+                if (!contextTarget || !anchorRect) return;
+                const target = { ...contextTarget, anchorRect };
+                pendingMenuAction.current = () => {
+                  setInlineEdit(null);
+                  setDeleteTarget(target);
+                };
+              }}
             >
               <Trash2 width="14" height="14" />
               {t("files.delete")}
@@ -263,20 +312,6 @@ export function FileTree({
           </ContextMenu.Content>
         </ContextMenu.Portal>
       </ContextMenu.Root>
-      <FileTreeDialog
-        mode={dialogMode}
-        defaultPath={dialogDefaultPath}
-        error={dialogError}
-        theme={settings.theme}
-        onOpenChange={(open) => {
-          if (!open) {
-            setDialogMode(null);
-            setDialogTarget(null);
-            setDialogError(undefined);
-          }
-        }}
-        onSubmit={handleDialogSubmit}
-      />
     </>
   );
 }
