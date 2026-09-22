@@ -1,4 +1,5 @@
 import { expect, test } from "bun:test";
+import { MAX_ROOM_UPDATE_BYTES } from "@iris/shared";
 import { LoroDoc } from "loro-crdt";
 import { RoomClient, type RoomSocket } from "./room-client";
 import { RoomDrafts } from "./room-drafts";
@@ -234,16 +235,35 @@ test("acknowledgements arriving during a checkpoint cannot leave a stale backup"
 test("oversized recovered edits stay local and retain a recoverable copy", async () => {
   const store = new MemoryStore();
   const first = setup(store);
+  const text = "recoverable offline text";
+  // Exercise the byte limit without benchmarking million-character text merges.
+  const payload = "x".repeat(MAX_ROOM_UPDATE_BYTES + 1);
   await first.drafts.start();
-  first.client.doc.getText("text").insert(0, "x".repeat(1_100_000));
+  first.client.doc.getText("text").insert(0, text);
+  first.client.doc.getMap("fixture").set("payload", payload);
   first.client.doc.commit();
+  expect(first.client.pendingUpdates).toHaveLength(1);
+  expect(first.client.pendingUpdates[0]!.byteLength).toBeGreaterThan(MAX_ROOM_UPDATE_BYTES);
   await first.drafts.dispose();
   const next = setup(store);
   await next.drafts.start();
   await next.drafts.restore();
   expect(next.client.syncError).toBeDefined();
   expect(next.client.status).toBe("offline");
-  expect(next.client.doc.getText("text").length).toBe(1_100_000);
+  expect(next.client.doc.getText("text").toString()).toBe(text);
+  expect(next.client.doc.getMap("fixture").get("payload")).toBe(payload);
+  expect(next.client.hasPendingChanges).toBe(true);
   expect(store.records.size).toBe(1);
   await next.drafts.dispose();
-}, 30_000);
+  const backup = [...store.records.values()][0]!;
+  expect(backup.updates).toHaveLength(1);
+  expect(backup.updates[0]!.byteLength).toBeGreaterThan(MAX_ROOM_UPDATE_BYTES);
+  const recovered = new LoroDoc();
+  try {
+    recovered.importBatch([backup.snapshot, ...backup.updates]);
+    expect(recovered.getText("text").toString()).toBe(text);
+    expect(recovered.getMap("fixture").get("payload")).toBe(payload);
+  } finally {
+    recovered.free();
+  }
+});
