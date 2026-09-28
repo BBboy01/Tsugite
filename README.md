@@ -20,7 +20,7 @@
   <img src="docs/assets/workspace.png" alt="Tsugite workspace with a shared file tree, code editor, and live preview" />
 </p>
 
-Tsugite is a collaborative code editor for small, shared rooms. Multiple people can edit the same project, follow each other's cursors, and see a live preview in the browser.
+Tsugite is a collaborative code editor for small, shared rooms. Multiple people can edit the same project, follow each other's cursor and selection, and see a live preview in their own browser.
 
 Each new room starts with a React, TypeScript, Vite, and Tailwind project. Loro CRDT synchronizes edits, and SQLite stores the room's files, folders, and shared settings. Each browser runs the project in WebContainer; the server never executes user project code.
 
@@ -39,9 +39,11 @@ The workspace keeps the file tree, editor, preview, output, and room presence in
 ## What it includes
 
 - Shared files, folders, workspace settings, cursors, and presence, with SQLite persistence for project data
-- CodeMirror 6 with Vim mode, relative line numbers, configurable cursors, fuzzy file search, Command Palette, and keymaps
-- TypeScript navigation, references, hover information, and inline Peek
-- Browser-local live previews with incremental file synchronization and runtime recovery actions
+- CodeMirror 6 with optional Vim mode, relative line numbers, configurable normal-mode cursors, and browser-local keymaps
+- Fuzzy file search, a searchable Command Palette, TypeScript navigation, references, hover information, and inline Peek
+- Browser-local live previews with incremental file synchronization, console output, and runtime recovery actions
+- Inline file and folder creation or rename, context-menu copy, and deletion with undo
+- Local recovery drafts for pending edits when IndexedDB and Web Locks are available
 - Anonymous room identities with editable display names and avatar colors
 - Docker Compose deployment with Caddy serving the web app and proxying WebSocket traffic
 
@@ -98,7 +100,7 @@ Use the [development guide](docs/development.md#verification) for scoped static 
 
 - Room access is based on the room URL; there is no authentication or authorization layer yet.
 - Deploy one room-server process. Live room state is not coordinated across replicas.
-- Snapshots normally reach SQLite within about 500 ms. The connection indicator is not a durable-save receipt, and unsent browser edits do not survive a page reload.
+- Room snapshots normally reach SQLite within about 500 ms. A server acknowledgement is not a durable-save receipt. Pending edits may be checkpointed locally and offered for recovery, but browser storage is best-effort and is not a backup guarantee.
 - Project dependencies and preview processes run independently in each collaborator's browser.
 - A project without a root `package.json` uses the single-file Babel iframe fallback instead of WebContainer.
 - See [resource limits and recovery](docs/deployment.md#resource-limits) before exposing a deployment to the internet.

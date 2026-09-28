@@ -14,6 +14,7 @@ From a repository checkout, the default stack contains two services:
 Build and start the stack:
 
 ```bash
+docker compose config
 docker compose up -d --build
 ```
 
@@ -40,7 +41,7 @@ TSUGITE_PORT=9090 docker compose up -d
 
 ## Published images
 
-GitHub Actions publishes images to GitHub Container Registry on pushes to `main` and version tags:
+The [Docker publishing workflow](../.github/workflows/docker-publish.yml) publishes images to GitHub Container Registry on pushes to `main` and version tags:
 
 ```text
 ghcr.io/<owner>/tsugite/web
@@ -102,7 +103,7 @@ The server runs checked-in Drizzle migrations on startup. The binary snapshot mi
 
 After binary snapshots have been written, reverting the application alone is not a safe rollback: older versions cannot read them. Restore the pre-upgrade volume together with the older image, or explicitly convert the binary rows first. Restoring a backup discards edits made after that backup.
 
-Upgrade the web and server images together and reload already-open editors. The bounded client outbox requires the server's `update:ack` message to release pending edits; mixed frontend/backend versions are not a supported rolling-upgrade path. Acknowledgements confirm in-memory acceptance, not a durable database commit. Pending client updates live in browser memory and do not survive closing or reloading the page.
+Upgrade the web and server images together and reload already-open editors. The bounded client outbox requires the server's `update:ack` message to release pending edits; mixed frontend/backend versions are not a supported rolling-upgrade path. Acknowledgements confirm in-memory acceptance, not a durable database commit. Unacknowledged updates are held in browser memory and may also be checkpointed to IndexedDB for explicit recovery when browser support and storage permit. The checkpoint is best-effort, can be lost, and is not a substitute for the server database backup described below.
 
 Collaboration broadcasts immediately; snapshots are coalesced on a 500 ms deadline. Last-member disconnect and SIGTERM/SIGINT trigger an immediate flush. Abrupt termination can lose recent unflushed edits; 500 ms is a normal-operation target, not a guarantee during database failures or a blocked process. Shutdown disables SQLite's per-attempt busy wait, retries persistence for up to five seconds and reports failure with a nonzero exit status. Give the container at least the default ten-second stop grace period.
 
