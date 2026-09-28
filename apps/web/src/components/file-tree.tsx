@@ -1,12 +1,11 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { Copy, FilePlus2, Pencil, Plus, Trash2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { memo, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 
 import type { ProjectFile, ProjectSettings } from "@iris/shared";
 
-import { buildFileTree, folderAncestors } from "../lib/file-tree-model";
+import { buildFileTree, folderAncestors, type FileTreeTarget } from "../lib/file-tree-model";
 import {
   getInlineEditDefaultValue,
   getInlineEditDirectory,
@@ -14,17 +13,12 @@ import {
   type InlineEditMode,
 } from "../lib/file-tree-edit-model";
 import { CurrentUserCard } from "./current-user-card";
-import { FileTreeNodes, type InlineEditState } from "./file-tree-node";
+import { FileTreeNodes } from "./file-tree-node";
+import { FileTreeContextMenu } from "./file-tree-context-menu";
+import type { FileTreeDeleteTarget, InlineEditState } from "./file-tree.types";
 import { SettingsPopover } from "./settings-popover";
 import type { KeyBinding } from "../lib/keymap";
 import type { LanguageCode } from "../lib/i18n";
-
-export type FileTreeTarget =
-  | { type: "file"; file: ProjectFile }
-  | { type: "folder"; path: string }
-  | null;
-
-export type FileTreeDeleteTarget = Exclude<FileTreeTarget, null> & { anchorRect: DOMRect };
 
 type FileTreeProps = {
   files: ProjectFile[];
@@ -36,10 +30,8 @@ type FileTreeProps = {
   onRename: (target: Exclude<FileTreeTarget, null>, path: string) => string | undefined;
   onCopy: (file: ProjectFile) => void;
   onDelete: (target: Exclude<FileTreeTarget, null>) => void;
-  currentUser: {
-    displayName: string;
-    color: string;
-  };
+  currentUserDisplayName: string;
+  currentUserColor: string;
   onDisplayNameChange: (value: string) => boolean;
   onColorChange: (value: string) => boolean;
   settings: ProjectSettings;
@@ -51,7 +43,7 @@ type FileTreeProps = {
   onLanguageChange: (language: LanguageCode) => void;
 };
 
-export function FileTree({
+export const FileTree = memo(function FileTree({
   files,
   folders,
   selectedPath,
@@ -61,7 +53,8 @@ export function FileTree({
   onRename,
   onCopy,
   onDelete,
-  currentUser,
+  currentUserDisplayName,
+  currentUserColor,
   onDisplayNameChange,
   onColorChange,
   settings,
@@ -76,7 +69,6 @@ export function FileTree({
   const [contextTarget, setContextTarget] = useState<FileTreeTarget>(null);
   const [inlineEdit, setInlineEdit] = useState<InlineEditState | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<FileTreeDeleteTarget | null>(null);
-  const deleteItemRef = useRef<HTMLDivElement>(null);
   const pendingMenuAction = useRef<(() => void) | null>(null);
   const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(() => new Set());
   const tree = useMemo(() => buildFileTree(files, folders), [files, folders]);
@@ -93,7 +85,7 @@ export function FileTree({
 
   const handleContextMenu = (event: MouseEvent<HTMLElement>) => {
     const target =
-      event.target instanceof HTMLElement
+      event.target instanceof Element
         ? event.target.closest<HTMLElement>("[data-context-kind]")
         : null;
     if (!target) {
@@ -189,44 +181,43 @@ export function FileTree({
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.2, ease: "easeOut" }}
           >
-            <div className="min-h-0 flex-1 overflow-auto px-2.5 pb-5 pt-1">
-              <FileTreeNodes
-                nodes={tree}
-                theme={settings.theme}
-                selectedPath={selectedPath}
-                collapsedFolders={collapsedFolders}
-                contextTarget={
-                  contextTarget
-                    ? contextTarget.type === "file"
-                      ? { type: "file", id: contextTarget.file.id }
-                      : contextTarget
-                    : null
-                }
-                inlineEdit={inlineEdit}
-                deleteTarget={deleteTarget}
-                onSelect={onSelect}
-                onToggleFolder={toggleFolder}
-                onInlineChange={(value) =>
-                  setInlineEdit((current) =>
-                    current ? { ...current, value, error: undefined } : null,
-                  )
-                }
-                onInlineSubmit={handleInlineSubmit}
-                onInlineCancel={() => setInlineEdit(null)}
-                onDeleteConfirm={() => {
-                  if (!deleteTarget) return;
-                  onDelete(deleteTarget);
-                  setDeleteTarget(null);
-                }}
-                onDeleteCancel={() => setDeleteTarget(null)}
-              />
-            </div>
+            <FileTreeNodes
+              nodes={tree}
+              theme={settings.theme}
+              selectedPath={selectedPath}
+              collapsedFolders={collapsedFolders}
+              contextTarget={
+                contextTarget
+                  ? contextTarget.type === "file"
+                    ? { type: "file", id: contextTarget.file.id }
+                    : contextTarget
+                  : null
+              }
+              inlineEdit={inlineEdit}
+              deleteTarget={deleteTarget}
+              label={t("files.projectFiles")}
+              onSelect={onSelect}
+              onToggleFolder={toggleFolder}
+              onInlineChange={(value) =>
+                setInlineEdit((current) =>
+                  current ? { ...current, value, error: undefined } : null,
+                )
+              }
+              onInlineSubmit={handleInlineSubmit}
+              onInlineCancel={() => setInlineEdit(null)}
+              onDeleteConfirm={() => {
+                if (!deleteTarget) return;
+                onDelete(deleteTarget);
+                setDeleteTarget(null);
+              }}
+              onDeleteCancel={() => setDeleteTarget(null)}
+            />
 
             <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-2">
               <div className="min-w-0 flex-1">
                 <CurrentUserCard
-                  displayName={currentUser.displayName}
-                  color={currentUser.color}
+                  displayName={currentUserDisplayName}
+                  color={currentUserColor}
                   onDisplayNameChange={onDisplayNameChange}
                   onColorChange={onColorChange}
                 />
@@ -244,74 +235,26 @@ export function FileTree({
           </motion.aside>
         </ContextMenu.Trigger>
 
-        <ContextMenu.Portal>
-          <ContextMenu.Content
-            onCloseAutoFocus={(event) => {
-              const action = pendingMenuAction.current;
-              pendingMenuAction.current = null;
-              if (!action) return;
-              event.preventDefault();
-              action();
-            }}
-            className={`theme-${settings.theme} glass-popover z-40 min-w-[190px] rounded-[9px] border border-iris-divider bg-iris-preview p-1.5 font-iris-mono text-[11px] leading-[1.2] text-iris-ink shadow-[0_14px_30px_rgba(65,66,45,0.16)]`}
-          >
-            <ContextMenu.Item
-              className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
-              onSelect={() => startInlineEdit("create-file", contextTarget)}
-            >
-              <FilePlus2 width="14" height="14" />
-              {t("files.newFile")}
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong"
-              onSelect={() => startInlineEdit("create-folder", contextTarget)}
-            >
-              <Plus width="14" height="14" />
-              {t("files.newFolder")}
-            </ContextMenu.Item>
-            <ContextMenu.Separator className="my-1 mx-1 h-px bg-iris-divider" />
-            <ContextMenu.Item
-              className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong data-[disabled]:pointer-events-none data-[disabled]:opacity-45"
-              disabled={!contextTarget}
-              onSelect={() =>
-                contextTarget &&
-                startInlineEdit(
-                  contextTarget.type === "file" ? "rename-file" : "rename-folder",
-                  contextTarget,
-                )
-              }
-            >
-              <Pencil width="14" height="14" />
-              {t("files.rename")}
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 outline-none data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_13%,transparent)] data-[highlighted]:text-iris-strong data-[disabled]:pointer-events-none data-[disabled]:opacity-45"
-              disabled={contextTarget?.type !== "file"}
-              onSelect={() => contextTarget?.type === "file" && onCopy(contextTarget.file)}
-            >
-              <Copy width="14" height="14" />
-              {t("files.copy")}
-            </ContextMenu.Item>
-            <ContextMenu.Item
-              ref={deleteItemRef}
-              className="flex cursor-default select-none items-center gap-2 rounded-md px-2 py-2 text-[#a55f5f] outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-45 data-[highlighted]:bg-[rgba(165,95,95,0.1)]"
-              disabled={!contextTarget}
-              onSelect={() => {
-                const anchorRect = deleteItemRef.current?.getBoundingClientRect();
-                if (!contextTarget || !anchorRect) return;
-                const target = { ...contextTarget, anchorRect };
-                pendingMenuAction.current = () => {
-                  setInlineEdit(null);
-                  setDeleteTarget(target);
-                };
-              }}
-            >
-              <Trash2 width="14" height="14" />
-              {t("files.delete")}
-            </ContextMenu.Item>
-          </ContextMenu.Content>
-        </ContextMenu.Portal>
+        <FileTreeContextMenu
+          theme={settings.theme}
+          target={contextTarget}
+          onStartEdit={startInlineEdit}
+          onCopy={onCopy}
+          onRequestDelete={(target) => {
+            pendingMenuAction.current = () => {
+              setInlineEdit(null);
+              setDeleteTarget(target);
+            };
+          }}
+          onCloseAutoFocus={(event) => {
+            const action = pendingMenuAction.current;
+            pendingMenuAction.current = null;
+            if (!action) return;
+            event.preventDefault();
+            action();
+          }}
+        />
       </ContextMenu.Root>
     </>
   );
-}
+});

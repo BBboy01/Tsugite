@@ -1,4 +1,4 @@
-import type { RoomClient } from "./room-client";
+import type { DraftSyncPort } from "./draft-sync-port";
 import { isRoomDraft, type RoomDraft, type RoomDraftStore } from "./room-draft-store";
 
 export type DraftState = {
@@ -26,10 +26,14 @@ export class RoomDrafts {
   private restored = new Set<string>();
 
   constructor(
-    private readonly client: RoomClient,
-    private readonly scope: string,
+    private readonly sync: DraftSyncPort,
     private readonly store: RoomDraftStore,
-  ) {}
+    scope = sync.draftScope,
+  ) {
+    this.scope = scope;
+  }
+
+  private readonly scope: string;
 
   subscribe(listener: () => void): () => void {
     this.listeners.add(listener);
@@ -41,7 +45,7 @@ export class RoomDrafts {
   }
 
   private async initialize(): Promise<void> {
-    this.unsubscribe = this.client.subscribe((event) => {
+    this.unsubscribe = this.sync.subscribeDraftSync((event) => {
       if (event.type === "outbox") this.schedule();
       if (event.type === "snapshot") void this.pruneConfirmed();
     });
@@ -67,7 +71,7 @@ export class RoomDrafts {
       this.ready = true;
       this.setState({ available: available.toSorted((a, b) => b.updatedAt - a.updatedAt) });
       await this.pruneConfirmed();
-      if (this.client.hasPendingChanges) this.schedule();
+      if (this.sync.hasPendingChanges) this.schedule();
     } catch {
       this.setState({ backup: "error", error: "storage" });
     }
@@ -77,7 +81,7 @@ export class RoomDrafts {
     if (this.disposed) return;
     this.dirty = true;
     if (this.ready) this.setState({ backup: "saving" });
-    if (this.ready && !this.client.hasPendingChanges) {
+    if (this.ready && !this.sync.hasPendingChanges) {
       void this.flush();
       return;
     }
@@ -105,19 +109,19 @@ export class RoomDrafts {
     try {
       while (this.dirty) {
         this.dirty = false;
-        const updates = [...this.client.pendingUpdates];
+        const updates = [...this.sync.pendingUpdates];
         if (updates.length) {
           await this.store.put({
             version: 1,
             id: this.id,
             scope: this.scope,
             updatedAt: Date.now(),
-            snapshot: this.client.doc.export({ mode: "snapshot" }),
+            snapshot: this.sync.doc.export({ mode: "snapshot" }),
             updates,
           });
         } else await this.store.remove(this.id);
       }
-      this.setState({ backup: this.client.hasPendingChanges ? "saved" : "idle", error: undefined });
+      this.setState({ backup: this.sync.hasPendingChanges ? "saved" : "idle", error: undefined });
       return true;
     } catch {
       this.dirty = true;
@@ -133,7 +137,7 @@ export class RoomDrafts {
     try {
       if (!isRoomDraft(draft)) throw new Error("Invalid draft");
       if (!this.restored.has(draft.id)) {
-        this.client.restorePendingDraft(draft.snapshot, draft.updates);
+        this.sync.restorePendingDraft(draft.snapshot, draft.updates);
         this.restored.add(draft.id);
         this.setState({ applied: true });
       }
@@ -151,7 +155,7 @@ export class RoomDrafts {
     for (const draft of this.state.available) {
       if (this.restored.has(draft.id)) continue;
       try {
-        if (isRoomDraft(draft) && this.client.containsDraft(draft.snapshot, draft.updates)) {
+        if (isRoomDraft(draft) && this.sync.containsDraft(draft.snapshot, draft.updates)) {
           await this.removeCandidate(draft.id);
         }
       } catch {

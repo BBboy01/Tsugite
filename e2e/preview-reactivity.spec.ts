@@ -33,7 +33,9 @@ test("standalone preview cannot read application storage or parent DOM", async (
       };
     } catch { document.getElementById("app").textContent = "storage blocked; parent " + dom; }
   `);
-  await page.getByRole("button", { name: "package.json", exact: true }).click({ button: "right" });
+  await page
+    .getByRole("treeitem", { name: "package.json", exact: true })
+    .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
   await expect(page.frameLocator('iframe[title^="Preview of "]').locator("#app")).toHaveText(
@@ -57,7 +59,7 @@ test("text-only local and remote edits refresh the standalone preview", async ({
     await first.keyboard.press("ControlOrMeta+A");
     await first.keyboard.insertText('document.getElementById("app").textContent = "Before edit";');
     await first
-      .getByRole("button", { name: "package.json", exact: true })
+      .getByRole("treeitem", { name: "package.json", exact: true })
       .click({ button: "right" });
     await first.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await first

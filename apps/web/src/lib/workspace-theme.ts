@@ -1,4 +1,4 @@
-import type { WorkspaceTheme } from "@iris/shared";
+import { WORKSPACE_THEME_IDS, type WorkspaceTheme } from "@iris/shared";
 
 import type { ShikiTheme } from "./shiki-highlighting";
 
@@ -128,6 +128,32 @@ export const WORKSPACE_THEME_OPTIONS: readonly WorkspaceThemeOption[] = [
     swatch: { background: "#1f1f28", accent: "#7e9cd8", foreground: "#dcd7ba" },
   },
 ];
+
+const roomThemeKey = (roomId: string) => `iris.room-theme.${roomId}`;
+
+export function readRoomTheme(
+  storage: Pick<Storage, "getItem">,
+  roomId: string,
+): WorkspaceTheme | null {
+  try {
+    const value = storage.getItem(roomThemeKey(roomId));
+    return WORKSPACE_THEME_IDS.find((theme) => theme === value) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+export function writeRoomTheme(
+  storage: Pick<Storage, "setItem">,
+  roomId: string,
+  theme: WorkspaceTheme,
+): void {
+  try {
+    storage.setItem(roomThemeKey(roomId), theme);
+  } catch {
+    // Storage can be unavailable in private or restricted browser contexts.
+  }
+}
 
 export function isDarkWorkspaceTheme(theme: WorkspaceTheme): boolean {
   return WORKSPACE_THEME_OPTIONS.find((option) => option.id === theme)?.dark ?? false;

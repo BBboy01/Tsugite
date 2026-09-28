@@ -1,326 +1,139 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { PreviewOutput } from "./preview-runner";
-import {
-  type RuntimeError,
-  type RuntimeEvent,
-  type RuntimeState,
-  isStoragePartitioningErrorUrl,
-} from "./webcontainer-runtime";
-import type { RuntimeAction } from "./runtime-actions";
+import { isStoragePartitioningErrorUrl } from "./webcontainer-errors";
 import type { PreviewPaneProps } from "../components/preview-pane.types";
-import { getRuntimeSettingsKey } from "./preview-runtime-model";
-import { getPreviewSourceLocation, type PreviewSourceError } from "./preview-error-model";
-type WebContainerRuntimeInstance = import("./webcontainer-runtime").WebContainerRuntime;
+import { getPreviewSourceLocation } from "./preview-error-model";
+import { usePreviewStandalone } from "./use-preview-standalone";
+import { usePreviewWebContainer } from "./use-preview-webcontainer";
+import { PreviewContentChanges } from "./preview-content-changes";
 
 export function usePreviewRuntime({ file, files, folders, settings }: PreviewPaneProps) {
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const [outputs, setOutputs] = useState<PreviewOutput[]>([]);
-  const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
-  const [runtimeError, setRuntimeError] = useState<RuntimeError | undefined>();
-  const [previewUrl, setPreviewUrl] = useState<string | undefined>();
-  const [previewLoaded, setPreviewLoaded] = useState(false);
   const [previewLoadKey, setPreviewLoadKey] = useState(0);
-  const [fallbackDocument, setFallbackDocument] = useState("");
-  const [previewBuildError, setPreviewBuildError] = useState<string>();
-  const [previewSourceError, setPreviewSourceError] = useState<PreviewSourceError>();
   const [runKey, setRunKey] = useState(0);
   const [contentRevision, setContentRevision] = useState(0);
-  const runtimeRef = useRef<WebContainerRuntimeInstance | undefined>(undefined);
-  const runtimeStartedRef = useRef(false);
-  const syntaxErrorActiveRef = useRef(false);
-  const lastRunKeyRef = useRef(runKey);
-  const lastRuntimeSettingsKeyRef = useRef("");
-  const latestProjectRef = useRef({ files, folders });
-  const translateRef = useRef(t);
-  const runtimeEventRef = useRef<(event: RuntimeEvent) => void>(() => undefined);
-  const stableRuntimeHandlerRef = useRef((event: RuntimeEvent) => runtimeEventRef.current(event));
-  const manualRuntimeActionRef = useRef<RuntimeAction | undefined>(undefined);
-  latestProjectRef.current = { files, folders };
-  translateRef.current = t;
-  useEffect(() => {
-    const unsubscribe = files.map((item) =>
-      item.text.subscribe(() => setContentRevision((revision) => revision + 1)),
-    );
-    return () => unsubscribe.forEach((stop) => stop());
-  }, [files]);
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent<PreviewOutput & { source?: string }>) => {
-      if (event.source !== iframeRef.current?.contentWindow || event.data.source !== "iris-preview")
-        return;
-      setOutputs((current) =>
-        [...current, { level: event.data.level, message: event.data.message }].slice(-80),
-      );
-      if (event.data.level === "error") setRuntimeState("error");
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-  useEffect(() => {
-    return () => runtimeRef.current?.dispose();
-  }, []);
-
-  useEffect(() => {
-    const handleRuntimeAction = (event: Event) => {
-      const action = (event as CustomEvent<{ action?: RuntimeAction }>).detail?.action;
-      if (action !== "restart" && action !== "reinstall") return;
-      manualRuntimeActionRef.current = action;
-      setRunKey((value) => value + 1);
-    };
-    window.addEventListener("iris:runtime-action", handleRuntimeAction);
-    return () => window.removeEventListener("iris:runtime-action", handleRuntimeAction);
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-    setPreviewSourceError(undefined);
-    const packageFile = files.find((item) => item.path === "package.json");
-    if (!packageFile) {
-      syntaxErrorActiveRef.current = false;
-      const fallbackTimer = setTimeout(() => {
-        void (async () => {
-          try {
-            const { createPreviewDocument, runPreview } = await import("./preview-runner");
-            if (cancelled) return;
-            const source = file.text.toString();
-            const result = runPreview(source, file.language);
-            if (cancelled) return;
-            if (result.error) {
-              setFallbackDocument("");
-              setOutputs([{ level: "error", message: result.error }]);
-              setPreviewBuildError(result.error);
-              setPreviewSourceError({ path: file.path, source, location: result.location });
-              setRuntimeState("error");
-              return;
-            }
-            setFallbackDocument(createPreviewDocument(result.code ?? ""));
-          } catch (error) {
-            if (cancelled) return;
-            setFallbackDocument("");
-            setOutputs([
-              {
-                level: "error",
-                message: error instanceof Error ? error.message : String(error),
-              },
-            ]);
-            setPreviewBuildError(error instanceof Error ? error.message : String(error));
-            setRuntimeState("error");
-          }
-        })();
-      }, 250);
-      runtimeRef.current?.dispose();
-      runtimeStartedRef.current = false;
-      setRuntimeState("idle");
-      setRuntimeError(undefined);
-      setPreviewBuildError(undefined);
-      setPreviewLoaded(false);
-      setPreviewUrl(undefined);
-      return () => {
-        cancelled = true;
-        clearTimeout(fallbackTimer);
-      };
-    }
-    let timer: ReturnType<typeof setTimeout> | undefined;
-    const setupRuntime = async () => {
-      if (!runtimeRef.current) {
-        const { WebContainerRuntime } = await import("./webcontainer-runtime");
-        if (cancelled) return;
-        runtimeRef.current = new WebContainerRuntime();
-      }
-      const runtime = runtimeRef.current;
-      if (!runtime || cancelled) return;
-      const { validateSourceSyntaxDetails } = await import("./preview-runner");
-      const source = file.text.toString();
-      const syntaxError = validateSourceSyntaxDetails(source, file.language, file.path);
-      if (cancelled) return;
-      if (syntaxError) {
-        syntaxErrorActiveRef.current = true;
-        setRuntimeState("error");
-        setPreviewBuildError(syntaxError.message);
-        setPreviewSourceError({ path: file.path, source, location: syntaxError.location });
-        setOutputs([{ level: "error", message: syntaxError.message }]);
-        return;
-      }
-      if (syntaxErrorActiveRef.current) {
-        syntaxErrorActiveRef.current = false;
-        setRuntimeError(undefined);
-        setRuntimeState(runtimeStartedRef.current ? "ready" : "idle");
-        setPreviewBuildError(undefined);
-        setOutputs([]);
-      }
-      const onRuntimeEvent = (event: RuntimeEvent) => {
-        if (cancelled) return;
-        if (syntaxErrorActiveRef.current) return;
-        if (event.type === "output") {
-          setOutputs((current) => [...current, event].slice(-80));
-          if (event.level === "error") {
-            setPreviewBuildError(event.message);
-            setRuntimeState("error");
-          }
-          return;
-        }
-        if (event.type === "server-ready") {
-          setPreviewLoaded(false);
-          setPreviewUrl(event.url);
-          return;
-        }
-        setRuntimeState(event.state);
-        setRuntimeError(event.error);
-        if (event.error) {
-          setPreviewSourceError(undefined);
-          setPreviewLoaded(false);
-          setPreviewUrl(undefined);
-          const runtimeMessage = translateRef.current(`preview.runtime.${event.error}`, {
-            manager: settings.packageManager,
-          });
-          setPreviewBuildError(runtimeMessage);
-          setOutputs((current) =>
-            [
-              ...current,
-              {
-                level: "error" as const,
-                message: runtimeMessage,
-              },
-            ].slice(-80),
-          );
-        }
-      };
-      runtimeEventRef.current = onRuntimeEvent;
-      timer = setTimeout(() => {
-        const runtimeSettingsKey = getRuntimeSettingsKey(settings);
-        const manualAction = manualRuntimeActionRef.current;
-        if (manualAction) {
-          manualRuntimeActionRef.current = undefined;
-          lastRunKeyRef.current = runKey;
-          runtimeStartedRef.current = true;
-          setPreviewLoaded(false);
-          setPreviewUrl(undefined);
-          setOutputs([]);
-          setRuntimeError(undefined);
-          setPreviewBuildError(undefined);
-          void runtime
-            .restart(files, folders, stableRuntimeHandlerRef.current, settings, {
-              forceStart: true,
-              forceInstall: manualAction === "reinstall",
-            })
-            .then(() => {
-              window.dispatchEvent(
-                new CustomEvent("iris:runtime-action-complete", {
-                  detail: { action: manualAction },
-                }),
-              );
-            });
-          return;
-        }
-        if (!runtimeStartedRef.current) {
-          runtimeStartedRef.current = true;
-          lastRunKeyRef.current = runKey;
-          lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
-          setOutputs([]);
-          setRuntimeError(undefined);
-          setPreviewBuildError(undefined);
-          void runtime
-            .start(files, folders, stableRuntimeHandlerRef.current, settings, {
-              forceStart: runKey > 0,
-            })
-            .then(() => {
-              const latest = latestProjectRef.current;
-              void runtime.sync(latest.files, latest.folders);
-            });
-          return;
-        }
-        if (runtimeSettingsKey !== lastRuntimeSettingsKeyRef.current) {
-          lastRuntimeSettingsKeyRef.current = runtimeSettingsKey;
-          setOutputs([]);
-          setRuntimeError(undefined);
-          setPreviewBuildError(undefined);
-          void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings);
-          return;
-        }
-        if (runKey !== lastRunKeyRef.current) {
-          lastRunKeyRef.current = runKey;
-          setOutputs([]);
-          setRuntimeError(undefined);
-          setPreviewBuildError(undefined);
-          void runtime.restart(files, folders, stableRuntimeHandlerRef.current, settings, {
-            forceStart: true,
-          });
-          return;
-        }
-        void runtime.sync(files, folders).then(({ packageChanged }) => {
-          if (!packageChanged || cancelled) return;
-          setOutputs([]);
-          setRuntimeError(undefined);
-          setPreviewBuildError(undefined);
-          void runtime.restart(
-            latestProjectRef.current.files,
-            latestProjectRef.current.folders,
-            stableRuntimeHandlerRef.current,
-            settings,
-          );
-        });
-      }, 250);
-    };
-    void setupRuntime();
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [
-    contentRevision,
+  const contentChangesRef = useRef(new PreviewContentChanges());
+  const contentChanges = useMemo(() => contentChangesRef.current.pending(), [contentRevision]);
+  const acknowledgeContentChanges = useCallback(
+    (changes: typeof contentChanges) => contentChangesRef.current.acknowledge(changes),
+    [],
+  );
+  const getPendingContentChanges = useCallback(() => contentChangesRef.current.pending(), []);
+  const previewLoadTimerRef = useRef<number | undefined>(undefined);
+  const requestRun = useCallback(() => setRunKey((value) => value + 1), []);
+  const hasRuntime = files.some((item) => item.path === "package.json");
+  const standalone = usePreviewStandalone(file, !hasRuntime, contentRevision, runKey);
+  const webcontainer = usePreviewWebContainer({
+    enabled: hasRuntime,
     file,
     files,
     folders,
+    settings,
+    contentRevision,
+    contentChanges,
+    acknowledgeContentChanges,
+    getPendingContentChanges,
     runKey,
-    settings.autoInstall,
-    settings.autoStartPreview,
-    settings.packageManager,
-  ]);
+    requestRun,
+    translate: t,
+  });
+  const outputs = hasRuntime ? webcontainer.outputs : standalone.outputs;
+  const previewUrl = hasRuntime ? webcontainer.previewUrl : undefined;
+  const previewLoaded = hasRuntime && webcontainer.previewLoaded;
+  const previewBuildError = hasRuntime ? webcontainer.buildError : standalone.buildError;
+  const sourceError = hasRuntime ? webcontainer.sourceError : standalone.sourceError;
+
+  useEffect(() => {
+    const unsubscribe = files.map((item) =>
+      item.text.subscribe(() => {
+        contentChangesRef.current.record(item);
+        setContentRevision((revision) => revision + 1);
+      }),
+    );
+    return () => unsubscribe.forEach((stop) => stop());
+  }, [files]);
+
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent<PreviewOutput & { source?: string }>) => {
+      if (
+        event.source !== iframeRef.current?.contentWindow ||
+        event.data?.source !== "iris-preview" ||
+        !isPreviewOutput(event.data)
+      )
+        return;
+      if (hasRuntime) webcontainer.addOutput(event.data);
+      else standalone.addOutput(event.data);
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [hasRuntime, standalone.addOutput, webcontainer.addOutput]);
+
+  useEffect(
+    () => () => {
+      if (previewLoadTimerRef.current !== undefined) {
+        window.clearTimeout(previewLoadTimerRef.current);
+      }
+    },
+    [],
+  );
 
   const handlePreviewLoad = () => {
-    if (previewUrl && isStoragePartitioningErrorUrl(previewUrl)) {
-      const message = translateRef.current("preview.runtime.storage-partitioning-required");
-      setPreviewLoaded(false);
-      setRuntimeState("error");
-      setRuntimeError("storage-partitioning-required");
-      setPreviewBuildError(message);
-      setOutputs((current) =>
-        current.some((output) => output.message === message)
-          ? current
-          : [...current, { level: "error" as const, message }].slice(-80),
-      );
+    if (!previewUrl) return;
+    if (isStoragePartitioningErrorUrl(previewUrl)) {
+      const message = t("preview.runtime.storage-partitioning-required");
+      webcontainer.reportIframeError(message, "storage-partitioning-required");
       return;
     }
-    window.setTimeout(() => setPreviewLoaded(true), 900);
+    if (previewLoadTimerRef.current !== undefined) {
+      window.clearTimeout(previewLoadTimerRef.current);
+    }
+    previewLoadTimerRef.current = window.setTimeout(() => {
+      previewLoadTimerRef.current = undefined;
+      webcontainer.setPreviewLoaded(true);
+    }, 900);
   };
 
   const rerun = () => {
-    setPreviewLoaded(false);
+    if (previewLoadTimerRef.current !== undefined) {
+      window.clearTimeout(previewLoadTimerRef.current);
+      previewLoadTimerRef.current = undefined;
+    }
+    if (hasRuntime) webcontainer.setPreviewLoaded(false);
     setPreviewLoadKey((value) => value + 1);
-    setRunKey((value) => value + 1);
-    setPreviewBuildError(undefined);
+    requestRun();
+    if (hasRuntime) webcontainer.prepareRerun();
+    else standalone.prepareRerun();
   };
-  const clearOutputs = () => setOutputs([]);
+  const clearOutputs = () => {
+    if (hasRuntime) webcontainer.clearOutputs();
+    else standalone.clearOutputs();
+  };
+
   return {
     outputs,
-    runtimeState,
-    runtimeError,
+    runtimeState: hasRuntime ? webcontainer.runtimeState : standalone.runtimeState,
+    runtimeError: hasRuntime ? webcontainer.runtimeError : undefined,
     previewUrl,
     previewLoaded,
     previewLoadKey,
-    fallbackDocument,
+    fallbackDocument: standalone.document,
     previewBuildError,
-    previewSourceLocation: getPreviewSourceLocation(
-      previewSourceError,
-      file.path,
-      file.text.toString(),
-    ),
-    hasSyntaxError: Boolean(previewSourceError),
+    previewSourceLocation: getPreviewSourceLocation(sourceError, file.path, file.text.toString()),
+    hasSyntaxError: Boolean(sourceError),
     iframeRef,
     handlePreviewLoad,
     rerun,
     clearOutputs,
   };
+}
+
+function isPreviewOutput(value: unknown): value is PreviewOutput & { source?: string } {
+  if (!value || typeof value !== "object") return false;
+  const output = value as Partial<PreviewOutput>;
+  return (
+    (output.level === "log" || output.level === "warn" || output.level === "error") &&
+    typeof output.message === "string"
+  );
 }

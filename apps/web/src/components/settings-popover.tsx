@@ -1,14 +1,15 @@
 import * as Dialog from "@radix-ui/react-dialog";
+import { useAtomValue, useSetAtom } from "jotai";
 import { Settings, X } from "lucide-react";
 import { IconButton, Theme } from "@radix-ui/themes";
 import { motion } from "motion/react";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { isDarkWorkspaceTheme } from "../lib/workspace-theme";
 import { SettingsContent } from "./settings-content";
 import type { SettingsDialogProps } from "./settings-types";
-
 import { useSettingsNavigation } from "./use-settings-navigation";
+import { settingsOpenAtom, workspaceCommandAtom } from "../lib/workspace-atoms";
 
 export const SETTINGS_DIALOG_THEME_CLASS_NAME = "settings-dialog-theme";
 
@@ -38,27 +39,11 @@ export function SettingsPopover({
   onLanguageChange,
 }: SettingsDialogProps) {
   const { t } = useTranslation();
-  const [open, setOpen] = useState(false);
-  const returnFocusRef = useRef(false);
-  useEffect(() => {
-    const openSettings = (event: Event) => {
-      returnFocusRef.current =
-        (event as CustomEvent<{ returnFocus?: boolean }>).detail?.returnFocus === true;
-      setOpen(true);
-    };
-    window.addEventListener("iris:open-settings", openSettings);
-    return () => window.removeEventListener("iris:open-settings", openSettings);
-  }, []);
+  const open = useAtomValue(settingsOpenAtom);
+  const dispatchWorkspace = useSetAtom(workspaceCommandAtom);
 
   const handleOpenChange = (nextOpen: boolean) => {
-    setOpen(nextOpen);
-    if (!nextOpen) {
-      const shouldReturnFocus = returnFocusRef.current;
-      returnFocusRef.current = false;
-      if (shouldReturnFocus) {
-        window.setTimeout(() => window.dispatchEvent(new Event("iris:settings-closed")), 0);
-      }
-    }
+    dispatchWorkspace({ type: "set-settings-open", open: nextOpen });
   };
   const {
     section,
@@ -79,13 +64,10 @@ export function SettingsPopover({
     <Dialog.Root open={open} onOpenChange={handleOpenChange}>
       <Dialog.Trigger asChild>
         <motion.button
-          className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg border-0 bg-transparent p-0 text-iris-muted transition-[background-color,color,box-shadow] duration-150 hover:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] hover:text-iris-strong hover:shadow-[0_2px_8px_color-mix(in_srgb,var(--ink-strong)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+          className="grid h-7 w-7 cursor-pointer place-items-center rounded-lg border-0 bg-transparent p-0 text-iris-muted transition-[background-color,color,box-shadow] duration-150 hover:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] hover:text-iris-strong hover:shadow-[0_2px_8px_color-mix(in_srgb,var(--ink-strong)_12%,transparent)] focus-visible:bg-[color-mix(in_srgb,var(--glass-popover)_88%,transparent)] focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-subtle)]"
           type="button"
           aria-label={t("settings.open")}
           title={t("settings.open")}
-          onPointerDown={() => {
-            returnFocusRef.current = true;
-          }}
           whileTap={{ scale: 0.96 }}
         >
           <Settings width="14" height="14" />
@@ -109,10 +91,10 @@ export function SettingsPopover({
               requestAnimationFrame(() => sidebarEntryRefs.current.get(activeEntryId)?.focus());
             }}
             onCloseAutoFocus={(event) => {
-              if (returnFocusRef.current) event.preventDefault();
+              event.preventDefault();
             }}
           >
-            <aside className="flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider bg-iris-rail p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:overflow-y-auto max-[760px]:border-b max-[760px]:border-r-0">
+            <aside className="settings-sidebar flex min-h-0 flex-col rounded-l-[14px] border-r border-iris-divider bg-iris-rail p-3 max-[760px]:rounded-l-none max-[760px]:rounded-t-[14px] max-[760px]:overflow-y-auto max-[760px]:border-b max-[760px]:border-r-0">
               <div className="mb-4 px-2 max-[760px]:mb-3">
                 <p className="m-0 font-iris-mono text-[9px] uppercase tracking-[0.13em] text-iris-muted">
                   {t("settings.title")}
@@ -123,7 +105,7 @@ export function SettingsPopover({
               </div>
               <input
                 ref={searchRef}
-                className="mb-3 h-8 w-full rounded-lg border border-iris-divider bg-iris-canvas px-2.5 font-iris-mono text-[11px] text-iris-ink outline-none placeholder:text-iris-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+                className="mb-3 h-8 w-full rounded-lg border border-iris-divider bg-iris-canvas px-2.5 font-iris-mono text-[11px] text-iris-ink outline-none placeholder:text-iris-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] max-[760px]:text-base"
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 onKeyDown={handleSearchKeyDown}
@@ -145,7 +127,7 @@ export function SettingsPopover({
                         if (node) sidebarEntryRefs.current.set(entryId, node);
                         else sidebarEntryRefs.current.delete(entryId);
                       }}
-                      className={`flex min-h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
+                      className={`flex min-h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
                       key={entryId}
                       type="button"
                       tabIndex={active ? 0 : -1}

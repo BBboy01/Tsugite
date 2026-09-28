@@ -1,4 +1,3 @@
-import type { Dispatch, SetStateAction } from "react";
 import type { LoroDoc } from "loro-crdt";
 import {
   copyFile,
@@ -10,7 +9,7 @@ import {
   renameFile,
   type ProjectFile,
 } from "@iris/shared";
-import type { FileTreeTarget } from "../components/file-tree";
+import type { FileTreeTarget } from "./file-tree-model";
 import { closeEditorTab } from "./editor-tabs";
 import { WORKSPACE_CHANGE_ORIGIN } from "./editor-undo";
 import {
@@ -23,8 +22,7 @@ type FileActionOptions = {
   doc: LoroDoc;
   selectedPath: string;
   openTabPaths: string[];
-  setSelectedPath: Dispatch<SetStateAction<string>>;
-  setOpenTabPaths: Dispatch<SetStateAction<string[]>>;
+  setNavigation: (selectedPath: string, openTabPaths: string[]) => void;
   activateFile: (path: string) => void;
   stopFollowing: () => void;
 };
@@ -33,11 +31,19 @@ export function createWorkspaceFileActions({
   doc,
   selectedPath,
   openTabPaths,
-  setSelectedPath,
-  setOpenTabPaths,
+  setNavigation,
   activateFile,
   stopFollowing,
 }: FileActionOptions) {
+  const commitNavigation = (nextSelectedPath: string, nextOpenTabPaths: string[]) => {
+    const tabsUnchanged =
+      nextOpenTabPaths.length === openTabPaths.length &&
+      nextOpenTabPaths.every((path, index) => path === openTabPaths[index]);
+    if (nextSelectedPath !== selectedPath || !tabsUnchanged) {
+      setNavigation(nextSelectedPath, nextOpenTabPaths);
+    }
+  };
+
   const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
     try {
       const language = /\.(?:[cm]?js|jsx)$/i.test(nextPath.trim()) ? "javascript" : "typescript";
@@ -69,25 +75,24 @@ export function createWorkspaceFileActions({
     if (!nextPath || nextPath === currentPath) return undefined;
     try {
       stopFollowing();
+      let nextSelectedPath = selectedPath;
+      let nextOpenTabPaths: string[];
       if (target.type === "file") {
         renameFile(doc, target.file.id, nextPath);
-        setOpenTabPaths((current) =>
-          current.map((path) => (path === currentPath ? nextPath : path)),
-        );
-        if (selectedPath === currentPath) setSelectedPath(nextPath);
+        nextOpenTabPaths = openTabPaths.map((path) => (path === currentPath ? nextPath : path));
+        if (selectedPath === currentPath) nextSelectedPath = nextPath;
       } else {
         renameFolder(doc, currentPath, nextPath);
-        setOpenTabPaths((current) =>
-          current.map((path) =>
-            path.startsWith(`${currentPath}/`)
-              ? `${nextPath}${path.slice(currentPath.length)}`
-              : path,
-          ),
+        nextOpenTabPaths = openTabPaths.map((path) =>
+          path.startsWith(`${currentPath}/`)
+            ? `${nextPath}${path.slice(currentPath.length)}`
+            : path,
         );
         if (selectedPath.startsWith(`${currentPath}/`)) {
-          setSelectedPath(`${nextPath}${selectedPath.slice(currentPath.length)}`);
+          nextSelectedPath = `${nextPath}${selectedPath.slice(currentPath.length)}`;
         }
       }
+      commitNavigation(nextSelectedPath, nextOpenTabPaths);
       doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       return undefined;
     } catch (error) {
@@ -116,8 +121,7 @@ export function createWorkspaceFileActions({
       deleteFile(doc, target.file.id);
       if (openTabPaths.includes(path)) {
         const result = closeEditorTab(openTabPaths, path, selectedPath);
-        setOpenTabPaths(result.paths);
-        if (selectedPath === path) setSelectedPath(result.nextPath);
+        commitNavigation(selectedPath === path ? result.nextPath : selectedPath, result.paths);
       }
     } else {
       deleteFolder(doc, target.path);
@@ -129,8 +133,10 @@ export function createWorkspaceFileActions({
         nextPaths = result.paths;
         nextSelectedPath = result.nextPath;
       }
-      setOpenTabPaths(nextPaths);
-      if (selectedPath.startsWith(`${path}/`)) setSelectedPath(nextSelectedPath);
+      commitNavigation(
+        selectedPath.startsWith(`${path}/`) ? nextSelectedPath : selectedPath,
+        nextPaths,
+      );
     }
     doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
     let restored = false;

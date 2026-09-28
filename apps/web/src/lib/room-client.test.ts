@@ -90,6 +90,41 @@ test("updates presence and status events", () => {
   client.disconnect();
 });
 
+test("exposes independently subscribable status, presence, and sync snapshots", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+  const statuses: string[] = [];
+  let presenceChanges = 0;
+  const pendingChanges: boolean[] = [];
+
+  client.subscribeStatus(() => statuses.push(client.getStatusSnapshot()));
+  client.subscribePresence(() => presenceChanges++);
+  client.subscribeSync(() => pendingChanges.push(client.getPendingChangesSnapshot()));
+  client.connect();
+  socket.open();
+  client.doc.getText("text").insert(0, "pending");
+  client.doc.commit();
+  socket.message(JSON.stringify({ type: "update:ack" }));
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+    }),
+  );
+
+  expect(statuses).toEqual(["connecting", "live"]);
+  expect(presenceChanges).toBe(1);
+  expect(pendingChanges).toEqual([true, false]);
+  expect(client.getMembersSnapshot()).toEqual(client.members);
+  client.disconnect();
+});
+
 test("resends updates when the connection closes before the server acknowledgement", () => {
   const sockets = [new FakeSocket(), new FakeSocket()];
   let attempt = 0;
@@ -196,6 +231,32 @@ test("clears a collaborator cursor when the server explicitly removes it", () =>
   );
 
   expect(client.members[0]?.cursor).toBeNull();
+});
+
+test("ignores malformed server messages without breaking the room session", () => {
+  const socket = new FakeSocket();
+  const client = new RoomClient({
+    roomId: "demo",
+    identity: { userId: "one", displayName: "Maya", color: "#d88961" },
+    socketFactory: () => socket,
+  });
+  client.connect();
+  socket.open();
+
+  expect(() => socket.message('{"type":"presence:list","members":null}')).not.toThrow();
+  expect(() => socket.message('{"type":"presence:list","members":[null]}')).not.toThrow();
+  expect(() => socket.message("{")).not.toThrow();
+  socket.message(
+    JSON.stringify({
+      type: "presence",
+      userId: "two",
+      displayName: "Jun",
+      color: "#7389b7",
+    }),
+  );
+
+  expect(client.members.map((member) => member.userId)).toEqual(["two"]);
+  client.disconnect();
 });
 
 test("creates a guest identity without asking for a display name", () => {

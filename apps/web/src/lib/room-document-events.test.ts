@@ -10,7 +10,8 @@ import {
   setSharedSetting,
 } from "@iris/shared";
 
-import { RoomClient, type RoomClientEvent, type RoomSocket } from "./room-client";
+import { RoomClient, type RoomSocket } from "./room-client";
+import type { RoomClientEvent } from "./room-events";
 
 async function setup() {
   const sent: Array<string | Uint8Array> = [];

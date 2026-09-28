@@ -1,7 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { ChevronDown } from "lucide-react";
 import { Switch } from "@radix-ui/themes";
-import { dispatchRuntimeAction, RUNTIME_ACTIONS, type RuntimeAction } from "../lib/runtime-actions";
+import {
+  dispatchRuntimeAction,
+  RUNTIME_ACTIONS,
+  subscribeRuntimeActionComplete,
+  type RuntimeAction,
+} from "../lib/runtime-actions";
 import { SettingSharingLabel } from "./setting-sharing-label";
 
 export function RuntimeActions({
@@ -14,12 +19,9 @@ export function RuntimeActions({
   const [pending, setPending] = useState<RuntimeAction | undefined>();
 
   useEffect(() => {
-    const handleComplete = (event: Event) => {
-      const detail = (event as CustomEvent<{ action?: RuntimeAction }>).detail;
-      if (detail?.action === pending) setPending(undefined);
-    };
-    window.addEventListener("iris:runtime-action-complete", handleComplete);
-    return () => window.removeEventListener("iris:runtime-action-complete", handleComplete);
+    return subscribeRuntimeActionComplete((action) => {
+      if (action === pending) setPending(undefined);
+    });
   }, [pending]);
 
   const run = (action: RuntimeAction, button: HTMLButtonElement) => {
@@ -81,7 +83,7 @@ export function SettingSelect({
       <span className="relative min-w-0 flex-1">
         <select
           aria-label={label}
-          className="w-full appearance-none rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 pr-10 text-base normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_72%,white)] focus-visible:outline-offset-2 min-[760px]:text-xs"
+          className="w-full appearance-none rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2.5 pr-10 text-base normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-strong)] focus-visible:outline-offset-2 min-[760px]:text-xs"
           value={value}
           onChange={(event) => onChange(event.target.value)}
         >
@@ -114,7 +116,7 @@ export function SettingSwitch({
   return (
     <div
       data-setting-id={settingId}
-      className="flex items-center justify-between gap-4 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-3"
+      className="flex items-center justify-between gap-4 rounded-lg border border-iris-divider bg-[var(--control-surface)] px-3 py-3"
     >
       <div className="min-w-0">
         <p className="m-0 font-iris-mono text-xs text-iris-strong">{label}</p>

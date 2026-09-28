@@ -23,6 +23,7 @@ test("only enables recovery appropriate to the preview error category", () => {
     "reinstall",
   ]);
   expect(getPreviewRecoveryActions("runtime-unavailable", false, true)).toEqual(["restart"]);
+  expect(getPreviewRecoveryActions("server-exited", false, true)).toEqual(["restart"]);
   expect(getPreviewRecoveryActions("install-failed", true, true)).toEqual([]);
   expect(getPreviewRecoveryActions("cross-origin-isolation-required", false, true)).toEqual([]);
   expect(getPreviewRecoveryActions(undefined, false, false)).toEqual([]);

@@ -8,6 +8,14 @@ test("keeps the CodeMirror search panel aligned with the editor theme", async ({
   await page.goto("/room/e2e-search-theme", { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
+  const [numberGutter, foldGutter] = await Promise.all([
+    page.locator(".cm-lineNumbers").boundingBox(),
+    page.locator(".cm-foldGutter").boundingBox(),
+  ]);
+  expect(numberGutter).not.toBeNull();
+  expect(foldGutter).not.toBeNull();
+  expect(numberGutter!.x + numberGutter!.width).toBeLessThanOrEqual(foldGutter!.x);
+
   await page.locator(".cm-content").press("ControlOrMeta+f");
   const searchPanel = page.locator(".cm-panel.cm-search");
   await expect(searchPanel).toBeVisible();
@@ -107,6 +115,14 @@ test("shows relative line numbers when enabled in editor settings", async ({ pag
 
   await expect.poll(readVisibleLineNumbers).toEqual(["2", "1", "3", "1", "2", "3", "4", "5"]);
 
+  await editor.click();
+  await page.keyboard.press("ControlOrMeta+Home");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await page.keyboard.press("ArrowDown");
+  await expect.poll(readVisibleLineNumbers).toEqual(["4", "3", "2", "1", "5", "1", "2", "3"]);
+
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Editor", exact: true }).click();
   const relativeLineNumbersAfterEnable = page.getByRole("switch", {
@@ -135,6 +151,33 @@ test("applies the configured Vim normal cursor style", async ({ page }) => {
         .evaluate((e) => getComputedStyle(e).backgroundColor),
     )
     .toBe("rgb(0, 122, 255)");
+});
+
+test("updates Vim preferences without recreating the editor", async ({ page }) => {
+  await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
+  await page.goto(`/room/e2e-editor-preference-lifecycle-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
+  const editor = page.locator(".cm-editor");
+  await expect(editor).toBeVisible({ timeout: 15_000 });
+  await editor.evaluate((element) => element.setAttribute("data-test-editor-instance", "stable"));
+  const content = page.locator(".cm-content");
+  await content.click();
+  await page.keyboard.press("ArrowRight");
+
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByRole("button", { name: "Editor", exact: true }).click();
+  await page.getByLabel("Normal mode cursor").selectOption("line");
+  await page.getByRole("button", { name: "Keyboard", exact: true }).click();
+  const systemClipboard = page.getByRole("switch", { name: "Use system clipboard" });
+  if ((await systemClipboard.getAttribute("aria-checked")) !== "true") {
+    await systemClipboard.click();
+  }
+  await page.getByRole("button", { name: "Close settings" }).click();
+
+  await expect(editor).toHaveAttribute("data-test-editor-instance", "stable");
+  await expect(editor).toHaveAttribute("data-normal-cursor-style", "line");
+  await expect(content).toBeFocused();
 });
 
 test("uses the workspace accent for the insert cursor", async ({ page }) => {
@@ -209,8 +252,8 @@ test("does not publish a cursor when selecting a file before focusing its editor
   await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
-  await firstPage.getByRole("button", { name: "index.html", exact: true }).click();
-  await secondPage.getByRole("button", { name: "index.html", exact: true }).click();
+  await firstPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
+  await secondPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
 
   await expect(firstPage.locator("[data-collaborator-badge='index.html']")).toHaveText("+1", {
     timeout: 15_000,
@@ -222,7 +265,7 @@ test("does not publish a cursor when selecting a file before focusing its editor
     timeout: 15_000,
   });
 
-  await secondPage.getByRole("button", { name: "main.tsx", exact: true }).click();
+  await secondPage.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
   await expect(firstPage.locator("[data-collaborator-badge='index.html']")).toHaveCount(0, {
     timeout: 15_000,
   });

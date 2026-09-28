@@ -6,5 +6,7 @@ export type PreviewPaneProps = {
   files: ProjectFile[];
   folders: string[];
   settings: ProjectSettings;
+  previewConsoleOpen: boolean;
+  onPreviewConsoleOpenChange: (open: boolean) => void;
   onNavigateToSource?: (location: EditorLocation) => void;
 };

@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "playwright/test";
+import { selectedBackground } from "./theme-selection-style";
 
 function readEditorText(page: Page) {
   return page.locator(".cm-content").evaluate((element) => {
@@ -129,12 +130,6 @@ test("opens the command palette and exposes extensible keymap actions", async ({
   await expect(page.getByRole("button", { name: "Open settings" })).toContainText(
     `${primaryModifier}-,`,
   );
-  await expect(page.getByRole("button", { name: "Open settings" })).toHaveClass(
-    /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
-  );
-  await expect(
-    page.getByRole("button", { name: "Open settings" }).locator("span").last(),
-  ).toHaveClass(/text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Keyboard" }).click();
@@ -188,14 +183,17 @@ test("navigates command palette actions with arrow keys", async ({ page }) => {
   const commands = page.getByRole("dialog").locator("button");
   const firstCommand = commands.first();
   const secondCommand = commands.nth(1);
-  await expect(firstCommand).toHaveClass(/accent/);
+  const selected = await selectedBackground(page, "#007aff");
+  await expect(firstCommand).toHaveCSS("background-color", selected);
+  await expect(secondCommand).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   await page.keyboard.press("ArrowDown");
-  await expect(secondCommand).toHaveClass(/accent/);
-  await expect(firstCommand).not.toHaveClass(/accent/);
+  await expect(secondCommand).toHaveCSS("background-color", selected);
+  await expect(firstCommand).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 
   await page.keyboard.press("ArrowUp");
-  await expect(firstCommand).toHaveClass(/accent/);
+  await expect(firstCommand).toHaveCSS("background-color", selected);
+  await expect(secondCommand).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("wraps command palette selection from the last item to the first", async ({ page }) => {
@@ -209,7 +207,11 @@ test("wraps command palette selection from the last item to the first", async ({
   await expect(commands.first()).toBeVisible();
   await page.keyboard.press("ControlOrMeta+P");
   await page.keyboard.press("ControlOrMeta+N");
-  await expect(commands.first()).toHaveClass(/accent/);
+  await expect(commands.first()).toHaveCSS(
+    "background-color",
+    await selectedBackground(page, "#007aff"),
+  );
+  await expect(commands.last()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
 test("updates workspace settings from command palette actions", async ({ page }) => {

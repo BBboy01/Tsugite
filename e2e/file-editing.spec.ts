@@ -26,7 +26,9 @@ test.describe("file and editor actions", () => {
     );
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
-    await page.getByRole("button", { name: "src folder", exact: true }).click({ button: "right" });
+    await page
+      .getByRole("treeitem", { name: "src folder", exact: true })
+      .click({ button: "right" });
     await page.getByRole("menuitem", { name: "New file", exact: true }).click();
     const pathInput = page.locator("#file-tree-path");
     await expect(pathInput).toBeFocused();
@@ -59,7 +61,7 @@ test.describe("file and editor actions", () => {
     await page.keyboard.type("\n// before-rename");
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
 
-    await page.getByRole("button", { name: "App.tsx", exact: true }).click({ button: "right" });
+    await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     const pathInput = page.locator("#file-tree-path");
     await expect(pathInput).toBeFocused();
@@ -100,11 +102,11 @@ test.describe("file and editor actions", () => {
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
     const edited = await readText();
 
-    await page.getByRole("button", { name: "index.html", exact: true }).click();
+    await page.getByRole("treeitem", { name: "index.html", exact: true }).click();
     await expect(page.locator('section[aria-label="Editing index.html"]')).toBeVisible();
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(edited);
 
-    await page.getByRole("button", { name: "App.tsx", exact: true }).click();
+    await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
     await expect(page.locator('section[aria-label="Editing src/App.tsx"]')).toBeVisible();
     await expect.poll(readText, { timeout: 15_000 }).toBe(edited);
     await editor.click();
@@ -146,7 +148,7 @@ test.describe("file and editor actions", () => {
     await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
     await secondPage
-      .getByRole("button", { name: "App.tsx", exact: true })
+      .getByRole("treeitem", { name: "App.tsx", exact: true })
       .click({ button: "right" });
     await secondPage.getByRole("menuitem", { name: "Rename", exact: true }).click();
     await secondPage.locator("#file-tree-path").fill("src/remote-renamed.tsx");
@@ -170,17 +172,17 @@ test.describe("file and editor actions", () => {
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
     const pathInput = page.locator("#file-tree-path");
-    const sourceFolder = page.getByRole("button", { name: "src folder", exact: true });
+    const sourceFolder = page.getByRole("treeitem", { name: "src folder", exact: true });
 
     await sourceFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "New file", exact: true }).click();
     await pathInput.fill("nested/example.ts");
     await pathInput.press("Enter");
     await expect(
-      page.getByRole("button", { name: "src/nested folder", exact: true }),
+      page.getByRole("treeitem", { name: "src/nested folder", exact: true }),
     ).toBeVisible();
 
-    const createdFile = page.getByRole("button", { name: "example.ts", exact: true });
+    const createdFile = page.getByRole("treeitem", { name: "example.ts", exact: true });
     await expect(createdFile).toBeVisible();
     await createdFile.click();
     await expect(page.getByRole("tab").filter({ hasText: "example.ts" })).toHaveAttribute(
@@ -192,15 +194,15 @@ test.describe("file and editor actions", () => {
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     await pathInput.fill("src/nested/renamed.ts");
     await pathInput.press("Enter");
-    const renamedFile = page.getByRole("button", { name: "renamed.ts", exact: true });
+    const renamedFile = page.getByRole("treeitem", { name: "renamed.ts", exact: true });
     await expect(renamedFile).toBeVisible();
 
-    const nestedFolder = page.getByRole("button", { name: "src/nested folder", exact: true });
+    const nestedFolder = page.getByRole("treeitem", { name: "src/nested folder", exact: true });
     await nestedFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     await pathInput.fill("src/renamed");
     await pathInput.press("Enter");
-    const renamedFolder = page.getByRole("button", { name: "src/renamed folder", exact: true });
+    const renamedFolder = page.getByRole("treeitem", { name: "src/renamed folder", exact: true });
     await expect(renamedFolder).toBeVisible();
     await expect(renamedFile).toBeVisible();
 
@@ -218,12 +220,12 @@ test.describe("file and editor actions", () => {
     await pathInput.fill("components");
     await pathInput.press("Enter");
     await expect(
-      page.getByRole("button", { name: "src/components folder", exact: true }),
+      page.getByRole("treeitem", { name: "src/components folder", exact: true }),
     ).toBeVisible();
 
     await renamedFile.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Copy", exact: true }).click();
-    const copiedFile = page.getByRole("button", { name: "renamed copy.ts", exact: true });
+    const copiedFile = page.getByRole("treeitem", { name: "renamed copy.ts", exact: true });
     await expect(copiedFile).toBeVisible();
 
     const closeCopy = page.getByRole("button", {

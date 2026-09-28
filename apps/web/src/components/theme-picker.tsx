@@ -84,7 +84,7 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                   next.focus();
                 }
               }}
-              className={`flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${selected ? "border-[color-mix(in_srgb,var(--accent)_54%,var(--divider))] bg-[color-mix(in_srgb,var(--accent)_10%,var(--canvas))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_14%,transparent)]" : "border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] hover:border-[color-mix(in_srgb,var(--accent)_30%,var(--divider))] hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--canvas))]"}`}
+              className={`flex min-w-0 items-center gap-2 rounded-lg border px-2.5 py-2 text-left transition-[background-color,border-color,box-shadow] duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)] ${selected ? "border-[color-mix(in_srgb,var(--accent)_54%,var(--divider))] bg-[color-mix(in_srgb,var(--accent)_10%,var(--canvas))] shadow-[0_0_0_1px_color-mix(in_srgb,var(--accent)_14%,transparent)]" : "border-iris-divider bg-[var(--control-surface)] hover:border-[color-mix(in_srgb,var(--accent)_30%,var(--divider))] hover:bg-[color-mix(in_srgb,var(--accent)_6%,var(--canvas))]"}`}
               onClick={() => onChange(option.id)}
             >
               <span

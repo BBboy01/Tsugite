@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { RefreshCw } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
@@ -11,7 +11,7 @@ import { PreviewError } from "./preview-error";
 import { PreviewLoader } from "./preview-loader";
 import type { PreviewPaneProps } from "./preview-pane.types";
 
-export function PreviewPane(props: PreviewPaneProps) {
+export const PreviewPane = memo(function PreviewPane(props: PreviewPaneProps) {
   const { file } = props;
   const { t } = useTranslation();
   const sectionRef = useRef<HTMLElement>(null);
@@ -68,7 +68,7 @@ export function PreviewPane(props: PreviewPaneProps) {
         </span>
         <IconButton asChild variant="ghost" color="gray" radius="medium">
           <motion.button
-            className="box-border grid h-6 w-6 place-items-center rounded-[4px] border border-transparent bg-transparent p-0 text-iris-muted transition-colors duration-150 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] active:scale-[0.96]"
+            className="box-border grid h-6 w-6 place-items-center rounded-[4px] border border-transparent bg-transparent p-0 text-iris-muted transition-colors duration-150 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)] active:scale-[0.96]"
             type="button"
             onClick={rerun}
             aria-label={t("preview.run")}
@@ -126,8 +126,10 @@ export function PreviewPane(props: PreviewPaneProps) {
       <PreviewConsole
         outputs={outputs}
         onClear={clearOutputs}
+        open={props.previewConsoleOpen}
+        onOpenChange={props.onPreviewConsoleOpenChange}
         getPreviewHeight={() => sectionRef.current?.getBoundingClientRect().height ?? 288}
       />
     </motion.section>
   );
-}
+});

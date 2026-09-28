@@ -6,6 +6,15 @@ function starterCounter(page: Page, count = 0) {
     .getByRole("button", { name: `Count is ${count}`, exact: true });
 }
 
+async function expectPreviewReady(page: Page, timeout = 30_000) {
+  await expect(starterCounter(page)).toBeVisible({ timeout });
+  await expect(
+    page
+      .getByRole("region", { name: "Live preview", includeHidden: true })
+      .getByRole("status", { includeHidden: true }),
+  ).toBeHidden();
+}
+
 test.afterEach(async ({ page }, testInfo) => {
   if (testInfo.status === testInfo.expectedStatus) return;
   const expand = page.getByRole("button", { name: "Expand output", exact: true });
@@ -33,14 +42,16 @@ test("keeps the initial room socket open through development remounts", async ({
   const preview = page.locator('iframe[title^="Preview of "]');
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
   await expect(preview).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
   expect(socketWarnings).toEqual([]);
 });
 
 test.beforeEach(async ({ page }) => {
-  await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+  await page.addInitScript(() => {
+    if (window.top === window) localStorage.setItem("iris.language", "en");
+  });
 });
 
 test("keeps the runtime action focused while restarting the preview", async ({ page }) => {
@@ -49,7 +60,7 @@ test("keeps the runtime action focused while restarting the preview", async ({ p
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open settings" }).click();
-  await page.getByRole("button", { name: "Runtime" }).click();
+  await page.getByRole("button", { name: "Runtime", exact: true }).click();
 
   const restart = page.getByRole("button", { name: "Restart preview runtime" });
   await restart.focus();
@@ -57,27 +68,39 @@ test("keeps the runtime action focused while restarting the preview", async ({ p
   await expect(restart).toBeFocused();
 });
 
-test("restores the preview after either runtime recovery action", async ({ page }) => {
+test("restores the preview after either runtime recovery action", async ({ page }, testInfo) => {
   test.setTimeout(360_000);
+  const pageErrors: string[] = [];
+  page.on("pageerror", (error) => pageErrors.push(error.message));
   await page.goto(`/room/e2e-runtime-recovery-${Date.now()}`, { waitUntil: "domcontentloaded" });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden({ timeout: 90_000 });
-  await expect(page.getByRole("button", { name: "package.json", exact: true })).toBeVisible({
+  await expect(page.getByRole("treeitem", { name: "package.json", exact: true })).toBeVisible({
     timeout: 90_000,
   });
   const preview = page.locator('iframe[title^="Preview of "]');
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
+  await starterCounter(page).click();
+  await expect(starterCounter(page, 1)).toBeVisible();
 
   await page.getByRole("button", { name: "Open settings" }).click();
-  await page.getByRole("button", { name: "Runtime" }).click();
+  await page.getByRole("button", { name: "Runtime", exact: true }).click();
 
   const restart = page.getByRole("button", { name: "Restart preview runtime" });
   await restart.click();
   await expect(preview).not.toHaveAttribute("src", /^https?:\/\//);
   await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await starterCounter(page).click();
+  await expect(starterCounter(page, 1)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("preview-restarted.png") });
+
+  await page.getByRole("button", { name: "Open settings" }).click();
+  await page.getByRole("button", { name: "Runtime", exact: true }).click();
 
   const reinstall = page.getByRole("button", {
     name: "Reinstall dependencies and restart preview",
@@ -86,7 +109,13 @@ test("restores the preview after either runtime recovery action", async ({ page 
   await expect(preview).not.toHaveAttribute("src", /^https?:\/\//);
   await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog")).toBeHidden();
+  await starterCounter(page).click();
+  await expect(starterCounter(page, 1)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("preview-reinstalled.png") });
+  expect(pageErrors).toEqual([]);
 });
 
 test("keeps the preview running after closing the last file tab", async ({ page }) => {
@@ -101,7 +130,7 @@ test("keeps the preview running after closing the last file tab", async ({ page 
   await expect(page.getByText("Waiting for preview…")).toBeHidden();
   await expect(page.getByRole("region", { name: "Live preview" })).toBeVisible();
   await expect(page.locator("iframe").first()).toBeVisible({ timeout: 15_000 });
-  await expect(starterCounter(page)).toBeVisible({ timeout: 150_000 });
+  await expectPreviewReady(page, 150_000);
 });
 
 test("keeps the project preview stable when switching editor files", async ({ page }) => {
@@ -113,11 +142,11 @@ test("keeps the project preview stable when switching editor files", async ({ pa
   const preview = page.locator('iframe[title^="Preview of "]');
   await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
   const previewUrl = await preview.getAttribute("src");
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
 
-  await page.getByRole("button", { name: "index.html", exact: true }).click();
+  await page.getByRole("treeitem", { name: "index.html", exact: true }).click();
   await expect(preview).toHaveAttribute("src", previewUrl ?? "");
   await expect(page.getByText("Waiting for preview…")).toBeHidden();
   await expect(starterCounter(page, 1)).toBeVisible();
@@ -137,7 +166,7 @@ test("shows syntax errors in preview instead of a blank frame", async ({ page },
   );
   const preview = page.locator('iframe[title^="Preview of "]');
   const previewUrl = await preview.getAttribute("src");
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
 
   const editor = page.locator(".cm-content");
   const originalSource = await editor.locator(".cm-line").allTextContents();
@@ -148,11 +177,15 @@ test("shows syntax errors in preview instead of a blank frame", async ({ page },
   await expect(page.getByRole("alert")).toContainText(/Unexpected token|PARSE_ERROR/, {
     timeout: 60_000,
   });
+  await page.screenshot({ path: testInfo.outputPath("preview-syntax-error.png") });
 
   await editor.click();
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText(originalSource.join("\n"));
   await expect(page.getByRole("alert")).toHaveCount(0, { timeout: 60_000 });
   await expect(preview).toHaveAttribute("src", previewUrl ?? "");
-  await expect(starterCounter(page)).toBeVisible({ timeout: 30_000 });
+  await expectPreviewReady(page);
+  await starterCounter(page).click();
+  await expect(starterCounter(page, 1)).toBeVisible();
+  await page.screenshot({ path: testInfo.outputPath("preview-syntax-recovered.png") });
 });

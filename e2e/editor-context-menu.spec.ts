@@ -107,6 +107,10 @@ test("definition navigation and Peek have different effects and references retai
 
 test("TypeScript hover blends its wrapper into the editor surface", async ({ page }) => {
   await replaceCode(page, "const answer = 42;\nconsole.log(answer);");
+  await rightClickText(page, "console.log(answer)", "answer");
+  await expect(page.getByRole("menuitem", { name: "Go to definition", exact: true })).toBeEnabled();
+  await page.keyboard.press("Escape");
+  await page.mouse.move(0, 0);
   await hoverText(page, "console.log(answer)", "answer");
 
   const tooltip = page.locator(".cm-tooltip.cm-tooltip-hover");
@@ -131,6 +135,12 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
   expect(styles.tooltipBorderWidth).toBe("0px");
   expect(styles.tooltipBorderStyle).toBe("none");
   expect(styles.innerBorderRadius).toBe("8px");
+
+  await page.mouse.move(0, 0);
+  await replaceCode(page, 'const answer = "updated";\nconsole.log(answer);');
+  await expect(tooltip).toBeHidden();
+  await hoverText(page, "console.log(answer)", "answer");
+  await expect(tooltip).toContainText('"updated"');
 });
 
 test("navigates to an unopened workspace file and exact target position", async ({ page }) => {
@@ -180,11 +190,7 @@ test("navigates types and implementations and reports missing targets", async ({
     "No locations found",
   );
   await page.keyboard.press("Escape");
-  await page
-    .locator('[data-context-kind="file"]')
-    .filter({ hasText: "index.css" })
-    .getByRole("button")
-    .click();
+  await page.getByRole("treeitem", { name: "index.css", exact: true }).click();
   await page.locator(".cm-content").click({ button: "right", position: { x: 15, y: 12 } });
   await expect(
     page.getByRole("menuitem", { name: "Go to definition", exact: true }),

@@ -64,7 +64,7 @@ export function FontFamilyPicker({ label, value, theme, onChange }: FontFamilyPi
       >
         <SelectTrigger
           aria-label={label}
-          className="h-8 min-w-0 border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_68%,transparent)] px-2.5 py-0 text-iris-ink shadow-none ring-0 hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] focus-visible:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] focus-visible:ring-2 focus-visible:ring-[color-mix(in_srgb,var(--accent)_18%,transparent)]"
+          className="h-8 min-w-0 border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_68%,transparent)] px-2.5 py-0 text-iris-ink shadow-none ring-0 hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] focus-visible:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] focus-visible:ring-2 focus-visible:ring-[var(--focus-halo)]"
         >
           <SelectValue
             className="min-w-0 truncate text-xs normal-case tracking-normal"
@@ -80,7 +80,7 @@ export function FontFamilyPicker({ label, value, theme, onChange }: FontFamilyPi
           >
             <SelectInput
               aria-label={t("settings.font.search")}
-              className="mobile-input-zoom-safe p-1.5 pb-1 [&_[data-slot=input-group]]:border-iris-divider [&_[data-slot=input-group]]:bg-[color-mix(in_srgb,var(--canvas)_78%,transparent)] [&_[data-slot=input-group]]:text-iris-ink [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-2 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-[color-mix(in_srgb,var(--accent)_18%,transparent)] [&_[data-slot=input-group-addon]]:text-iris-muted [&_[data-slot=input-group-control]]:text-[11px] [&_[data-slot=input-group-control]]:text-iris-ink [&_[data-slot=input-group-control]]:placeholder:text-iris-muted"
+              className="mobile-input-zoom-safe p-1.5 pb-1 [&_[data-slot=input-group]]:border-iris-divider [&_[data-slot=input-group]]:bg-[color-mix(in_srgb,var(--canvas)_78%,transparent)] [&_[data-slot=input-group]]:text-iris-ink [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:border-[color-mix(in_srgb,var(--accent)_42%,var(--divider))] [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-2 [&_[data-slot=input-group]]:has-[[data-slot=input-group-control]:focus-visible]:ring-[var(--focus-halo)] [&_[data-slot=input-group-addon]]:text-iris-muted [&_[data-slot=input-group-control]]:text-[11px] [&_[data-slot=input-group-control]]:text-iris-ink [&_[data-slot=input-group-control]]:placeholder:text-iris-muted"
               placeholder={t("settings.font.search")}
             />
             <SelectList

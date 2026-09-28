@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import type { RoomClient } from "./room-client";
+import type { DraftSyncPort } from "./draft-sync-port";
 import { browserDraftStore } from "./room-draft-store";
 import { RoomDrafts } from "./room-drafts";
 
-export function useRoomDrafts(client: RoomClient) {
-  const [session] = useState(() => new RoomDrafts(client, client.draftScope, browserDraftStore));
+export function useRoomDrafts(client: DraftSyncPort) {
+  const [session] = useState(() => new RoomDrafts(client, browserDraftStore));
   const [state, setState] = useState(session.state);
   const disposal = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => {

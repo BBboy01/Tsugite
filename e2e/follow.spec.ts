@@ -31,9 +31,9 @@ test("follows a collaborator's file and cursor until a local action", async ({
   await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
-  await firstPage.getByRole("button", { name: "index.html", exact: true }).click();
-  await secondPage.getByRole("button", { name: "index.html", exact: true }).click();
-  await secondPage.getByRole("button", { name: "main.tsx", exact: true }).click();
+  await firstPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
+  await secondPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
+  await secondPage.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
   await secondPage
     .locator(".cm-line")
     .filter({ hasText: /^createRoot\(document/ })
@@ -82,7 +82,7 @@ test("follows a collaborator's file and cursor until a local action", async ({
   await secondPage.keyboard.press("ArrowDown");
   await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);
 
-  await firstPage.getByRole("button", { name: "index.html", exact: true }).click();
+  await firstPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
   await expect(firstPage.locator("[data-following-member='e2e-follow-second']")).toHaveCount(0);
   await expect(firstPage.locator('section[aria-label="Editing index.html"]')).toBeVisible();
 
@@ -108,15 +108,19 @@ test("follows a collaborator's file and cursor until a local action", async ({
     { width: 390, height: 844 },
   ]) {
     await firstPage.setViewportSize(viewport);
+    if (viewport.width < 760) {
+      await expect(firstPage.locator(".workspace-layout > div")).not.toHaveClass(/\bgrid\b/);
+    }
     await expect(followedEditor).toBeVisible();
     await expect
       .poll(() =>
-        followedEditor.evaluate((element) => {
-          const bounds = element.getBoundingClientRect();
-          const gutter = element
-            .parentElement!.querySelector(".cm-gutters")!
-            .getBoundingClientRect();
-          return bounds.left - gutter.right;
+        firstPage.evaluate(() => {
+          const indicator = document.querySelector("[data-editor-following='true']");
+          const gutter = indicator?.parentElement?.querySelector(".cm-gutters");
+          const indicatorBounds = indicator?.getBoundingClientRect();
+          const gutterBounds = gutter?.getBoundingClientRect();
+          if (!indicatorBounds?.width || !gutterBounds?.width) return -1;
+          return indicatorBounds.left - gutterBounds.right;
         }),
       )
       .toBeGreaterThanOrEqual(0);

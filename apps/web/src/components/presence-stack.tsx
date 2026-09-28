@@ -80,7 +80,7 @@ export function PresenceStack({
         }}
       >
         <button
-          className="flex cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] focus-visible:outline-offset-4"
+          className="flex cursor-pointer items-center gap-2.5 border-0 bg-transparent p-0 focus-visible:rounded focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-subtle)] focus-visible:outline-offset-4"
           type="button"
           aria-label={t("presence.onlineCount", { count: members.length })}
           aria-expanded={open}
@@ -156,7 +156,7 @@ export function PresenceStack({
                   }
                   return (
                     <button
-                      className="flex min-w-0 w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-1 py-1 text-left transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)] focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+                      className="flex min-w-0 w-full items-center gap-2 rounded-md border border-transparent bg-transparent px-1 py-1 text-left transition-colors hover:bg-[var(--hover-surface)] focus-visible:outline-2 focus-visible:outline-offset-[-1px] focus-visible:outline-[var(--focus-ring)]"
                       style={
                         isFollowing
                           ? {

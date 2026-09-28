@@ -1,15 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { basicSetup } from "codemirror";
-import {
-  Compartment,
-  EditorState,
-  RangeSet,
-  RangeSetBuilder,
-  StateField,
-  Transaction,
-} from "@codemirror/state";
-import { EditorView, GutterMarker, lineNumberMarkers } from "@codemirror/view";
+import { EditorState, Transaction } from "@codemirror/state";
+import { EditorView } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
 import { vim } from "@replit/codemirror-vim";
 import type { VirtualTypeScriptEnvironment } from "@typescript/vfs";
@@ -22,70 +14,27 @@ import {
   getEditorLanguageSupport,
   supportsTypeScriptServices,
 } from "../lib/editor-language";
-import { shikiHighlight } from "../lib/shiki-highlighting";
 import {
   getRemoteSelections,
   remotePresenceExtension,
   updateRemotePresence,
 } from "../lib/remote-presence";
-import { getShikiTheme } from "../lib/workspace-theme";
 import { clampEditorSelection, type EditorSelection } from "../lib/editor-selection";
 import type { EditorPaneProps } from "./editor-pane.types";
 import { EditorFileTabs } from "./editor-file-tabs";
 import { EditorFollowingOutline } from "./editor-following-outline";
 import { EditorContextMenu } from "./editor-context-menu";
-import { editorTheme } from "../lib/editor-theme";
+import { EditorVisualConfiguration } from "../lib/editor-visual-configuration";
 import { useEditorLocation } from "../lib/use-editor-location";
-import { attachVimCursorStyle, attachVimStatus } from "../lib/vim-status";
-import { attachVimClipboard } from "../lib/vim-clipboard";
-import { attachVimSearch, vimSearchExtension } from "../lib/vim-search";
+import { EditorVimBindings } from "../lib/editor-vim-bindings";
+import { vimSearchExtension } from "../lib/vim-search";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
-
-class RelativeLineNumberMarker extends GutterMarker {
-  constructor(private readonly number: string) {
-    super();
-  }
-
-  eq(other: GutterMarker): boolean {
-    return other instanceof RelativeLineNumberMarker && other.number === this.number;
-  }
-
-  toDOM(): Text {
-    return document.createTextNode(this.number);
-  }
-}
-
-const relativeLineNumberMarkers = StateField.define<RangeSet<GutterMarker>>({
-  create: buildRelativeLineNumberMarkers,
-  update(markers, transaction) {
-    if (transaction.docChanged) return buildRelativeLineNumberMarkers(transaction.state);
-    if (!transaction.selection) return markers;
-    const previousLine = transaction.startState.doc.lineAt(
-      transaction.startState.selection.main.head,
-    ).number;
-    const nextLine = transaction.state.doc.lineAt(transaction.state.selection.main.head).number;
-    return previousLine === nextLine ? markers : buildRelativeLineNumberMarkers(transaction.state);
-  },
-  provide: (field) => lineNumberMarkers.from(field),
-});
+import { editorBasicSetup } from "../lib/editor-basic-setup";
+import { attachEditorTypeScriptServices } from "../lib/editor-typescript-services";
 
 type SavedEditorSelection = EditorSelection & { fileId: string };
 
-function buildRelativeLineNumberMarkers(state: EditorState): RangeSet<GutterMarker> {
-  const currentLine = state.doc.lineAt(state.selection.main.head).number;
-  const markers = new RangeSetBuilder<GutterMarker>();
-
-  for (let lineNumber = 1; lineNumber <= state.doc.lines; lineNumber += 1) {
-    const line = state.doc.line(lineNumber);
-    const displayNumber =
-      lineNumber === currentLine ? lineNumber : Math.abs(lineNumber - currentLine);
-    markers.add(line.from, line.from, new RelativeLineNumberMarker(String(displayNumber)));
-  }
-
-  return markers.finish();
-}
-
-export function EditorPane({
+export const EditorPane = memo(function EditorPane({
   doc,
   file,
   files,
@@ -110,8 +59,9 @@ export function EditorPane({
   systemClipboardRef.current = systemClipboard;
   const hostRef = useRef<HTMLDivElement>(null);
   const viewRef = useRef<EditorView | null>(null);
-  const relativeLineNumbersCompartmentRef = useRef<Compartment | null>(null);
-  const relativeLineNumbersRef = useRef(settings.relativeLineNumbers);
+  const visualConfigurationRef = useRef<EditorVisualConfiguration | null>(null);
+  const vimBindingsRef = useRef<EditorVimBindings | null>(null);
+  const settingsRef = useRef(settings);
   const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
   const localInteractionRef = useRef(onLocalInteraction);
@@ -120,6 +70,8 @@ export function EditorPane({
   const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
+  const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
+  const currentFileKey = `${file.id}:${file.path}`;
   const { navigateToLocation, applyPendingLocation } = useEditorLocation({
     path: file.path,
     viewRef,
@@ -128,7 +80,11 @@ export function EditorPane({
     onLocalInteraction,
     onSelectTab,
   });
-  const typeScriptEnvironmentRef = useRef<VirtualTypeScriptEnvironment | null>(null);
+  const [typeScriptEnvironment, setTypeScriptEnvironment] = useState<{
+    fileId: string;
+    path: string;
+    environment: VirtualTypeScriptEnvironment;
+  } | null>(null);
   const projectFilesRef = useRef(files);
   const tabViewModels = useMemo(
     () => buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
@@ -138,119 +94,79 @@ export function EditorPane({
   localInteractionRef.current = onLocalInteraction;
   followedSelectionRef.current = followedSelection;
   isFollowingRef.current = isFollowing;
-  relativeLineNumbersRef.current = settings.relativeLineNumbers;
+  settingsRef.current = settings;
   remoteMembersRef.current = remoteMembers;
   projectFilesRef.current = files;
 
   useEffect(() => {
     if (!hostRef.current) return;
 
-    let disposed = false;
-    let environment: VirtualTypeScriptEnvironment | undefined;
-    let view: EditorView | undefined;
-    let relativeLineNumbersCompartment: Compartment | undefined;
-    let detachVimStatus: () => void = () => undefined;
-    let detachVimCursorStyle: () => void = () => undefined;
-    let detachVimClipboard: () => void = () => undefined;
-    let detachVimSearch: () => void = () => undefined;
-    const setupEditor = async () => {
-      const language = getEditorLanguage(file.path, file.language);
-      const typeScriptEnabled = supportsTypeScriptServices(language);
-      const typeScriptServices = typeScriptEnabled
-        ? await Promise.all([
-            import("@valtown/codemirror-ts"),
-            import("../lib/typescript-environment"),
-            import("../lib/typescript-hover"),
-          ])
-        : undefined;
-      if (disposed || !hostRef.current) return;
-      const source = file.text.toString();
-      environment = typeScriptServices
-        ? typeScriptServices[1].createEditorTypeScriptEnvironment(
-            file.path,
-            source,
-            projectFilesRef.current.map((projectFile) => ({
-              path: projectFile.path,
-              text: projectFile.text.toString(),
-            })),
-          )
-        : undefined;
-      if (disposed || !hostRef.current) return;
-      typeScriptEnvironmentRef.current = environment ?? null;
+    const language = getEditorLanguage(file.path, file.language);
+    setTypeScriptEnvironment(null);
+    const currentSettings = settingsRef.current;
+    const source = file.text.toString();
 
-      relativeLineNumbersCompartment = new Compartment();
-      relativeLineNumbersCompartmentRef.current = relativeLineNumbersCompartment;
-      view = new EditorView({
-        state: EditorState.create({
-          doc: source,
-          extensions: [
-            ...(vimMode ? [vim()] : []),
-            ...(vimMode ? [vimSearchExtension] : []),
-            basicSetup,
-            relativeLineNumbersCompartment.of(
-              relativeLineNumbersRef.current ? relativeLineNumberMarkers : [],
-            ),
-            getEditorLanguageSupport(language),
-            ...(settings.wordWrap ? [EditorView.lineWrapping] : []),
-            ...(environment && typeScriptServices
-              ? [
-                  typeScriptServices[0].tsFacet.of({ env: environment, path: `/${file.path}` }),
-                  typeScriptServices[0].tsSync(),
-                  typeScriptServices[0].tsHover({
-                    renderTooltip: typeScriptServices[2].renderTypeScriptHover,
-                  }),
-                ]
-              : []),
-            shikiHighlight(language, getShikiTheme(settings.theme)),
-            remotePresenceExtension(),
-            deferredLoroUndoKeymap(undoManager),
-            groupedLoroUndo(undoManager),
-            LoroExtensions(doc, undefined, undoManager, () => file.text),
-            EditorView.updateListener.of((update) => {
-              const hasUserEvent = update.transactions.some((transaction) =>
-                Boolean(transaction.annotation(Transaction.userEvent)),
-              );
-              if ((!hasUserEvent && !update.focusChanged) || !update.view.hasFocus) {
-                return;
-              }
-              if (hasUserEvent) localInteractionRef.current();
-              const selection = update.state.selection.main;
-              if (hasUserEvent || (update.focusChanged && !isFollowingRef.current)) {
-                cursorChangeRef.current({
-                  anchor: selection.anchor,
-                  head: selection.head,
-                });
-              }
-            }),
-            editorTheme(settings),
-          ],
-        }),
-        parent: hostRef.current,
-      });
-      viewRef.current = view;
-      const editorView = view;
-      editorView.dom.dataset.normalCursorStyle = settings.normalCursorStyle;
-      detachVimCursorStyle = vimMode
-        ? attachVimCursorStyle(editorView, settings.normalCursorStyle)
-        : () => undefined;
-      detachVimClipboard = vimMode
-        ? attachVimClipboard(editorView, systemClipboardRef.current)
-        : () => undefined;
-      detachVimSearch = vimMode ? attachVimSearch(editorView) : () => undefined;
-      onEditorFocusReady?.(() => editorView.focus());
-      if (vimMode) {
-        detachVimStatus = attachVimStatus(editorView, setVimStatus);
-      }
-      updateRemotePresence(
-        view,
-        getRemoteSelections(
-          remoteMembersRef.current,
-          currentUserId,
-          file.path,
-          view.state.doc.length,
-        ),
-      );
-      if (applyPendingLocation(view)) return;
+    const visualConfiguration = new EditorVisualConfiguration(language, currentSettings, () =>
+      setHighlightedFile(`${file.id}:${file.path}`),
+    );
+    visualConfigurationRef.current = visualConfiguration;
+    const visualExtensions = visualConfiguration.extensions;
+    const view = new EditorView({
+      state: EditorState.create({
+        doc: source,
+        extensions: [
+          ...(vimMode ? [vim()] : []),
+          ...(vimMode ? [vimSearchExtension] : []),
+          visualExtensions.lineNumbers,
+          editorBasicSetup(),
+          getEditorLanguageSupport(language),
+          visualExtensions.wordWrap,
+          visualExtensions.highlighting,
+          remotePresenceExtension(),
+          deferredLoroUndoKeymap(undoManager),
+          groupedLoroUndo(undoManager),
+          LoroExtensions(doc, undefined, undoManager, () => file.text),
+          EditorView.updateListener.of((update) => {
+            const hasUserEvent = update.transactions.some((transaction) =>
+              Boolean(transaction.annotation(Transaction.userEvent)),
+            );
+            if ((!hasUserEvent && !update.focusChanged) || !update.view.hasFocus) {
+              return;
+            }
+            if (hasUserEvent) localInteractionRef.current();
+            const selection = update.state.selection.main;
+            if (hasUserEvent || (update.focusChanged && !isFollowingRef.current)) {
+              cursorChangeRef.current({
+                anchor: selection.anchor,
+                head: selection.head,
+              });
+            }
+          }),
+          visualExtensions.theme,
+        ],
+      }),
+      parent: hostRef.current,
+    });
+    viewRef.current = view;
+    const vimBindings = new EditorVimBindings(
+      view,
+      vimMode,
+      currentSettings.normalCursorStyle,
+      systemClipboardRef.current,
+      setVimStatus,
+    );
+    vimBindingsRef.current = vimBindings;
+    onEditorFocusReady?.(() => view.focus());
+    updateRemotePresence(
+      view,
+      getRemoteSelections(
+        remoteMembersRef.current,
+        currentUserId,
+        file.path,
+        view.state.doc.length,
+      ),
+    );
+    if (!applyPendingLocation(view)) {
       const savedSelection = savedSelectionRef.current;
       const selection =
         followedSelectionRef.current ??
@@ -259,59 +175,50 @@ export function EditorPane({
         const { anchor, head } = clampEditorSelection(selection, view.state.doc.length);
         view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
       }
-    };
+    }
 
-    void setupEditor();
+    const detachTypeScript = supportsTypeScriptServices(language)
+      ? attachEditorTypeScriptServices(
+          view,
+          file.path,
+          () =>
+            projectFilesRef.current.map((projectFile) => ({
+              path: projectFile.path,
+              text: projectFile.text.toString(),
+            })),
+          (environment) =>
+            setTypeScriptEnvironment({ fileId: file.id, path: file.path, environment }),
+        )
+      : undefined;
 
     return () => {
-      disposed = true;
       onEditorFocusReady?.(undefined);
-      detachVimStatus();
-      detachVimCursorStyle();
-      detachVimClipboard();
-      detachVimSearch();
-      if (view) {
-        savedSelectionRef.current = {
-          fileId: file.id,
-          anchor: view.state.selection.main.anchor,
-          head: view.state.selection.main.head,
-        };
-      }
-      view?.dom.removeAttribute("data-normal-cursor-style");
-      view?.destroy();
+      vimBindings.destroy();
+      vimBindingsRef.current = null;
+      savedSelectionRef.current = {
+        fileId: file.id,
+        anchor: view.state.selection.main.anchor,
+        head: view.state.selection.main.head,
+      };
+      view.destroy();
       if (viewRef.current === view) viewRef.current = null;
-      typeScriptEnvironmentRef.current = null;
-      environment?.languageService.dispose();
-      if (relativeLineNumbersCompartmentRef.current === relativeLineNumbersCompartment) {
-        relativeLineNumbersCompartmentRef.current = null;
-      }
+      detachTypeScript?.();
+      visualConfigurationRef.current = null;
     };
-  }, [
-    doc,
-    file.id,
-    file.path,
-    file.language,
-    settings.fontFamily,
-    settings.fontSize,
-    settings.theme,
-    settings.wordWrap,
-    settings.normalCursorStyle,
-    systemClipboard,
-    vimMode,
-    undoManager,
-  ]);
+  }, [doc, file.id, file.path, file.language, vimMode, undoManager]);
+
+  useEffect(() => {
+    vimBindingsRef.current?.update(settings.normalCursorStyle, systemClipboard);
+  }, [settings.normalCursorStyle, systemClipboard]);
 
   useEffect(() => {
     const view = viewRef.current;
-    const compartment = relativeLineNumbersCompartmentRef.current;
-    if (!view || !compartment) return;
+    const configuration = visualConfigurationRef.current;
+    if (!view || !configuration) return;
 
-    view.dispatch({
-      effects: compartment.reconfigure(
-        settings.relativeLineNumbers ? relativeLineNumberMarkers : [],
-      ),
-    });
-  }, [settings.relativeLineNumbers]);
+    const effects = configuration.reconfigure(settings);
+    if (effects.length > 0) view.dispatch({ effects });
+  }, [settings]);
 
   useEffect(() => {
     const view = viewRef.current;
@@ -344,7 +251,11 @@ export function EditorPane({
       <EditorContextMenu
         key={file.id + file.path}
         viewRef={viewRef}
-        environmentRef={typeScriptEnvironmentRef}
+        environment={
+          typeScriptEnvironment?.fileId === file.id && typeScriptEnvironment.path === file.path
+            ? typeScriptEnvironment.environment
+            : null
+        }
         path={file.path}
         files={files}
         theme={settings.theme}
@@ -352,7 +263,11 @@ export function EditorPane({
         onLocalInteraction={onLocalInteraction}
         onNavigate={navigateToLocation}
       >
-        <div className="h-full min-h-0 [&_.cm-editor]:h-full" ref={hostRef} />
+        <div
+          className="h-full min-h-0 [&_.cm-editor]:h-full"
+          ref={hostRef}
+          style={{ opacity: highlightedFile === currentFileKey ? 1 : 0 }}
+        />
         {isFollowing && <EditorFollowingOutline />}
       </EditorContextMenu>
       {vimMode && (
@@ -365,4 +280,4 @@ export function EditorPane({
       )}
     </section>
   );
-}
+});

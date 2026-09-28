@@ -12,16 +12,22 @@ import {
   type PreviewOutputFilter,
   resizePreviewConsoleHeight,
 } from "../lib/preview-console-model";
-
 type PreviewConsoleProps = {
   outputs: PreviewOutput[];
   onClear: () => void;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
   getPreviewHeight: () => number;
 };
 
-export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewConsoleProps) {
+export function PreviewConsole({
+  outputs,
+  onClear,
+  open,
+  onOpenChange,
+  getPreviewHeight,
+}: PreviewConsoleProps) {
   const { t } = useTranslation();
-  const [collapsed, setCollapsed] = useState(true);
   const [height, setHeight] = useState(DEFAULT_PREVIEW_CONSOLE_HEIGHT);
   const [filter, setFilter] = useState<PreviewOutputFilter>("all");
   const dragRef = useRef<{ clientY: number; height: number } | null>(null);
@@ -29,18 +35,12 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
   const visibleOutputs = useMemo(() => filterPreviewOutputs(outputs, filter), [outputs, filter]);
 
   useEffect(() => {
-    const toggle = () => setCollapsed((current) => !current);
-    window.addEventListener("iris:toggle-preview-console", toggle);
-    return () => window.removeEventListener("iris:toggle-preview-console", toggle);
-  }, []);
-
-  useEffect(() => {
-    if (collapsed || !outputRef.current) return;
+    if (!open || !outputRef.current) return;
     outputRef.current.scrollTop = outputRef.current.scrollHeight;
-  }, [collapsed, visibleOutputs]);
+  }, [open, visibleOutputs]);
 
   const handlePointerDown = (event: PointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || collapsed) return;
+    if (event.button !== 0 || !open) return;
     dragRef.current = { clientY: event.clientY, height };
     event.currentTarget.setPointerCapture(event.pointerId);
   };
@@ -73,10 +73,10 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
   return (
     <section
       className="glass-console relative flex flex-none flex-col overflow-hidden rounded-b-[10px] bg-[color-mix(in_srgb,var(--preview-surface)_94%,var(--ink))]"
-      style={{ height: collapsed ? 24 : height }}
+      style={{ height: open ? height : 24 }}
       aria-label={t("preview.output")}
     >
-      {!collapsed ? (
+      {open ? (
         <div
           className="group absolute inset-x-0 top-0 z-10 h-2 -translate-y-1/2 touch-none cursor-row-resize outline-none"
           role="separator"
@@ -98,17 +98,13 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
 
       <div className="flex h-6 flex-none items-center justify-between px-2 font-iris-mono text-[9px] leading-none text-iris-muted">
         <button
-          className="flex h-full items-center gap-1 bg-transparent p-0 text-inherit hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+          className="flex h-full items-center gap-1 bg-transparent p-0 text-inherit hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)]"
           type="button"
-          aria-expanded={!collapsed}
-          aria-label={t(collapsed ? "preview.console.expand" : "preview.console.collapse")}
-          onClick={() => setCollapsed((current) => !current)}
+          aria-expanded={open}
+          aria-label={t(open ? "preview.console.collapse" : "preview.console.expand")}
+          onClick={() => onOpenChange(!open)}
         >
-          {collapsed ? (
-            <ChevronUp width="10" height="10" />
-          ) : (
-            <ChevronDown width="10" height="10" />
-          )}
+          {!open ? <ChevronUp width="10" height="10" /> : <ChevronDown width="10" height="10" />}
           <span>{t("preview.output")}</span>
         </button>
         <div className="flex items-center gap-1">
@@ -132,7 +128,7 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
           </Select.Root>
           {outputs.length > 0 ? (
             <button
-              className="grid h-6 w-6 place-items-center rounded-[3px] border-0 bg-transparent p-0 text-iris-muted transition-colors hover:bg-[color-mix(in_srgb,var(--preview-surface)_82%,var(--ink))] hover:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)]"
+              className="grid h-6 w-6 place-items-center rounded-[3px] border-0 bg-transparent p-0 text-iris-muted transition-colors hover:bg-[color-mix(in_srgb,var(--preview-surface)_82%,var(--ink))] hover:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)]"
               type="button"
               aria-label={t("preview.clearOutput")}
               title={t("preview.clearOutput")}
@@ -144,7 +140,7 @@ export function PreviewConsole({ outputs, onClear, getPreviewHeight }: PreviewCo
         </div>
       </div>
 
-      {!collapsed ? (
+      {open ? (
         <div
           className="min-h-0 flex-1 overflow-auto px-2 pb-2 font-iris-mono text-[10px] leading-[1.45] text-iris-ink"
           ref={outputRef}

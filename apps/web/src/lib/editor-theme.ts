@@ -107,13 +107,13 @@ export function editorTheme(settings: ProjectSettings) {
       caretColor: "var(--accent)",
       padding: "0 28px 0 0",
     },
-    ".cm-content span": {
+    ".cm-content .cm-shiki span": {
       color: "inherit",
     },
     ".cm-gutters": {
       border: "none",
       backgroundColor: "var(--editor-surface)",
-      color: "color-mix(in srgb, var(--muted) 45%, transparent)",
+      color: "var(--text-dimmed)",
       minWidth: "56px",
       padding: "0 12px 0 0",
     },

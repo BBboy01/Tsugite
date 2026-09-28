@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { expect, spyOn, test } from "bun:test";
 
 import {
   createPreviewDocument,
@@ -43,6 +43,23 @@ test("validates JSX and TypeScript syntax before preview sync", () => {
   expect(validateSourceSyntax("export const broken = ;", "typescript")).toContain(
     "Unexpected token",
   );
+});
+
+test("syntax preflight does not generate code or emit generator warnings for large files", () => {
+  const warnings = spyOn(console, "error").mockImplementation(() => undefined);
+  try {
+    const source = `// ${"large source ".repeat(45_000)}\nexport const App = () => <main />;`;
+    expect(validateSourceSyntaxDetails(source, "typescript", "src/App.tsx")).toBeUndefined();
+    expect(warnings).not.toHaveBeenCalled();
+    const error = validateSourceSyntaxDetails(
+      "const ready = true;\nconst broken = ;",
+      "typescript",
+    );
+    expect(error?.message).toContain("Unexpected token");
+    expect(error?.location).toEqual({ line: 2, column: 16, offset: 35 });
+  } finally {
+    warnings.mockRestore();
+  }
 });
 
 test("project syntax preflight leaves non-script resources to the project compiler", () => {

@@ -13,21 +13,12 @@ import { RoomClient } from "./room-client";
 import { WORKSPACE_CHANGE_ORIGIN } from "./editor-undo";
 
 function actions(doc: LoroDoc, selectedPath = "") {
-  let selected = selectedPath;
-  let tabs = selectedPath ? [selectedPath] : [];
   return createWorkspaceFileActions({
     doc,
     selectedPath,
-    openTabPaths: tabs,
-    setSelectedPath: (next) => {
-      selected = typeof next === "function" ? next(selected) : next;
-    },
-    setOpenTabPaths: (next) => {
-      tabs = typeof next === "function" ? next(tabs) : next;
-    },
-    activateFile: (path) => {
-      selected = path;
-    },
+    openTabPaths: selectedPath ? [selectedPath] : [],
+    setNavigation: () => {},
+    activateFile: () => {},
     stopFollowing: () => {},
   });
 }
@@ -57,6 +48,46 @@ test("explicit deletion undo restores file contents independently of editor hist
   expect(recovery?.undo()).toBe(true);
   expect(getFileByPath(doc, file.path)?.text.toString()).toBe("const retained = 1");
   expect(getFileByPath(doc, file.path)?.language).toBe("javascript");
+});
+
+test("file rename emits one plain-data navigation update", () => {
+  const doc = new LoroDoc();
+  const file = createFile(doc, "src/notes.ts", "typescript");
+  const updates: Array<{ selectedPath: string; openTabPaths: string[] }> = [];
+  const fileActions = createWorkspaceFileActions({
+    doc,
+    selectedPath: file.path,
+    openTabPaths: [file.path, "src/other.ts"],
+    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    activateFile: () => {},
+    stopFollowing: () => {},
+  });
+
+  expect(fileActions.handleRename({ type: "file", file }, "src/renamed.ts")).toBeUndefined();
+  expect(updates).toEqual([
+    {
+      selectedPath: "src/renamed.ts",
+      openTabPaths: ["src/renamed.ts", "src/other.ts"],
+    },
+  ]);
+});
+
+test("renaming an unopened inactive file does not dispatch navigation state", () => {
+  const doc = new LoroDoc();
+  const file = createFile(doc, "src/notes.ts", "typescript");
+  let navigationUpdates = 0;
+  const fileActions = createWorkspaceFileActions({
+    doc,
+    selectedPath: "src/active.ts",
+    openTabPaths: ["src/active.ts"],
+    setNavigation: () => navigationUpdates++,
+    activateFile: () => {},
+    stopFollowing: () => {},
+  });
+
+  fileActions.handleRename({ type: "file", file }, "src/renamed.ts");
+
+  expect(navigationUpdates).toBe(0);
 });
 
 test("folder deletion undo restores nested files and empty folders", () => {

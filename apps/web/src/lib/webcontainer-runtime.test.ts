@@ -1,91 +1,14 @@
 import { expect, test } from "bun:test";
 
-import type { ProjectFile } from "@iris/shared";
-
 import {
   WebContainerRuntime,
   getRuntimeError,
   isStoragePartitioningErrorUrl,
-  type RuntimeContainer,
   type RuntimeEvent,
   type RuntimeProcess,
   type RuntimeSettings,
 } from "./webcontainer-runtime";
-
-function projectFile(path: string, contents: string): ProjectFile {
-  return {
-    id: path,
-    path,
-    language: "javascript",
-    kind: "file",
-    text: { toString: () => contents } as ProjectFile["text"],
-  };
-}
-
-function fakeProcess(exitCode = 0): RuntimeProcess {
-  return {
-    output: new ReadableStream({
-      start(controller) {
-        controller.close();
-      },
-    }),
-    exit: Promise.resolve(exitCode),
-    kill() {},
-  };
-}
-
-function fakeContainer(readyUrl = "http://localhost:4173") {
-  const events = new Map<string, unknown>();
-  const calls = {
-    mount: [] as unknown[],
-    spawn: [] as string[][],
-    writes: [] as string[],
-    removes: [] as string[],
-    teardown: 0,
-  };
-  const container: RuntimeContainer = {
-    fs: {
-      async mkdir() {
-        return "";
-      },
-      async writeFile(path, contents) {
-        calls.writes.push(`${path}:${contents}`);
-      },
-      async rm(path) {
-        calls.removes.push(path);
-      },
-    },
-    async mount(tree) {
-      calls.mount.push(tree);
-    },
-    async spawn(command, args) {
-      calls.spawn.push([command, ...args]);
-      if (args[0] === "run") {
-        queueMicrotask(() =>
-          (events.get("server-ready") as ((port: number, url: string) => void) | undefined)?.(
-            4173,
-            readyUrl,
-          ),
-        );
-      }
-      return fakeProcess();
-    },
-    on(event, listener) {
-      events.set(event, listener);
-      return () => events.delete(event);
-    },
-    teardown() {
-      calls.teardown += 1;
-    },
-  };
-  return {
-    container,
-    calls,
-    emitError(error: Error) {
-      (events.get("error") as ((error: Error) => void) | undefined)?.(error);
-    },
-  };
-}
+import { fakeContainer, fakeProcess, projectFile } from "./webcontainer-test-utils";
 
 const npmSettings: RuntimeSettings = {
   packageManager: "npm",
@@ -154,6 +77,105 @@ test("reports install failure and terminates an installation that exceeds its de
   expect(killed).toBe(true);
   expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "install-failed" });
   runtime.dispose();
+}, 1000);
+
+test("disposes an in-flight dependency install instead of leaving it running", async () => {
+  const fake = fakeContainer();
+  let resolveInstall: ((code: number) => void) | undefined;
+  let killed = false;
+  fake.container.spawn = async (_command, args) => {
+    if (args[0] !== "install") return fakeProcess();
+    return {
+      ...fakeProcess(),
+      exit: new Promise<number>((resolve) => {
+        resolveInstall = resolve;
+      }),
+      kill() {
+        killed = true;
+        resolveInstall?.(1);
+      },
+    };
+  };
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const started = runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    () => {},
+  );
+
+  await Bun.sleep(20);
+  runtime.dispose();
+  await started;
+
+  expect(killed).toBe(true);
+  expect(fake.calls.teardown).toBe(1);
+}, 1000);
+
+test("restarting during installation cancels the old generation before starting again", async () => {
+  const fake = fakeContainer();
+  const originalSpawn = fake.container.spawn;
+  let installCount = 0;
+  let killed = false;
+  let resolveFirstInstall: ((code: number) => void) | undefined;
+  fake.container.spawn = async (command, args) => {
+    if (args[0] !== "install") return originalSpawn(command, args);
+    installCount += 1;
+    if (installCount > 1) return fakeProcess();
+    return {
+      ...fakeProcess(),
+      exit: new Promise<number>((resolve) => {
+        resolveFirstInstall = resolve;
+      }),
+      kill() {
+        killed = true;
+        resolveFirstInstall?.(1);
+      },
+    };
+  };
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const files = [projectFile("package.json", '{"scripts":{"dev":"vite"}}')];
+  const firstStart = runtime.start(files, [], () => {});
+
+  await Bun.sleep(20);
+  await runtime.restart(files, [], () => {});
+  await firstStart;
+
+  expect(killed).toBe(true);
+  expect(installCount).toBe(2);
+  expect(fake.calls.spawn.filter((call) => call[1] === "run")).toHaveLength(1);
+  runtime.dispose();
+}, 1000);
+
+test("does not adopt an install process that appears after disposal", async () => {
+  const fake = fakeContainer();
+  const spawnStarted = Promise.withResolvers<void>();
+  let resolveSpawn: ((process: RuntimeProcess) => void) | undefined;
+  let killed = false;
+  fake.container.spawn = async (_command, args) => {
+    if (args[0] !== "install") return fakeProcess();
+    spawnStarted.resolve();
+    return new Promise<RuntimeProcess>((resolve) => {
+      resolveSpawn = resolve;
+    });
+  };
+  const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+  const started = runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    () => {},
+  );
+
+  await spawnStarted.promise;
+  runtime.dispose();
+  resolveSpawn?.({
+    ...fakeProcess(1),
+    kill() {
+      killed = true;
+    },
+  });
+  await started;
+
+  expect(killed).toBe(true);
 }, 1000);
 
 test("waits for installation to finish before starting the preview", async () => {

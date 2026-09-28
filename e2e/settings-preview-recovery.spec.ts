@@ -73,6 +73,7 @@ test("starts the project runtime with a non-script resource selected", async ({ 
       export class WebContainerRuntime {
         async start() { document.documentElement.dataset.testRuntimeStarted = "true"; }
         async sync() { return { packageChanged: false }; }
+        async syncChangedFiles() { return { packageChanged: false }; }
         dispose() {}
       }`,
     }),
@@ -80,7 +81,7 @@ test("starts the project runtime with a non-script resource selected", async ({ 
   await page.goto(`/room/e2e-preview-resource-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-content")).toBeVisible();
   for (const name of ["App.tsx", "main.tsx"]) {
-    await page.getByRole("button", { name, exact: true }).click({ button: "right" });
+    await page.getByRole("treeitem", { name, exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
     await page
       .getByRole("alertdialog")

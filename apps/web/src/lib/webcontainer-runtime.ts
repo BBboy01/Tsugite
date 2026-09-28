@@ -2,7 +2,13 @@ import { WebContainer, type FileSystemTree } from "@webcontainer/api";
 
 import type { PackageManager, ProjectFile } from "@iris/shared";
 
-import { buildPreviewFileSystemTree, selectPreviewScript } from "./webcontainer-files";
+import { selectPreviewScript } from "./webcontainer-files";
+import { WebContainerFileSync } from "./webcontainer-file-sync";
+import {
+  getRuntimeError,
+  isStoragePartitioningErrorUrl,
+  type RuntimeError,
+} from "./webcontainer-errors";
 
 export type RuntimeState = "idle" | "installing" | "starting" | "ready" | "paused" | "error";
 export type RuntimeSettings = {
@@ -10,15 +16,7 @@ export type RuntimeSettings = {
   autoInstall: boolean;
   autoStartPreview: boolean;
 };
-export type RuntimeError =
-  | "cross-origin-isolation-required"
-  | "storage-partitioning-required"
-  | "invalid-package-json"
-  | "missing-package-json"
-  | "missing-preview-script"
-  | "install-failed"
-  | "start-failed"
-  | "runtime-unavailable";
+export type { RuntimeError } from "./webcontainer-errors";
 
 export type RuntimeEvent =
   | { type: "state"; state: RuntimeState; error?: RuntimeError }
@@ -39,13 +37,15 @@ export type RuntimeContainer = {
   };
   mount: (tree: FileSystemTree) => Promise<void>;
   spawn: (command: string, args: string[]) => Promise<RuntimeProcess>;
-  on: (event: "server-ready", listener: (port: number, url: string) => void) => () => void;
+  on(event: "server-ready", listener: (port: number, url: string) => void): () => void;
+  on(event: "error", listener: (error: { message: string }) => void): () => void;
   teardown: () => void;
 };
 
 type RuntimeOptions = {
   boot?: () => Promise<RuntimeContainer>;
   installTimeoutMs?: number;
+  spawnTimeoutMs?: number;
 };
 
 type StartOptions = {
@@ -59,26 +59,23 @@ const DEFAULT_RUNTIME_SETTINGS: RuntimeSettings = {
   autoStartPreview: true,
 };
 
-type Snapshot = {
-  files: Map<string, string>;
-  folders: Set<string>;
-};
-
 export class WebContainerRuntime {
   private readonly boot: () => Promise<RuntimeContainer>;
   private readonly installTimeoutMs: number;
+  private readonly spawnTimeoutMs: number;
   private container: RuntimeContainer | undefined;
   private bootPromise: Promise<RuntimeContainer> | undefined;
   private process: RuntimeProcess | undefined;
   private unsubscribeReady: (() => void) | undefined;
   private unsubscribeError: (() => void) | undefined;
-  private snapshot: Snapshot = { files: new Map(), folders: new Set() };
+  private fileSync: WebContainerFileSync | undefined;
   private listener: ((event: RuntimeEvent) => void) | undefined;
   private generation = 0;
 
   constructor(options: RuntimeOptions = {}) {
     this.boot = options.boot ?? defaultBoot;
     this.installTimeoutMs = options.installTimeoutMs ?? 120_000;
+    this.spawnTimeoutMs = options.spawnTimeoutMs ?? 15_000;
   }
 
   async start(
@@ -90,16 +87,20 @@ export class WebContainerRuntime {
   ): Promise<void> {
     this.listener = onEvent;
     const generation = ++this.generation;
-    this.stopProcess();
+    this.stopCurrentRun();
     this.emit({ type: "state", state: "installing" });
 
     try {
       const container = await this.getContainer();
-      if (generation !== this.generation) return;
+      if (generation !== this.generation || !this.fileSync) return;
 
-      const tree = buildPreviewFileSystemTree(files, folders, settings.packageManager);
-      await container.mount(tree);
-      this.snapshot = createSnapshot(files, folders);
+      await this.fileSync.mount(
+        files,
+        folders,
+        settings.packageManager,
+        () => generation === this.generation,
+      );
+      if (generation !== this.generation) return;
 
       const packageFile = files.find((file) => file.path === "package.json");
       if (!packageFile) {
@@ -110,18 +111,22 @@ export class WebContainerRuntime {
       if (settings.autoInstall || options.forceInstall) {
         const [installCommand, installArgs] = getInstallCommand(settings.packageManager);
         this.emit({ type: "output", level: "log", message: `${installCommand} install` });
-        const install = await withTimeout(
-          container.spawn(installCommand, installArgs),
-          15_000,
+        const install = await this.spawnProcess(
+          container,
+          installCommand,
+          installArgs,
+          generation,
           "install-failed",
         );
-        void consumeOutput(install, this.listener);
+        if (!install) return;
         let installCode: number;
         try {
           installCode = await withTimeout(install.exit, this.installTimeoutMs, "install-failed");
         } catch (error) {
           install.kill();
           throw error;
+        } finally {
+          if (this.process === install) this.process = undefined;
         }
         if (generation !== this.generation) return;
         if (installCode !== 0) {
@@ -146,6 +151,7 @@ export class WebContainerRuntime {
       await this.startPreview(container, script.command, script.args, generation);
     } catch (error) {
       if (generation !== this.generation) return;
+      this.stopCurrentRun();
       this.emit({
         type: "state",
         state: "error",
@@ -155,38 +161,21 @@ export class WebContainerRuntime {
   }
 
   async sync(files: ProjectFile[], folders: string[]): Promise<{ packageChanged: boolean }> {
-    if (!this.container) return { packageChanged: false };
-    const next = createSnapshot(files, folders);
-    const previousPackage = this.snapshot.files.get("package.json");
-    const nextPackage = next.files.get("package.json");
-
-    for (const path of this.snapshot.files.keys()) {
-      if (!next.files.has(path)) await this.container.fs.rm(toContainerPath(path), { force: true });
-    }
-
-    for (const path of this.snapshot.folders) {
-      if (!next.folders.has(path)) {
-        const stillUsed = [...next.files.keys()].some((filePath) =>
-          filePath.startsWith(`${path}/`),
-        );
-        if (!stillUsed)
-          await this.container.fs.rm(toContainerPath(path), { force: true, recursive: true });
+    const generation = this.generation;
+    return (
+      this.fileSync?.sync(files, folders, () => generation === this.generation) ?? {
+        packageChanged: false,
       }
-    }
+    );
+  }
 
-    for (const folder of next.folders) {
-      if (this.snapshot.folders.has(folder)) continue;
-      await this.container.fs.mkdir(toContainerPath(folder), { recursive: true });
-    }
-
-    for (const [path, contents] of next.files) {
-      if (this.snapshot.files.get(path) !== contents) {
-        await this.container.fs.writeFile(toContainerPath(path), contents);
+  async syncChangedFiles(files: ProjectFile[]): Promise<{ packageChanged: boolean }> {
+    const generation = this.generation;
+    return (
+      this.fileSync?.syncChangedFiles(files, () => generation === this.generation) ?? {
+        packageChanged: false,
       }
-    }
-
-    this.snapshot = next;
-    return { packageChanged: previousPackage !== nextPackage };
+    );
   }
 
   async restart(
@@ -196,40 +185,38 @@ export class WebContainerRuntime {
     settings: RuntimeSettings = DEFAULT_RUNTIME_SETTINGS,
     options: StartOptions = {},
   ): Promise<void> {
-    this.generation += 1;
-    this.stopProcess();
-    this.unsubscribeReady?.();
-    this.unsubscribeReady = undefined;
-    this.unsubscribeError?.();
-    this.unsubscribeError = undefined;
-    this.snapshot = { files: new Map(), folders: new Set() };
     await this.start(files, folders, onEvent, settings, options);
   }
 
   dispose(): void {
     this.generation += 1;
-    this.stopProcess();
-    this.unsubscribeReady?.();
-    this.unsubscribeReady = undefined;
-    this.unsubscribeError?.();
-    this.unsubscribeError = undefined;
+    this.stopCurrentRun();
     this.container?.teardown();
     this.container = undefined;
     this.bootPromise = undefined;
-    this.snapshot = { files: new Map(), folders: new Set() };
+    this.fileSync = undefined;
     this.listener = undefined;
   }
 
   private async getContainer(): Promise<RuntimeContainer> {
     if (this.container) return this.container;
-    if (!this.bootPromise) this.bootPromise = this.boot();
-    try {
-      this.container = await this.bootPromise;
-      return this.container;
-    } catch (error) {
-      this.bootPromise = undefined;
-      throw error;
+    if (!this.bootPromise) {
+      const bootPromise = this.boot().then(
+        (container) => {
+          if (this.bootPromise === bootPromise) {
+            this.container = container;
+            this.fileSync = new WebContainerFileSync(container);
+          } else container.teardown();
+          return container;
+        },
+        (error: unknown) => {
+          if (this.bootPromise === bootPromise) this.bootPromise = undefined;
+          throw error;
+        },
+      );
+      this.bootPromise = bootPromise;
     }
+    return this.bootPromise;
   }
 
   private async startPreview(
@@ -239,44 +226,29 @@ export class WebContainerRuntime {
     generation: number,
   ): Promise<void> {
     this.emit({ type: "state", state: "starting" });
-    let settled = false;
+    let phase: "starting" | "ready" | "failed" = "starting";
     let resolveReady: (() => void) | undefined;
     const readyPromise = new Promise<void>((resolve) => {
       resolveReady = resolve;
     });
-    this.unsubscribeReady?.();
-    this.unsubscribeError?.();
     this.unsubscribeReady = container.on("server-ready", (port, url) => {
-      if (generation !== this.generation || settled) return;
+      if (generation !== this.generation || phase !== "starting") return;
       if (isStoragePartitioningErrorUrl(url)) {
-        settled = true;
+        phase = "failed";
         this.emit({ type: "state", state: "error", error: "storage-partitioning-required" });
         resolveReady?.();
         return;
       }
-      settled = true;
+      phase = "ready";
       this.emit({ type: "server-ready", port, url });
       this.emit({ type: "state", state: "ready" });
       resolveReady?.();
     });
-    this.unsubscribeError = (
-      container as unknown as {
-        on: (event: "error", listener: (error: { message: string }) => void) => () => void;
-      }
-    ).on("error", (error) => {
-      if (generation !== this.generation) return;
-      if (settled) {
-        this.emit({
-          type: "output",
-          level: "error",
-          message: error.message || "Preview runtime error",
-        });
-        this.emit({ type: "state", state: "error", error: "start-failed" });
-        return;
-      }
-      const runtimeError = getRuntimeError(error);
+    this.unsubscribeError = container.on("error", (error) => {
+      if (generation !== this.generation || phase === "failed") return;
+      const runtimeError = phase === "starting" ? getRuntimeError(error) : "start-failed";
+      phase = "failed";
       if (runtimeError !== "storage-partitioning-required") {
-        settled = true;
         this.emit({
           type: "output",
           level: "error",
@@ -286,25 +258,64 @@ export class WebContainerRuntime {
         resolveReady?.();
         return;
       }
-      settled = true;
       this.emit({ type: "state", state: "error", error: runtimeError });
       resolveReady?.();
     });
 
-    const process = await withTimeout(container.spawn(command, args), 15_000);
-    this.process = process;
-    void consumeOutput(process, this.listener);
-    const exit = process.exit.then(() => {
-      if (generation === this.generation && !settled) {
-        this.emit({ type: "state", state: "error", error: "start-failed" });
+    const process = await this.spawnProcess(container, command, args, generation, "start-failed");
+    if (!process) return;
+    const failProcess = (error: RuntimeError) => {
+      if (generation === this.generation && phase !== "failed") {
+        phase = "failed";
+        this.stopCurrentRun();
+        this.emit({ type: "state", state: "error", error });
       }
-    });
+    };
+    const exit = process.exit.then(
+      () => failProcess(phase === "ready" ? "server-exited" : "start-failed"),
+      (error: unknown) => failProcess(getRuntimeError(error)),
+    );
     await Promise.race([readyPromise, exit]);
   }
 
-  private stopProcess(): void {
+  private async spawnProcess(
+    container: RuntimeContainer,
+    command: string,
+    args: string[],
+    generation: number,
+    error: RuntimeError,
+  ): Promise<RuntimeProcess | undefined> {
+    let pending = true;
+    try {
+      const process = await withTimeout(
+        container.spawn(command, args).then((spawned) => {
+          if (!pending) spawned.kill();
+          return spawned;
+        }),
+        this.spawnTimeoutMs,
+        error,
+      );
+      if (generation !== this.generation) {
+        process.kill();
+        return;
+      }
+      this.process = process;
+      void consumeOutput(process, (event) => {
+        if (generation === this.generation) this.emit(event);
+      });
+      return process;
+    } finally {
+      pending = false;
+    }
+  }
+
+  private stopCurrentRun(): void {
     this.process?.kill();
     this.process = undefined;
+    this.unsubscribeReady?.();
+    this.unsubscribeReady = undefined;
+    this.unsubscribeError?.();
+    this.unsubscribeError = undefined;
   }
 
   private emit(event: RuntimeEvent): void {
@@ -316,23 +327,7 @@ function defaultBoot(): Promise<RuntimeContainer> {
   if (typeof window !== "undefined" && !window.crossOriginIsolated) {
     return Promise.reject(new Error("cross-origin-isolation-required"));
   }
-  return WebContainer.boot({ forwardPreviewErrors: true }) as unknown as Promise<RuntimeContainer>;
-}
-
-export function isStoragePartitioningErrorUrl(url: string): boolean {
-  return /localservice@sw-install-error/i.test(url);
-}
-
-function createSnapshot(files: ProjectFile[], folders: string[]): Snapshot {
-  const fileMap = new Map(files.map((file) => [file.path, file.text.toString()]));
-  const folderSet = new Set(folders);
-  for (const path of fileMap.keys()) {
-    const segments = path.split("/").slice(0, -1);
-    for (let index = 1; index <= segments.length; index += 1) {
-      folderSet.add(segments.slice(0, index).join("/"));
-    }
-  }
-  return { files: fileMap, folders: folderSet };
+  return WebContainer.boot({ forwardPreviewErrors: true });
 }
 
 async function consumeOutput(
@@ -347,6 +342,12 @@ async function consumeOutput(
       const message = stripAnsi(result.value).trim();
       if (message) listener?.({ type: "output", level: classifyOutput(message), message });
     }
+  } catch (error) {
+    listener?.({
+      type: "output",
+      level: "warn",
+      message: error instanceof Error ? error.message : "Preview output stream closed unexpectedly",
+    });
   } finally {
     reader.releaseLock();
   }
@@ -363,46 +364,12 @@ function stripAnsi(value: string): string {
   return value.replace(new RegExp(`${escape}\\[[0-?]*[ -/]*[@-~]`, "g"), "");
 }
 
-function toContainerPath(path: string): string {
-  return `/${path}`;
-}
-
-export function getRuntimeError(error: unknown): RuntimeError {
-  const message =
-    error instanceof Error
-      ? error.message
-      : typeof error === "object" &&
-          error !== null &&
-          "message" in error &&
-          typeof error.message === "string"
-        ? error.message
-        : undefined;
-  if (message && isStoragePartitioningErrorMessage(message)) return "storage-partitioning-required";
-  if (message && isRuntimeError(message)) return message;
-  return "runtime-unavailable";
-}
-
-function isStoragePartitioningErrorMessage(message: string): boolean {
-  return /storage[ -]partition(?:ing)?|third[- ]party storage/i.test(message);
-}
+export { getRuntimeError, isStoragePartitioningErrorUrl } from "./webcontainer-errors";
 
 function getInstallCommand(packageManager: PackageManager): [string, string[]] {
   if (packageManager === "npm") return ["npm", ["install", "--no-audit", "--no-fund"]];
   if (packageManager === "yarn") return ["yarn", ["install", "--non-interactive"]];
   return ["pnpm", ["install", "--reporter=append-only"]];
-}
-
-function isRuntimeError(value: string): value is RuntimeError {
-  return [
-    "cross-origin-isolation-required",
-    "storage-partitioning-required",
-    "invalid-package-json",
-    "missing-package-json",
-    "missing-preview-script",
-    "install-failed",
-    "start-failed",
-    "runtime-unavailable",
-  ].includes(value);
 }
 
 async function withTimeout<T>(
