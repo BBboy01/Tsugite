@@ -6,6 +6,124 @@ test.beforeEach(async ({ page }) => {
   await expect(page.locator(".cm-content")).toBeVisible();
 });
 
+test("virtualized file tree keeps keyboard navigation across rows", async ({ page }) => {
+  const files = page.getByRole("complementary", { name: "Project files" });
+  const tree = files.getByRole("tree", { name: "Project files" });
+  const activeFile = tree.getByRole("treeitem", { name: "App.tsx", exact: true });
+  const nextFile = tree.getByRole("treeitem", { name: "index.css", exact: true });
+  const sourceFolder = tree.getByRole("treeitem", { name: "src folder", exact: true });
+
+  await expect(sourceFolder).toHaveAttribute("aria-level", "1");
+  await expect(sourceFolder).toHaveAttribute("aria-posinset", "1");
+  await expect(sourceFolder).toHaveAttribute(
+    "aria-setsize",
+    String(await tree.locator('[role="treeitem"][aria-level="1"]').count()),
+  );
+  await expect(activeFile).toHaveAttribute("aria-level", "2");
+  await expect(activeFile).toHaveAttribute("aria-selected", "true");
+  await activeFile.focus();
+  await page.keyboard.press("ArrowDown");
+  await expect(nextFile).toBeFocused();
+  await page.keyboard.press("Home");
+  await expect(sourceFolder).toBeFocused();
+  await page.keyboard.press("ArrowRight");
+  await expect(activeFile).toBeFocused();
+});
+
+test("file tree supports type-ahead navigation", async ({ page }) => {
+  const tree = page.getByRole("tree", { name: "Project files" });
+  const sourceFolder = tree.getByRole("treeitem", { name: "src folder", exact: true });
+  const stylesheet = tree.getByRole("treeitem", { name: "index.css", exact: true });
+
+  await sourceFolder.focus();
+  await page.keyboard.press("i");
+  await expect(stylesheet).toBeFocused();
+});
+
+test("file and folder icons retain their colors across selection", async ({ page }) => {
+  const tree = page.getByRole("tree", { name: "Project files" });
+  const active = tree.getByRole("treeitem", { name: "App.tsx", exact: true });
+  const inactive = tree.getByRole("treeitem", { name: "index.css", exact: true });
+  const folder = tree.getByRole("treeitem", { name: "src folder", exact: true });
+  const activeIcon = active.locator("svg").first();
+  const inactiveIcon = inactive.locator("svg").first();
+  const folderIcon = folder.locator("svg").last();
+
+  await expect(activeIcon).toHaveCSS("filter", "none");
+  await expect(activeIcon).toHaveCSS("opacity", "1");
+  await expect(inactiveIcon).toHaveCSS("filter", "none");
+  await expect(inactiveIcon).toHaveCSS("opacity", "1");
+  await expect(folderIcon).toHaveCSS("filter", "none");
+  await expect(folderIcon).toHaveCSS("opacity", "1");
+
+  await inactive.click();
+  await expect(inactiveIcon).toHaveCSS("filter", "none");
+  await expect(inactiveIcon).toHaveCSS("opacity", "1");
+  await expect(activeIcon).toHaveCSS("filter", "none");
+  await expect(activeIcon).toHaveCSS("opacity", "1");
+});
+
+for (const [action, key] of [
+  ["Cancel", "Enter"],
+  ["Delete", "Enter"],
+  ["Cancel", "Space"],
+  ["Delete", "Space"],
+] as const) {
+  test(`delete confirmation accepts ${key} on ${action} without opening the file`, async ({
+    page,
+  }) => {
+    const file = page.getByRole("treeitem", { name: "index.css", exact: true });
+    await file.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+    const dialog = page.getByRole("alertdialog");
+    await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+    if (action === "Delete") await page.keyboard.press("Tab");
+    await expect(dialog.getByRole("button", { name: action, exact: true })).toBeFocused();
+    await page.keyboard.press(key);
+    await expect(dialog).toHaveCount(0);
+    if (action === "Delete") {
+      await expect(file).toHaveCount(0);
+      await page.getByRole("button", { name: "Undo deletion", exact: true }).click();
+    }
+    await expect(file).toBeVisible();
+    await expect(page.getByRole("tab", { name: "src/index.css", exact: true })).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "src/App.tsx", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+}
+
+for (const action of ["Cancel", "Delete"] as const) {
+  test(`clicking ${action} on an inactive file preserves the active tab`, async ({ page }) => {
+    await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
+    const file = page.getByRole("treeitem", { name: "index.css", exact: true });
+    await file.click({ button: "right" });
+    await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+    const dialog = page.getByRole("alertdialog");
+    await dialog.getByRole("button", { name: action, exact: true }).click();
+    await expect(dialog).toHaveCount(0);
+    await expect(page.getByRole("tab", { name: "src/main.tsx", exact: true })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+    if (action === "Delete") await expect(file).toHaveCount(0);
+    else await expect(file).toBeVisible();
+  });
+}
+
+test("cancelling folder deletion does not collapse it", async ({ page }) => {
+  const folder = page.getByRole("treeitem", { name: "src folder", exact: true });
+  await expect(folder).toHaveAttribute("aria-expanded", "true");
+  await folder.click({ button: "right" });
+  await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
+  const dialog = page.getByRole("alertdialog");
+  await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
+  await expect(dialog).toHaveCount(0);
+  await expect(folder).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("treeitem", { name: "App.tsx", exact: true })).toBeVisible();
+});
+
 for (const { width, height, fileName, keyboard } of [
   { width: 1280, height: 720, fileName: "index.css", keyboard: false },
   { width: 390, height: 720, fileName: "index.css", keyboard: false },
@@ -21,7 +139,7 @@ for (const { width, height, fileName, keyboard } of [
     if (width < 760)
       await page.getByRole("button", { name: "Toggle files panel", exact: true }).click();
     const sidebar = page.getByRole("complementary", { name: "Project files" });
-    await sidebar.getByRole("button", { name: fileName, exact: true }).click({ button: "right" });
+    await sidebar.getByRole("treeitem", { name: fileName, exact: true }).click({ button: "right" });
     const deleteItem = page.getByRole("menuitem", { name: "Delete", exact: true });
     await expect(deleteItem).toBeVisible();
     const anchor = await deleteItem.boundingBox();
@@ -75,15 +193,15 @@ for (const { width, height, fileName, keyboard } of [
     });
     await page.keyboard.press("Escape");
     await expect(dialog).toHaveCount(0);
-    await expect(sidebar.getByRole("button", { name: fileName, exact: true })).toBeVisible();
+    await expect(sidebar.getByRole("treeitem", { name: fileName, exact: true })).toBeVisible();
   });
 }
 
 test("inline creation and rename accept typing without clicking the input", async ({ page }) => {
-  const folder = page.getByRole("button", { name: "src folder", exact: true });
+  const folder = page.getByRole("treeitem", { name: "src folder", exact: true });
   const file = page
     .getByRole("complementary", { name: "Project files" })
-    .getByRole("button", { name: "App.tsx", exact: true });
+    .getByRole("treeitem", { name: "App.tsx", exact: true });
   const input = page.locator("#file-tree-path");
   for (const [target, action] of [
     [folder, "New file"],
@@ -113,7 +231,7 @@ test("inline creation and rename accept typing without clicking the input", asyn
 });
 
 test("inline editing does not submit or cancel input method composition", async ({ page }) => {
-  await page.getByRole("button", { name: "src folder", exact: true }).click({ button: "right" });
+  await page.getByRole("treeitem", { name: "src folder", exact: true }).click({ button: "right" });
   await page.getByRole("menuitem", { name: "New file", exact: true }).click();
   const input = page.getByLabel("Path", { exact: true });
   await input.fill("composing.ts");
@@ -127,7 +245,7 @@ test("inline editing does not submit or cancel input method composition", async 
   await expect(input).toBeFocused();
   await input.press("Enter");
   await expect(input).toHaveCount(0);
-  await expect(page.getByRole("button", { name: "composing.ts", exact: true })).toBeVisible();
+  await expect(page.getByRole("treeitem", { name: "composing.ts", exact: true })).toBeVisible();
 });
 
 test("delete confirmation keeps the workspace theme and dismisses outside without deleting", async ({
@@ -139,7 +257,7 @@ test("delete confirmation keeps the workspace theme and dismisses outside withou
   await page.getByRole("button", { name: "Dracula", exact: true }).click();
   const file = page
     .getByRole("complementary", { name: "Project files" })
-    .getByRole("button", { name: "index.css", exact: true });
+    .getByRole("treeitem", { name: "index.css", exact: true });
   await file.click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   const dialog = page.getByRole("alertdialog");

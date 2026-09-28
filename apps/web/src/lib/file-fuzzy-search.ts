@@ -1,5 +1,16 @@
 import type { ProjectFile } from "@iris/shared";
 
+export const FILE_SEARCH_RESULT_LIMIT = 100;
+
+export function getFileSearchResults(
+  files: readonly ProjectFile[],
+  query: string,
+  limit = FILE_SEARCH_RESULT_LIMIT,
+): { files: ProjectFile[]; total: number } {
+  const rankedFiles = fuzzyMatchFiles(files, query);
+  return { files: rankedFiles.slice(0, limit), total: rankedFiles.length };
+}
+
 export function fuzzyMatchFiles(files: readonly ProjectFile[], query: string): ProjectFile[] {
   const needle = query.trim().toLowerCase();
   if (!needle) return [...files];

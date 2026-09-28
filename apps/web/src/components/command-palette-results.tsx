@@ -40,8 +40,8 @@ export function CommandPaletteResults({
               ref={(element) => registerCommand(command.id, element)}
               className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-none ${
                 selectedIndex === index
-                  ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-[var(--foreground)]"
-                  : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
+                  ? "bg-[var(--selection-surface)] text-[var(--foreground)]"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
               }`}
               onMouseMove={() => onHighlight(index)}
               onFocus={() => onHighlight(index)}
@@ -52,7 +52,7 @@ export function CommandPaletteResults({
                 {highlightCommandLabel(command.label, query)}
               </span>
               {command.shortcut ? (
-                <span className="shrink-0 font-iris-mono text-[10px] text-[color-mix(in_srgb,var(--muted)_45%,transparent)]">
+                <span className="shrink-0 font-iris-mono text-[10px] text-[var(--text-secondary)]">
                   {command.shortcut}
                 </span>
               ) : null}

@@ -15,6 +15,7 @@ export default defineConfig({
     },
   },
   plugins: [react(), tailwindcss(), wasm()],
+  worker: { format: "es" },
   server: {
     port: 5173,
     strictPort: false,

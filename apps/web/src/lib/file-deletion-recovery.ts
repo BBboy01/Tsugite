@@ -8,7 +8,7 @@ import {
   type FileLanguage,
 } from "@iris/shared";
 import type { LoroDoc } from "loro-crdt";
-import type { FileTreeTarget } from "../components/file-tree";
+import type { FileTreeTarget } from "./file-tree-model";
 import { WORKSPACE_CHANGE_ORIGIN } from "./editor-undo";
 
 // UTF-8 uses at most three bytes per UTF-16 unit; leave room for CRDT metadata.

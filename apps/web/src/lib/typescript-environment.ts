@@ -1,7 +1,5 @@
 import * as ts from "typescript-legacy";
-import { createSystem, createVirtualTypeScriptEnvironment } from "@typescript/vfs";
-
-type TypeScriptModule = typeof import("typescript");
+import { createSystem } from "@typescript/vfs";
 
 export function createEditorTypeScriptEnvironment(
   path: string,
@@ -27,27 +25,49 @@ export function createEditorTypeScriptEnvironment(
   files.set(absolutePath, source);
   files.set("/lib.d.ts", EDITOR_LIB);
   const system = createSystem(files);
-  const typescript = {
-    ...ts,
-    createLanguageService(host: ts.LanguageServiceHost) {
-      // VFS 1.6 treats empty strings as missing snapshots; retain actual empty files.
-      return ts.createLanguageService({
-        ...host,
-        getScriptSnapshot(fileName) {
-          return system.readFile(fileName) === ""
-            ? ts.ScriptSnapshot.fromString("")
-            : host.getScriptSnapshot(fileName);
-        },
-      });
+  const versions = new Map<string, number>();
+  let projectVersion = 0;
+  // Publish text versions synchronously; TypeScript parses only when a query needs them.
+  const languageService = ts.createLanguageService({
+    ...system,
+    useCaseSensitiveFileNames: () => system.useCaseSensitiveFileNames,
+    getCompilationSettings: () => compilerOptions,
+    getDefaultLibFileName: () => "/lib.d.ts",
+    getProjectVersion: () => String(projectVersion),
+    getScriptFileNames: () => [...files.keys()],
+    getScriptVersion: (fileName) => String(versions.get(fileName) ?? 0),
+    getScriptSnapshot(fileName) {
+      const text = files.get(fileName);
+      return text === undefined ? undefined : ts.ScriptSnapshot.fromString(text);
     },
-  } as unknown as TypeScriptModule;
-  const environment = createVirtualTypeScriptEnvironment(
-    system,
-    [...files.keys()],
-    typescript,
-    compilerOptions,
-  );
-  return environment;
+  });
+  const createFile = (fileName: string, content: string) => {
+    if (files.get(fileName) === content) return;
+    system.writeFile(fileName, content);
+    versions.set(fileName, ++projectVersion);
+  };
+  return {
+    sys: system,
+    languageService,
+    getSourceFile: (fileName: string) => languageService.getProgram()?.getSourceFile(fileName),
+    createFile,
+    updateFile(fileName: string, content: string, span?: ts.TextSpan) {
+      const previous = files.get(fileName);
+      if (previous === undefined) throw new Error(`Did not find a source file for ${fileName}`);
+      createFile(
+        fileName,
+        span
+          ? previous.slice(0, span.start) + content + previous.slice(span.start + span.length)
+          : content,
+      );
+    },
+    deleteFile(fileName: string) {
+      if (!files.has(fileName)) return;
+      files.delete(fileName);
+      versions.delete(fileName);
+      projectVersion++;
+    },
+  };
 }
 
 const EDITOR_LIB = `

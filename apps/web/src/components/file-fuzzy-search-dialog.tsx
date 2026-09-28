@@ -1,28 +1,43 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { FileCode2 } from "lucide-react";
-import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useAtomValue } from "jotai";
+import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ProjectFile, WorkspaceTheme } from "@iris/shared";
 
-import { fuzzyMatchFiles, fuzzyMatchIndexes } from "../lib/file-fuzzy-search";
+import {
+  FILE_SEARCH_RESULT_LIMIT,
+  fuzzyMatchIndexes,
+  getFileSearchResults,
+} from "../lib/file-fuzzy-search";
+import { fileSearchOpenAtom } from "../lib/workspace-atoms";
 
 type Props = {
-  open: boolean;
   files: readonly ProjectFile[];
   theme: WorkspaceTheme;
   onOpenChange: (open: boolean) => void;
   onSelect: (path: string) => void;
 };
 
-export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSelect }: Props) {
+export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
+  files,
+  theme,
+  onOpenChange,
+  onSelect,
+}: Props) {
+  const open = useAtomValue(fileSearchOpenAtom);
   const { t } = useTranslation();
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
   const listId = useId();
-  const matches = useMemo(() => (open ? fuzzyMatchFiles(files, query) : []), [files, open, query]);
+  const searchResults = useMemo(
+    () => (open ? getFileSearchResults(files, query) : { files: [], total: 0 }),
+    [files, open, query],
+  );
+  const { files: matches, total: matchCount } = searchResults;
   useEffect(() => {
     if (open) {
       setQuery("");
@@ -100,7 +115,7 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 }
               }}
               placeholder={t("files.searchPlaceholder")}
-              className="min-w-0 flex-1 border-0 bg-transparent font-iris-mono text-sm text-iris-ink outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"
+              className="min-w-0 flex-1 border-0 bg-transparent font-iris-mono text-sm text-iris-ink outline-none placeholder:text-[var(--text-secondary)] max-[760px]:text-base"
               autoComplete="off"
               spellCheck={false}
             />
@@ -120,7 +135,7 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 role="option"
                 aria-selected={index === selected}
                 tabIndex={-1}
-                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-iris-mono text-[11px] ${index === selected ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] text-iris-strong" : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)] hover:bg-[color-mix(in_srgb,var(--accent)_8%,transparent)]"}`}
+                className={`flex w-full items-center gap-2 rounded-md px-3 py-2 text-left font-iris-mono text-[11px] ${index === selected ? "bg-[var(--selection-surface)] text-iris-strong" : "text-[var(--text-secondary)] hover:bg-[var(--hover-surface)]"}`}
                 onMouseEnter={() => setSelected(index)}
                 onMouseDown={(event) => event.preventDefault()}
                 onClick={() => {
@@ -129,9 +144,7 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
                 }}
               >
                 <FileCode2 width="14" height="14" className="shrink-0 text-[var(--accent)]" />
-                <span className="truncate">
-                  {renderHighlightedPath(file.path, query, index === selected)}
-                </span>
+                <span className="truncate">{renderHighlightedPath(file.path, query)}</span>
               </button>
             ))}
             {matches.length === 0 && (
@@ -140,25 +153,31 @@ export function FileFuzzySearchDialog({ open, files, theme, onOpenChange, onSele
               </p>
             )}
           </div>
+          {matchCount > FILE_SEARCH_RESULT_LIMIT && (
+            <p
+              className="m-0 border-t border-iris-divider px-4 py-2 text-right font-iris-mono text-[10px] text-iris-muted"
+              role="status"
+            >
+              {t("files.searchResultsLimited", {
+                shown: matches.length,
+                total: matchCount,
+              })}
+            </p>
+          )}
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
   );
-}
+});
 
-function renderHighlightedPath(path: string, query: string, isSelected: boolean) {
+function renderHighlightedPath(path: string, query: string) {
   const separator = path.lastIndexOf("/");
   const directory = separator >= 0 ? path.slice(0, separator + 1) : "";
   const fileName = path.slice(separator + 1);
-  const textClassName = isSelected
-    ? "text-iris-strong"
-    : "text-[color-mix(in_srgb,var(--muted)_45%,transparent)]";
   return (
     <>
-      <span data-file-directory className={textClassName}>
-        {directory}
-      </span>
-      <span data-file-name className={textClassName}>
+      <span data-file-directory>{directory}</span>
+      <span data-file-name>
         {renderHighlightedText(
           fileName,
           fuzzyMatchIndexes(path, query)

@@ -1,0 +1,13 @@
+:root,
+[class^="theme-"],
+[class*=" theme-"] {
+  --text-dimmed: color-mix(in srgb, var(--muted) 45%, transparent);
+  --text-secondary: color-mix(in srgb, var(--muted) 45%, var(--ink));
+  --focus-ring: color-mix(in srgb, var(--accent) 48%, transparent);
+  --focus-ring-subtle: color-mix(in srgb, var(--accent) 36%, transparent);
+  --focus-ring-strong: color-mix(in srgb, var(--accent) 72%, white);
+  --focus-halo: color-mix(in srgb, var(--accent) 18%, transparent);
+  --selection-surface: color-mix(in srgb, var(--accent) 14%, transparent);
+  --hover-surface: color-mix(in srgb, var(--accent) 8%, transparent);
+  --control-surface: color-mix(in srgb, var(--canvas) 72%, transparent);
+}

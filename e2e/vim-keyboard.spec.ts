@@ -31,7 +31,7 @@ for (const style of ["block", "line", "underline"]) {
     await page.getByRole("button", { name: "Editor", exact: true }).click();
     await page.getByLabel("Normal mode cursor").selectOption(style);
     await page.getByRole("button", { name: "Close settings" }).click();
-    await expect(page.getByRole("button", { name: "Open settings" })).toBeFocused();
+    await expect(page.locator(".cm-content")).toBeFocused();
     await page.locator(".cm-content").focus();
     await keys(page, "gg0");
     for (let i = 0; i < 20; i++) await page.keyboard.down("l");

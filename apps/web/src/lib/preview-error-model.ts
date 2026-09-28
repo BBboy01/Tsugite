@@ -31,6 +31,6 @@ export function getPreviewRecoveryActions(
 ): RuntimeAction[] {
   if (syntaxError || !hasRuntime) return [];
   if (error === "install-failed" || error === "start-failed") return ["restart", "reinstall"];
-  if (!error || error === "runtime-unavailable") return ["restart"];
+  if (!error || error === "runtime-unavailable" || error === "server-exited") return ["restart"];
   return [];
 }

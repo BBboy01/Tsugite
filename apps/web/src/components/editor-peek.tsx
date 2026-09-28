@@ -91,7 +91,7 @@ export function EditorPeek({
                 role="option"
                 aria-selected={index === selected}
                 tabIndex={index === selected ? 0 : -1}
-                className={`block w-full truncate rounded px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] ${selected === index ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]" : "text-iris-muted"}`}
+                className={`block w-full truncate rounded px-2 py-1.5 text-left outline-none focus-visible:ring-1 focus-visible:ring-[var(--accent)] ${selected === index ? "bg-[var(--selection-surface)]" : "text-iris-muted"}`}
                 title={`${item.path}:${item.line}:${item.column}`}
                 onClick={() => setSelected(index)}
                 onDoubleClick={() => onNavigate(item)}
@@ -113,7 +113,7 @@ export function EditorPeek({
             {lines.slice(start, Math.max(start + 8, location.line + 3)).map((line, index) => (
               <div
                 key={start + index}
-                className={`flex min-w-max pr-3 ${start + index + 1 === location.line ? "bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]" : ""}`}
+                className={`flex min-w-max pr-3 ${start + index + 1 === location.line ? "bg-[var(--selection-surface)]" : ""}`}
               >
                 <span
                   aria-hidden="true"

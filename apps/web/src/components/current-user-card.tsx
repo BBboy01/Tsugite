@@ -50,7 +50,7 @@ export function CurrentUserCard({
         onToggle={(event) => setColorMenuOpen(event.currentTarget.open)}
       >
         <motion.summary
-          className="grid h-[27px] w-[27px] cursor-pointer place-items-center rounded-full border-0 text-white shadow-[0_1px_3px_rgba(38,49,41,0.18)] transition-transform duration-150 hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)] [&::-webkit-details-marker]:hidden"
+          className="grid h-[27px] w-[27px] cursor-pointer place-items-center rounded-full border-0 text-white shadow-[0_1px_3px_rgba(38,49,41,0.18)] transition-transform duration-150 hover:scale-[1.02] focus-visible:scale-[1.02] focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-subtle)] [&::-webkit-details-marker]:hidden"
           style={{ backgroundColor: color }}
           aria-label={t("user.changeAvatarColor")}
           title={t("user.changeAvatarColor")}
@@ -74,7 +74,7 @@ export function CurrentUserCard({
             >
               {AVATAR_COLORS.map((option) => (
                 <motion.button
-                  className={`grid h-6 w-6 cursor-pointer place-items-center rounded-full border-2 border-transparent text-white hover:border-iris-strong focus-visible:border-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[color-mix(in_srgb,var(--accent)_48%,transparent)] ${option === color ? "border-iris-strong" : ""}`}
+                  className={`grid h-6 w-6 cursor-pointer place-items-center rounded-full border-2 border-transparent text-white hover:border-iris-strong focus-visible:border-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)] ${option === color ? "border-iris-strong" : ""}`}
                   key={option}
                   type="button"
                   style={{ backgroundColor: option }}

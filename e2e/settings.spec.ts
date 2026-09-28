@@ -45,11 +45,11 @@ test("searches settings hierarchically and updates the right panel automatically
   await expect(page.getByRole("heading", { name: "Editor" })).toBeVisible();
   await expect(page.locator('[data-setting-id="relativeLineNumbers"]')).toBeVisible();
   await expect(page.getByRole("button", { name: "Relative line numbers" })).toBeVisible();
-  await expect(page.locator("aside.settings-sidebar-glass button")).toHaveText([
+  await expect(page.locator("aside.settings-sidebar button")).toHaveText([
     "Editor",
     "Relative line numbers",
   ]);
-  await expect(page.locator("aside.settings-sidebar-glass mark")).toHaveText("Relative line");
+  await expect(page.locator("aside.settings-sidebar mark")).toHaveText("Relative line");
 });
 
 test("focuses the current settings menu item when opened", async ({ page }) => {

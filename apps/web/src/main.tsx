@@ -19,5 +19,3 @@ createRoot(document.getElementById("app")!).render(
     </MotionConfig>
   </StrictMode>,
 );
-
-requestAnimationFrame(() => document.getElementById("app-boot")?.remove());

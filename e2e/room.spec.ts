@@ -43,12 +43,12 @@ test("de-emphasizes file search directories and uses text-only matches", async (
 
   await search.fill("");
   const inactiveResult = page.getByRole("dialog").getByRole("option").nth(1);
-  await expect(inactiveResult).toHaveClass(
-    /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
-  );
-  await expect(inactiveResult.locator("[data-file-name]")).toHaveClass(
-    /text-\[color-mix\(in_srgb,var\(--muted\)_45%,transparent\)\]/,
-  );
+  await expect(inactiveResult).toHaveAttribute("aria-selected", "false");
+  const mutedColor = await inactiveResult.evaluate((element) => getComputedStyle(element).color);
+  await expect(inactiveResult.locator("[data-file-name]")).toHaveCSS("color", mutedColor);
+  await search.press("ArrowDown");
+  await expect(inactiveResult).toHaveAttribute("aria-selected", "true");
+  await expect(inactiveResult.locator("[data-file-name]")).not.toHaveCSS("color", mutedColor);
 });
 
 test("keeps inactive file names muted until they are opened", async ({ page }) => {
@@ -65,7 +65,7 @@ test("keeps inactive file names muted until they are opened", async ({ page }) =
   await expect(app).toHaveCSS("color", "rgb(29, 29, 31)");
   await expect(index.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
   await expect(src.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
-  await index.getByRole("button").click();
+  await index.click();
   await expect(app).toHaveCSS("color", "rgb(110, 110, 115)");
   await expect(index).toHaveCSS("color", "rgb(29, 29, 31)");
 });
@@ -168,7 +168,7 @@ test("uses the active workspace theme", async ({ page }) => {
     surface: getComputedStyle(element).getPropertyValue("--glass-popover").trim(),
   }));
   expect(colors).toEqual({
-    backgroundColor: "rgba(68, 71, 90, 0.9)",
+    backgroundColor: "rgb(40, 42, 54)",
     color: "rgb(230, 230, 220)",
     surface: "rgba(68, 71, 90, 0.9)",
   });
@@ -254,14 +254,14 @@ test("loads the editor and supports collapsing the source tree", async ({ page }
   await expect(page.getByRole("complementary", { name: "Project files" })).toBeVisible();
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
-  const sourceFolder = page.getByRole("button", { name: "src folder" });
+  const sourceFolder = page.getByRole("treeitem", { name: "src folder" });
   await expect(sourceFolder).toHaveAttribute("aria-expanded", "true");
   await sourceFolder.click();
   await expect(sourceFolder).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByRole("button", { name: "main.tsx", exact: true })).toBeHidden();
+  await expect(page.getByRole("treeitem", { name: "main.tsx", exact: true })).toBeHidden();
   await sourceFolder.click();
-  await expect(page.getByRole("button", { name: "main.tsx", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "main.tsx", exact: true }).click();
+  await expect(page.getByRole("treeitem", { name: "main.tsx", exact: true })).toBeVisible();
+  await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.className))
     .toBe("cm-content");

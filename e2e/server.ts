@@ -9,7 +9,8 @@ const rooms = new RoomService(new RoomRepository(db), {
   roomCreationLimit: 1024,
   idleTtlMs: 1000,
 });
-const app = createRoomApp(rooms).listen({ hostname: "127.0.0.1", port: 3003 });
+const port = Number(process.env.E2E_SERVER_PORT ?? 3003);
+const app = createRoomApp(rooms).listen({ hostname: "127.0.0.1", port });
 let stopping = false;
 async function shutdown() {
   if (stopping) return;

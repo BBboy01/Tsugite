@@ -82,6 +82,7 @@ export function validateSourceSyntaxDetails(
   if (path && !/\.[cm]?[jt]sx?$/i.test(path)) return undefined;
   try {
     Babel.transform(source, {
+      code: false,
       parserOpts: {
         plugins: language === "typescript" ? ["typescript", "jsx"] : ["jsx"],
       },

@@ -1,16 +1,15 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Theme } from "@radix-ui/themes";
-import { ArrowLeft, Command } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useAtomValue } from "jotai";
+import { memo, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-
 import type { ProjectSettings, WorkspaceTheme } from "@iris/shared";
 
 import {
   getRootCommands,
   getSubmenuCommands,
   getSubmenuLabel,
-  type CommandId,
+  type ExternalCommandId,
   type PaletteCommand,
   type Submenu,
 } from "@/lib/command-palette-model";
@@ -20,26 +19,27 @@ import type { LanguageCode } from "@/lib/i18n";
 import type { KeyBinding } from "@/lib/keymap";
 
 import { CommandPaletteResults } from "./command-palette-results";
+import { CommandPaletteSearch } from "./command-palette-search";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
+import { commandPaletteOpenAtom } from "../lib/workspace-atoms";
 
 type CommandPaletteProps = {
-  open: boolean;
   settings: ProjectSettings;
   previewTheme: WorkspaceTheme | null;
   vimMode: boolean;
   onOpenChange: (open: boolean) => void;
-  onSelect: (command: CommandId) => void;
+  onSelect: (command: ExternalCommandId) => void;
   onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
   onThemePreview: (theme: WorkspaceTheme | null) => void;
   onVimModeChange: (enabled: boolean) => void;
   onRuntimeAction: (action: RuntimeAction) => void;
+  onTogglePreviewConsole: () => void;
   onLanguageChange: (language: LanguageCode) => void;
   keymap: readonly KeyBinding[];
   onCloseAutoFocus: () => void;
 };
 
-export function CommandPalette({
-  open,
+export const CommandPalette = memo(function CommandPalette({
   settings,
   previewTheme,
   vimMode,
@@ -49,10 +49,12 @@ export function CommandPalette({
   onThemePreview,
   onVimModeChange,
   onRuntimeAction,
+  onTogglePreviewConsole,
   onLanguageChange,
   keymap,
   onCloseAutoFocus,
 }: CommandPaletteProps) {
+  const open = useAtomValue(commandPaletteOpenAtom);
   const { t } = useTranslation();
   const [systemClipboard, setSystemClipboard] = useSystemClipboard();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -72,12 +74,12 @@ export function CommandPalette({
   );
 
   useEffect(() => {
+    onThemePreview(null);
     if (!open) {
       return;
     }
 
     shouldReturnFocusRef.current = true;
-    onThemePreview(null);
     setQuery("");
     setSelectedIndex(0);
     setSubmenu(null);
@@ -91,7 +93,7 @@ export function CommandPalette({
   const selectedCommand = commands[selectedIndex];
   useEffect(() => {
     if (!open || submenu !== "theme") return;
-    onThemePreview((selectedCommand?.id as WorkspaceTheme | undefined) ?? settings.theme);
+    onThemePreview(selectedCommand?.scope === "theme" ? selectedCommand.id : settings.theme);
   }, [onThemePreview, open, selectedCommand?.id, settings.theme, submenu]);
 
   const returnToRoot = () => {
@@ -111,7 +113,7 @@ export function CommandPalette({
     requestAnimationFrame(() => inputRef.current?.focus());
   };
 
-  const selectExternalCommand = (command: CommandId) => {
+  const selectExternalCommand = (command: ExternalCommandId) => {
     shouldReturnFocusRef.current = false;
     onSelect(command);
     onOpenChange(false);
@@ -128,28 +130,27 @@ export function CommandPalette({
   const closePalette = () => handleOpenChange(false);
 
   const activate = (command: PaletteCommand) => {
-    if (submenu === "language") {
-      onLanguageChange(command.id as LanguageCode);
-      closePalette();
-      return;
-    }
-    if (submenu === "theme") {
-      onSettingChange("theme", command.id as WorkspaceTheme);
-      onThemePreview(null);
-      closePalette();
-      return;
-    }
-
-    if (submenu === "normalCursor") {
-      onSettingChange("normalCursorStyle", command.id as ProjectSettings["normalCursorStyle"]);
-      closePalette();
-      return;
-    }
-
-    if (submenu === "packageManager") {
-      onSettingChange("packageManager", command.id as ProjectSettings["packageManager"]);
-      closePalette();
-      return;
+    switch (command.scope) {
+      case "language":
+        onLanguageChange(command.id);
+        closePalette();
+        return;
+      case "theme":
+        onSettingChange("theme", command.id);
+        closePalette();
+        return;
+      case "normalCursor":
+        onSettingChange("normalCursorStyle", command.id);
+        closePalette();
+        return;
+      case "packageManager":
+        onSettingChange("packageManager", command.id);
+        closePalette();
+        return;
+      case "root":
+        break;
+      default:
+        return assertNever(command);
     }
 
     switch (command.id) {
@@ -158,7 +159,7 @@ export function CommandPalette({
         selectExternalCommand(command.id);
         return;
       case "preview.console.toggle":
-        window.dispatchEvent(new Event("iris:toggle-preview-console"));
+        onTogglePreviewConsole();
         closePalette();
         return;
       case "language.choose":
@@ -202,10 +203,15 @@ export function CommandPalette({
         closePalette();
         return;
       case "runtime.restart":
-      case "runtime.reinstall":
-        onRuntimeAction(command.id.slice("runtime.".length) as RuntimeAction);
+        onRuntimeAction("restart");
         closePalette();
         return;
+      case "runtime.reinstall":
+        onRuntimeAction("reinstall");
+        closePalette();
+        return;
+      default:
+        return assertNever(command);
     }
   };
 
@@ -246,69 +252,25 @@ export function CommandPalette({
             }}
           >
             <Dialog.Title className="sr-only">{t("command.title")}</Dialog.Title>
-            <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2.5">
-              {submenu ? (
-                <button
-                  type="button"
-                  aria-label={t("command.back")}
-                  title={t("command.back")}
-                  className="grid size-7 shrink-0 place-items-center text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
-                  onClick={returnToRoot}
-                >
-                  <ArrowLeft size={16} aria-hidden="true" />
-                </button>
-              ) : (
-                <Command size={16} aria-hidden="true" className="shrink-0 text-[var(--muted)]" />
-              )}
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(event) => {
-                  setQuery(event.target.value);
-                  setSelectedIndex(0);
-                }}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
-                    event.preventDefault();
-                    const command = commands[selectedIndex];
-                    if (command) {
-                      activate(command);
-                    }
-                    return;
-                  }
-
-                  if (event.key === "ArrowDown") {
-                    event.preventDefault();
-                    moveSelection(1);
-                    return;
-                  }
-
-                  if (event.key === "ArrowUp") {
-                    event.preventDefault();
-                    moveSelection(-1);
-                    return;
-                  }
-
-                  if ((event.ctrlKey || event.metaKey) && event.key === "n") {
-                    event.preventDefault();
-                    moveSelection(1);
-                    return;
-                  }
-
-                  if ((event.ctrlKey || event.metaKey) && event.key === "p") {
-                    event.preventDefault();
-                    moveSelection(-1);
-                  }
-                }}
-                placeholder={
-                  submenuLabel
-                    ? `${submenuLabel}: ${t("command.placeholder")}`
-                    : t("command.placeholder")
-                }
-                spellCheck={false}
-                className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[color-mix(in_srgb,var(--muted)_45%,transparent)]"
-              />
-            </div>
+            <CommandPaletteSearch
+              inputRef={inputRef}
+              query={query}
+              placeholder={
+                submenuLabel
+                  ? `${submenuLabel}: ${t("command.placeholder")}`
+                  : t("command.placeholder")
+              }
+              backLabel={submenu ? t("command.back") : undefined}
+              commands={commands}
+              selectedIndex={selectedIndex}
+              onQueryChange={(value) => {
+                setQuery(value);
+                setSelectedIndex(0);
+              }}
+              onBack={submenu ? returnToRoot : undefined}
+              onActivate={activate}
+              onMoveSelection={moveSelection}
+            />
             <CommandPaletteResults
               commands={commands}
               selectedIndex={selectedIndex}
@@ -321,4 +283,8 @@ export function CommandPalette({
       </Dialog.Portal>
     </Dialog.Root>
   );
+});
+
+function assertNever(value: never): never {
+  throw new Error(`Unhandled command palette value: ${JSON.stringify(value)}`);
 }

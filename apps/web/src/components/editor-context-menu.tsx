@@ -29,7 +29,7 @@ import { EditorPeek, type PeekResult } from "./editor-peek";
 type Props = {
   children: ReactNode;
   viewRef: RefObject<EditorView | null>;
-  environmentRef: RefObject<VirtualTypeScriptEnvironment | null>;
+  environment: VirtualTypeScriptEnvironment | null;
   files: ProjectFile[];
   path: string;
   theme: ProjectSettings["theme"];
@@ -55,12 +55,12 @@ const editItems = [
   { id: "selectAll", icon: TextSelect },
 ] as const;
 const itemClass =
-  "flex cursor-default select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[color-mix(in_srgb,var(--accent)_14%,transparent)]";
+  "flex cursor-default select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[var(--selection-surface)]";
 
 export function EditorContextMenu({
   children,
   viewRef,
-  environmentRef,
+  environment,
   files,
   path,
   theme,
@@ -105,7 +105,6 @@ export function EditorContextMenu({
   };
   const runNavigation = (kind: NavigationKind, title: string, preview = false) => {
     const view = viewRef.current;
-    const environment = environmentRef.current;
     if (!view || !environment || !target) return;
     if (target.view !== view || view.state.doc !== target.state.doc) {
       setError("staleTarget");
@@ -247,7 +246,7 @@ export function EditorContextMenu({
               <ContextMenu.Item
                 key={id}
                 className={itemClass}
-                disabled={!environmentRef.current || !target}
+                disabled={!environment || !target}
                 onSelect={() => runNavigation(kind, t(`editor.context.${id}`), options.peek)}
               >
                 <Icon size={14} aria-hidden="true" />

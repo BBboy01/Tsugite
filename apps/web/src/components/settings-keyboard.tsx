@@ -74,7 +74,7 @@ export function KeyboardSettings({
             <SettingSharingLabel settingId={settingId} />
             <div className="flex items-center gap-2">
               <input
-                className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[color-mix(in_srgb,var(--accent)_36%,transparent)]"
+                className="min-w-0 flex-1 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-xs normal-case tracking-normal text-iris-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring-subtle)]"
                 value={formatKeyBinding(binding)}
                 readOnly
                 onKeyDown={(event) => {

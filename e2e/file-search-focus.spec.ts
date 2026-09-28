@@ -17,7 +17,7 @@ function cursorPosition(page: Page) {
 }
 
 for (const path of ["src/main.tsx", "src/index.css", "src/App.tsx"]) {
-  test(`Vim hjkl works immediately after Mod-P and Enter opens ${path}`, async ({ page }) => {
+  test(`Vim hjkl works after focus returns from file search to ${path}`, async ({ page }) => {
     await page.addInitScript(() => {
       localStorage.setItem("iris.language", "en");
       localStorage.setItem("tsugite.vim-mode", "true");
@@ -32,6 +32,7 @@ for (const path of ["src/main.tsx", "src/index.css", "src/App.tsx"]) {
     await expect(
       page.getByRole("region", { name: `Editing ${path}` }).locator(".cm-content"),
     ).toBeVisible();
+    await expect(page.locator(".cm-content")).toBeFocused();
 
     await page.keyboard.press("j");
     await expect.poll(() => cursorPosition(page)).toEqual({ line: 2, column: 0 });

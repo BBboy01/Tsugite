@@ -48,7 +48,7 @@ function setup(store: MemoryStore, scope = "room-a") {
     identity: { userId: crypto.randomUUID(), displayName: "User", color: "#7389b7" },
     socketFactory: () => socket,
   });
-  const drafts = new RoomDrafts(client, scope, store);
+  const drafts = new RoomDrafts(client, store, scope);
   return { client, drafts, socket };
 }
 

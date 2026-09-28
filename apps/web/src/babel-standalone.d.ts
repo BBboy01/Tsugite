@@ -5,6 +5,7 @@ declare module "@babel/standalone" {
     transform: (
       source: string,
       options: {
+        code?: boolean;
         presets?: string[];
         sourceType?: "script";
         parserOpts?: { plugins: string[] };

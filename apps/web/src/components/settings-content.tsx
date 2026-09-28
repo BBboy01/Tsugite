@@ -129,7 +129,7 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             checked={settings.autoStartPreview}
             onCheckedChange={(checked) => onChange("autoStartPreview", checked)}
           />
-          <div className="mt-2 rounded-lg border border-iris-divider bg-[color-mix(in_srgb,var(--canvas)_72%,transparent)] px-3 py-2.5 font-iris-mono text-[10px] leading-[1.5] text-iris-muted">
+          <div className="mt-2 rounded-lg border border-iris-divider bg-[var(--control-surface)] px-3 py-2.5 font-iris-mono text-[10px] leading-[1.5] text-iris-muted">
             {t("settings.runtimeNote", { manager: settings.packageManager })}
           </div>
           <RuntimeActions t={t} />
