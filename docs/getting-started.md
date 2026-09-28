@@ -43,9 +43,7 @@ Room IDs contain 1-80 ASCII letters, digits, underscores, or hyphens. Opening an
 1. Open the same room URL in two separate browser profiles, browsers, or devices connected to the same deployment.
 2. Edit a file in one tab and watch the change arrive in the other.
 3. Open the presence list to follow another collaborator.
-4. Use the file tree context menu to create, rename, copy, or delete files.
-
-Deletion asks for confirmation and offers a separate undo action. Undo refuses conflicting paths created by collaborators. Large restored contents are sent in bounded updates through the existing synchronization queue; collaborators may briefly see a partially restored file until the queue is acknowledged.
+4. Use the file tree context menu to create, rename, copy, or delete files. Creation and rename use an inline input; Enter or leaving the input commits the value, while an empty new path cancels. Deletion asks for confirmation and offers a separate undo action. Undo refuses paths that now conflict with collaborator changes.
 5. Open shared settings to change the theme, editor behavior, Vim mode, keymaps, or preview runtime.
 
 New rooms start from the shared example project and open `src/App.tsx`. The user card lets you change your anonymous display name and avatar color.
@@ -63,11 +61,19 @@ Click another member in the presence list to follow their active file, cursor, a
 | Open settings         | `Cmd-,`       | `Ctrl-,`                |
 | Toggle preview output | `Cmd-J`       | `Ctrl-J`                |
 
-In file search and Command Palette, use the arrow keys or `Ctrl-N` / `Ctrl-P` to move, then `Enter` to select. `Esc` closes file search or the root palette. In a palette submenu, `Esc` returns to the root first. Clicking the backdrop closes either dialog. Selecting a final palette option closes it; selecting a category opens its submenu.
+File search ranks partial path matches and highlights contiguous matched characters. Use the arrow keys or `Ctrl-N` / `Ctrl-P` to move through results and `Enter` to open the selected file. `Esc` or clicking the backdrop closes the dialog.
 
-Configure application shortcuts under Settings > Keyboard. `Mod` in the default binding means `Cmd` on macOS and `Ctrl` elsewhere, not a physical key. Recorded `Cmd` and `Ctrl` bindings remain distinct. Use the restore-default control to return a customized binding to its platform-aware default.
+The Command Palette searches workspace actions and settings. Use the arrow keys or `Ctrl-N` / `Ctrl-P` to move, and `Enter` to activate. `Esc` closes the root palette; from a submenu it returns to the root first. Clicking the backdrop closes the palette. Choosing a category opens its submenu; activating a final option applies it and closes the palette. While browsing the theme submenu, the selected theme is previewed locally. Closing or leaving the submenu restores the room's committed theme unless a theme was selected.
+
+Settings > Keyboard displays the workspace shortcuts. `Mod` in the defaults means `Cmd` on macOS and `Ctrl` elsewhere, not a physical key. Explicit `Cmd` and `Ctrl` bindings remain distinct. Use the restore-default control to return a customized binding to its platform-aware default. Vim editor key bindings are separate from these workspace shortcuts.
 
 Settings opens with the current sidebar item focused. Arrow keys switch the displayed section or search result without requiring `Enter`. `Tab` moves from the current menu item to search, through the right-hand controls, then back to the menu; `Shift-Tab` reverses the order. Search matches section names and setting labels or descriptions.
+
+## Vim mode
+
+Enable Vim mode in Settings > Keyboard. The mode indicator appears in the editor status bar only while Vim mode is enabled. Normal, insert, and visual modes use the Vim key behavior provided by the CodeMirror Vim integration. Search with `/` or `?`, move through matches with `n` and `N`, and use `*` on a visual selection to search for that text. The current search and its match count appear in the editor. Normal-mode cursor shape can be selected under Settings > Editor; its color follows the room's accent color. Relative line numbers are a shared editor setting and keep the active line's absolute number.
+
+System clipboard integration is an optional browser-local setting. When enabled and permitted by the browser, Vim yank and paste use the system clipboard. The editor context menu also provides clipboard actions, undo/redo, select all, TypeScript navigation, references, and Peek where language services are available.
 
 ## Shared and local preferences
 
@@ -107,13 +113,13 @@ A project without `package.json` uses the single-file Babel iframe fallback. It 
 | Preview is paused                | Enable automatic start or use Run preview.                                                                                    |
 | Offline indicator mentions 1 MiB | A single encoded edit exceeded the limit. Copy local changes before reloading, then reapply them in smaller edits.            |
 
-Automatic reconnect retries unacknowledged edits. The browser also checkpoints them to IndexedDB while pending; the connection indicator reports when the local draft has been saved. Reopening the same room offers **Restore draft** or **Discard draft**. Restore merges the draft with the current room and sends pending edits when connected; discard permanently removes only that local copy. Another active tab's draft is not offered for recovery.
+Automatic reconnect retries unacknowledged edits. The browser also checkpoints them to IndexedDB while pending; the connection indicator reports when the local draft has been saved. Reopening the same room offers **Restore draft** or **Discard draft**. Restore merges the draft with the current room and sends pending edits when connected; discard permanently removes only that local copy. Another active tab's draft is not offered for recovery. This is best-effort browser recovery, not a guarantee that every edit survives a crash, storage eviction, or unfinished checkpoint.
 
 Local drafts require IndexedDB and Web Locks (HTTPS or localhost). If local backup is unavailable, keep the tab open until synchronized or copy your changes elsewhere. Drafts belong to this browser profile and server/room address, not your account. Browser storage clearing/eviction, private-session closure, or termination before a checkpoint finishes can still lose them. This is not a fully offline application cache: the application itself must be loadable to recover a draft.
 
 If restoration merges successfully but the new backup cannot be saved, the dialog offers **Retry backup**. The original copy remains protected and cannot be discarded until replacement succeeds; retrying does not duplicate the edits.
 
-The unload warning remains while edits are unacknowledged, even with a saved draft. A live connection or a server acknowledgement does not prove that the latest edit has reached SQLite. See [persistence guarantees](deployment.md#persistence-and-upgrades).
+The unload warning remains while edits are unacknowledged, even with a saved draft. A live connection or a server acknowledgement does not prove that the latest edit has reached SQLite. The normal snapshot window is about 500 ms; neither the browser checkpoint nor the acknowledgement extends it. See [persistence guarantees](deployment.md#persistence-and-upgrades).
 
 ## Stop and resume
 
