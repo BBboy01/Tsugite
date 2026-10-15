@@ -1,9 +1,13 @@
 import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
 import type { LoroDoc } from "loro-crdt";
 import type { EditorLocation } from "../lib/editor-navigation";
+import type { EditorIntelligence } from "../lib/editor-intelligence";
+import type { EditorIntelligenceService } from "../lib/room-typescript-intelligence";
 
 export type EditorPaneProps = {
   doc: LoroDoc;
+  intelligence: EditorIntelligence;
+  serviceStatus: EditorIntelligenceService;
   file: ProjectFile;
   files: ProjectFile[];
   tabs: ProjectFile[];

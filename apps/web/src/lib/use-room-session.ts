@@ -5,7 +5,13 @@ import { readSettings, readWorkspaceSnapshot } from "@iris/shared";
 import { getIdentity, RoomClient } from "./room-client";
 
 export function useRoomSession(roomId: string) {
-  const [client] = useState(() => new RoomClient({ roomId, identity: getIdentity() }));
+  const [client] = useState(
+    () =>
+      new RoomClient({
+        roomId,
+        identity: getIdentity(),
+      }),
+  );
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [settingsRevision, setSettingsRevision] = useState(0);
   const status = useSyncExternalStore(
@@ -66,6 +72,7 @@ export function useRoomSession(roomId: string) {
       unsubscribe();
       disconnectTimer.current = setTimeout(() => {
         client.disconnect();
+        client.typeScript.dispose();
         disconnectTimer.current = null;
       }, 0);
     };
@@ -78,6 +85,7 @@ export function useRoomSession(roomId: string) {
   const settings = useMemo(() => readSettings(client.doc), [client, settingsRevision]);
   return {
     client,
+    typeScript: client.typeScript,
     files,
     folders,
     settings,

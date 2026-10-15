@@ -8,7 +8,6 @@ import type { ProjectFile, ProjectSettings } from "@iris/shared";
 import type { UndoManager } from "loro-crdt";
 import {
   queryEditorLocations,
-  matchesIntelligenceSnapshot,
   LatestIntelligenceRequest,
   type EditorLocation,
   type NavigationKind,
@@ -25,6 +24,7 @@ type Props = {
   files: ProjectFile[];
   path: string;
   theme: ProjectSettings["theme"];
+  languageAvailable?: boolean;
   undoManager: UndoManager;
   onNavigate: (location: EditorLocation) => void;
   onLocalInteraction: () => void;
@@ -40,6 +40,7 @@ export function EditorContextMenu({
   files,
   path,
   theme,
+  languageAvailable = true,
   undoManager,
   onNavigate,
   onLocalInteraction,
@@ -94,7 +95,7 @@ export function EditorContextMenu({
     onLocalInteraction();
     const isCurrent = requests.current.begin();
     const doc = view.state.doc;
-    const snapshot = files.map((file) => ({ path: file.path, text: file.text.toString() }));
+    const workspaceVersion = intelligence.workspaceVersion;
     const valid = () =>
       mounted.current &&
       isCurrent() &&
@@ -102,14 +103,11 @@ export function EditorContextMenu({
       view.state.doc === doc &&
       current.current.path === path &&
       current.current.intelligence === intelligence &&
-      matchesIntelligenceSnapshot(
-        snapshot,
-        current.current.files.map((file) => ({ path: file.path, text: file.text.toString() })),
-      );
+      intelligence.workspaceVersion === workspaceVersion;
     try {
       const result = await queryEditorLocations(
         intelligence,
-        snapshot,
+        undefined,
         path,
         target.position,
         kind,
@@ -249,7 +247,7 @@ export function EditorContextMenu({
               <ContextMenu.Item
                 key={id}
                 className={itemClass}
-                disabled={!intelligence || !target}
+                disabled={!languageAvailable || !intelligence || !target}
                 onSelect={() => {
                   void runNavigation(kind, t(`editor.context.${id}`), options.peek);
                 }}

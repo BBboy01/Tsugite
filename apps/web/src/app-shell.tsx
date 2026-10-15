@@ -35,6 +35,7 @@ function AppShellContent({ roomId }: { roomId: string }) {
   const [deletionRecovery, setDeletionRecovery] = useState<FileDeletionRecovery>();
   const {
     client,
+    typeScript,
     settings,
     files,
     folders,
@@ -83,7 +84,8 @@ function AppShellContent({ roomId }: { roomId: string }) {
   const { state: draftState, session: draftSession } = useRoomDrafts(client);
   const [themePreview, setThemePreview] = useState<WorkspaceTheme | null>(null);
   const [cachedTheme] = useState(() => readRoomTheme(window.localStorage, roomId));
-  const isThemeReady = hasReceivedSnapshot || cachedTheme !== null;
+  const isThemeReady =
+    hasReceivedSnapshot || cachedTheme !== null || client.syncError !== undefined;
   useEffect(() => {
     if (!isThemeReady) return;
     const frame = requestAnimationFrame(() => document.getElementById("app-boot")?.remove());
@@ -254,6 +256,8 @@ function AppShellContent({ roomId }: { roomId: string }) {
               {selectedFile ? (
                 <EditorPane
                   doc={client.doc}
+                  intelligence={typeScript.intelligence}
+                  serviceStatus={typeScript}
                   file={selectedFile}
                   files={files}
                   tabs={openFiles}
