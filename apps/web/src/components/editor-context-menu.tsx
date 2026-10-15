@@ -1,35 +1,27 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
 import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { useTranslation } from "react-i18next";
-import {
-  Copy,
-  Scissors,
-  ClipboardPaste,
-  Undo2,
-  Redo2,
-  TextSelect,
-  ArrowRightToLine,
-  Eye,
-  List,
-  FileCode2,
-} from "lucide-react";
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import type { VirtualTypeScriptEnvironment } from "@typescript/vfs";
+import type { EditorIntelligence } from "../lib/editor-intelligence";
 import type { ProjectFile, ProjectSettings } from "@iris/shared";
 import type { UndoManager } from "loro-crdt";
 import {
   queryEditorLocations,
+  matchesIntelligenceSnapshot,
+  LatestIntelligenceRequest,
   type EditorLocation,
   type NavigationKind,
 } from "../lib/editor-navigation";
 import { runClipboardAction } from "../lib/editor-clipboard";
-import { EditorPeek, type PeekResult } from "./editor-peek";
+import { EditorContextFeedback, type EditorContextError } from "./editor-context-feedback";
+import type { PeekResult } from "./editor-peek";
+import { editItems, navigationItems } from "./editor-context-actions";
 
 type Props = {
   children: ReactNode;
   viewRef: RefObject<EditorView | null>;
-  environment: VirtualTypeScriptEnvironment | null;
+  intelligence: EditorIntelligence | null;
   files: ProjectFile[];
   path: string;
   theme: ProjectSettings["theme"];
@@ -38,29 +30,13 @@ type Props = {
   onLocalInteraction: () => void;
 };
 
-const navigationItems = [
-  { id: "definition", kind: "definition", icon: ArrowRightToLine },
-  { id: "typeDefinition", kind: "type", icon: FileCode2 },
-  { id: "implementation", kind: "implementation", icon: FileCode2 },
-  { id: "references", kind: "references", icon: List, peek: true },
-  { id: "peekDefinition", kind: "definition", icon: Eye, peek: true },
-  { id: "peekReferences", kind: "references", icon: Eye, peek: true },
-] satisfies { id: string; kind: NavigationKind; icon: typeof Eye; peek?: boolean }[];
-const editItems = [
-  { id: "undo", icon: Undo2 },
-  { id: "redo", icon: Redo2 },
-  { id: "cut", icon: Scissors },
-  { id: "copy", icon: Copy },
-  { id: "paste", icon: ClipboardPaste },
-  { id: "selectAll", icon: TextSelect },
-] as const;
 const itemClass =
   "flex cursor-default select-none items-center gap-2 rounded px-2 py-1.5 outline-none data-[disabled]:pointer-events-none data-[disabled]:opacity-40 data-[highlighted]:bg-[var(--selection-surface)]";
 
 export function EditorContextMenu({
   children,
   viewRef,
-  environment,
+  intelligence,
   files,
   path,
   theme,
@@ -75,15 +51,19 @@ export function EditorContextMenu({
     view: EditorView;
   } | null>(null);
   const [peek, setPeek] = useState<PeekResult | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<EditorContextError | null>(null);
   const beforeRightClick = useRef<EditorSelection | null>(null);
   const keepPeekFocus = useRef(false);
   const mounted = useRef(true);
+  const requests = useRef(new LatestIntelligenceRequest());
+  const current = useRef({ files, path, intelligence });
+  current.current = { files, path, intelligence };
   const surfaceRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     mounted.current = true;
     return () => {
       mounted.current = false;
+      requests.current.invalidate();
     };
   }, []);
 
@@ -94,7 +74,8 @@ export function EditorContextMenu({
     restoreFocus();
   };
   const navigate = (location: EditorLocation) => {
-    if (files.find((file) => file.path === location.path)?.text.toString() !== location.source) {
+    const foundFile = files.find((file) => file.path === location.path);
+    if (foundFile?.text.toString() !== location.source) {
       setPeek(null);
       setError("staleTarget");
       return;
@@ -103,27 +84,49 @@ export function EditorContextMenu({
     keepPeekFocus.current = false;
     onNavigate(location);
   };
-  const runNavigation = (kind: NavigationKind, title: string, preview = false) => {
+  const runNavigation = async (kind: NavigationKind, title: string, preview = false) => {
     const view = viewRef.current;
-    if (!view || !environment || !target) return;
+    if (!view || !intelligence || !target) return;
     if (target.view !== view || view.state.doc !== target.state.doc) {
       setError("staleTarget");
       return;
     }
     onLocalInteraction();
+    const isCurrent = requests.current.begin();
+    const doc = view.state.doc;
+    const snapshot = files.map((file) => ({ path: file.path, text: file.text.toString() }));
+    const valid = () =>
+      mounted.current &&
+      isCurrent() &&
+      viewRef.current === view &&
+      view.state.doc === doc &&
+      current.current.path === path &&
+      current.current.intelligence === intelligence &&
+      matchesIntelligenceSnapshot(
+        snapshot,
+        current.current.files.map((file) => ({ path: file.path, text: file.text.toString() })),
+      );
     try {
-      const sources = files.map((file) => ({
-        path: file.path,
-        text: file.path === path ? view.state.doc.toString() : file.text.toString(),
-      }));
-      const locations = queryEditorLocations(environment, sources, path, target.position, kind);
+      const result = await queryEditorLocations(
+        intelligence,
+        snapshot,
+        path,
+        target.position,
+        kind,
+      );
+      if (!valid()) return;
+      if (result.status !== "ok" && result.status !== "empty") {
+        if (result.status === "error" || result.status === "timeout") setError("queryFailed");
+        return;
+      }
+      const locations = result.status === "ok" ? result.value : [];
       if (!preview && locations.length === 1) navigate(locations[0]);
       else {
         keepPeekFocus.current = true;
         setPeek({ title, locations });
       }
     } catch {
-      setError("queryFailed");
+      if (valid()) setError("queryFailed");
     }
   };
   const runEdit = async (action: (typeof editItems)[number]["id"]) => {
@@ -246,8 +249,10 @@ export function EditorContextMenu({
               <ContextMenu.Item
                 key={id}
                 className={itemClass}
-                disabled={!environment || !target}
-                onSelect={() => runNavigation(kind, t(`editor.context.${id}`), options.peek)}
+                disabled={!intelligence || !target}
+                onSelect={() => {
+                  void runNavigation(kind, t(`editor.context.${id}`), options.peek);
+                }}
               >
                 <Icon size={14} aria-hidden="true" />
                 {t(`editor.context.${id}`)}
@@ -270,25 +275,13 @@ export function EditorContextMenu({
           </ContextMenu.Content>
         </ContextMenu.Portal>
       </ContextMenu.Root>
-      {error && (
-        <p
-          role="alert"
-          className="m-0 flex items-center justify-between gap-2 border-t border-iris-divider px-3 py-1 font-iris-mono text-xs text-iris-ink"
-        >
-          {t(`editor.context.${error}`)}
-          <button type="button" className="text-iris-muted" onClick={() => setError(null)}>
-            {t("editor.context.dismiss")}
-          </button>
-        </p>
-      )}
-      {peek && (
-        <EditorPeek
-          key={peek.title + peek.locations.map((item) => `${item.path}:${item.from}`).join(",")}
-          result={peek}
-          onClose={closePeek}
-          onNavigate={navigate}
-        />
-      )}
+      <EditorContextFeedback
+        error={error}
+        peek={peek}
+        onDismissError={() => setError(null)}
+        onClosePeek={closePeek}
+        onNavigate={navigate}
+      />
     </div>
   );
 }
