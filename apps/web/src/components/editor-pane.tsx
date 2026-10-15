@@ -1,4 +1,4 @@
-import { memo, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslation } from "react-i18next";
 import { EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -31,11 +31,14 @@ import { vimSearchExtension } from "../lib/vim-search";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
 import { editorBasicSetup } from "../lib/editor-basic-setup";
 import { attachEditorTypeScriptServices } from "../lib/editor-typescript-services";
+import { EditorLanguageStatus } from "./editor-language-status";
 
 type SavedEditorSelection = EditorSelection & { fileId: string };
 
 export const EditorPane = memo(function EditorPane({
   doc,
+  intelligence,
+  serviceStatus: service,
   file,
   files,
   tabs,
@@ -54,6 +57,11 @@ export const EditorPane = memo(function EditorPane({
   onLocationHandled,
 }: EditorPaneProps) {
   const { t } = useTranslation();
+  const serviceStatus = useSyncExternalStore(
+    service.subscribeServiceStatus,
+    service.getServiceStatus,
+    service.getServiceStatus,
+  );
   const [systemClipboard] = useSystemClipboard();
   const systemClipboardRef = useRef(systemClipboard);
   systemClipboardRef.current = systemClipboard;
@@ -176,8 +184,12 @@ export const EditorPane = memo(function EditorPane({
     }
 
     const detachTypeScript = supportsTypeScriptServices(language)
-      ? attachEditorTypeScriptServices(view, file.path, doc, (intelligence) =>
-          setTypeScriptEnvironment({ fileId: file.id, path: file.path, intelligence }),
+      ? attachEditorTypeScriptServices(view, file.path, intelligence, (readyIntelligence) =>
+          setTypeScriptEnvironment({
+            fileId: file.id,
+            path: file.path,
+            intelligence: readyIntelligence,
+          }),
         )
       : undefined;
 
@@ -195,7 +207,7 @@ export const EditorPane = memo(function EditorPane({
       detachTypeScript?.();
       visualConfigurationRef.current = null;
     };
-  }, [doc, file.id, file.path, file.language, vimMode, undoManager]);
+  }, [doc, file.id, file.path, file.language, vimMode, undoManager, intelligence]);
 
   useEffect(() => {
     vimBindingsRef.current?.update(settings.normalCursorStyle, systemClipboard);
@@ -238,7 +250,9 @@ export const EditorPane = memo(function EditorPane({
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
       />
+      <EditorLanguageStatus serviceStatus={service} />
       <EditorContextMenu
+        languageAvailable={serviceStatus.state === "ready" || serviceStatus.state === "fallback"}
         key={file.id + file.path}
         viewRef={viewRef}
         intelligence={

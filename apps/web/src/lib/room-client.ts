@@ -9,6 +9,8 @@ import {
   type TransportEvent,
 } from "./room-transport";
 import { type RoomClientEvent } from "./room-events";
+import { RoomTypeScriptIntelligence } from "./room-typescript-intelligence";
+import type { EditorIntelligence, IntelligenceFile } from "./editor-intelligence";
 import type { DraftSyncEvent, DraftSyncPort } from "./draft-sync-port";
 
 import {
@@ -26,6 +28,7 @@ export type RoomClientOptions = {
   identity: RoomIdentity;
   url?: string;
   socketFactory?: (url: string) => RoomSocket;
+  createEditorIntelligence?: (files: readonly IntelligenceFile[]) => EditorIntelligence;
 };
 
 export type { RoomSocket } from "./room-transport";
@@ -38,6 +41,7 @@ const IMPORT_ERROR = "Unable to apply room data. Reconnecting; local changes rem
 export class RoomClient implements DraftSyncPort {
   readonly roomId: string;
   readonly identity: RoomIdentity;
+  readonly typeScript: RoomTypeScriptIntelligence;
   private readonly transport: RoomTransport;
   private readonly document: RoomDocument;
   private readonly presence: RoomPresence;
@@ -59,6 +63,9 @@ export class RoomClient implements DraftSyncPort {
     this.transport.subscribe((event) => this.handleTransportEvent(event));
     this.document = new RoomDocument((bytes) => this.outbox.update(bytes));
     this.document.subscribe((event) => this.handleDocumentEvent(event));
+    this.typeScript = new RoomTypeScriptIntelligence(this, {
+      createIntelligence: options.createEditorIntelligence,
+    });
     this.presence = new RoomPresence(this.identity, (message) => {
       if (this.transport.status === "live") this.outbox.updatePresence(encodeJsonMessage(message));
     });
@@ -222,6 +229,7 @@ export class RoomClient implements DraftSyncPort {
     if (event.type === "import-error") {
       this.importError = IMPORT_ERROR;
       this.transport.reconnect();
+      this.emit({ type: "status", status: this.status });
       return;
     }
     if (event.type === "oversized") {

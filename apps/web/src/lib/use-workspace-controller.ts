@@ -179,6 +179,7 @@ export function useWorkspaceController(roomId: string) {
 
   return {
     client,
+    typeScript: client.typeScript,
     settings,
     files,
     folders,
