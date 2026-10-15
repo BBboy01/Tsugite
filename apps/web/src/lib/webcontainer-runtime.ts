@@ -4,6 +4,8 @@ import type { PackageManager, ProjectFile } from "@iris/shared";
 
 import { selectPreviewScript } from "./webcontainer-files";
 import { WebContainerFileSync } from "./webcontainer-file-sync";
+import type { IntelligenceFile } from "./editor-intelligence";
+import { scanWebContainerDeclarations } from "./webcontainer-declaration-scan";
 import {
   getRuntimeError,
   isStoragePartitioningErrorUrl,
@@ -46,6 +48,7 @@ type RuntimeOptions = {
   boot?: () => Promise<RuntimeContainer>;
   installTimeoutMs?: number;
   spawnTimeoutMs?: number;
+  declarationTimeoutMs?: number;
 };
 
 type StartOptions = {
@@ -63,6 +66,8 @@ export class WebContainerRuntime {
   private readonly boot: () => Promise<RuntimeContainer>;
   private readonly installTimeoutMs: number;
   private readonly spawnTimeoutMs: number;
+  private readonly declarationTimeoutMs: number;
+  private readonly declarationScans = new Set<AbortController>();
   private container: RuntimeContainer | undefined;
   private bootPromise: Promise<RuntimeContainer> | undefined;
   private process: RuntimeProcess | undefined;
@@ -76,6 +81,32 @@ export class WebContainerRuntime {
     this.boot = options.boot ?? defaultBoot;
     this.installTimeoutMs = options.installTimeoutMs ?? 120_000;
     this.spawnTimeoutMs = options.spawnTimeoutMs ?? 15_000;
+    this.declarationTimeoutMs = options.declarationTimeoutMs ?? 2000;
+  }
+
+  async readTypeScriptDeclarations(
+    sourceFiles?: readonly IntelligenceFile[],
+  ): Promise<IntelligenceFile[]> {
+    const container = this.container;
+    if (!container) throw new Error("TypeScript declaration runtime unavailable");
+    const generation = this.generation;
+    for (const scan of this.declarationScans) scan.abort();
+    this.declarationScans.clear();
+    const controller = new AbortController();
+    this.declarationScans.add(controller);
+    try {
+      const files = await scanWebContainerDeclarations(
+        container,
+        sourceFiles,
+        controller.signal,
+        this.spawnTimeoutMs,
+        this.declarationTimeoutMs,
+      );
+      if (generation !== this.generation) throw new Error("TypeScript declaration scan cancelled");
+      return files;
+    } finally {
+      this.declarationScans.delete(controller);
+    }
   }
 
   async start(
@@ -310,6 +341,8 @@ export class WebContainerRuntime {
   }
 
   private stopCurrentRun(): void {
+    for (const scan of this.declarationScans) scan.abort();
+    this.declarationScans.clear();
     this.process?.kill();
     this.process = undefined;
     this.unsubscribeReady?.();

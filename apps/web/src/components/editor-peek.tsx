@@ -18,6 +18,9 @@ export function EditorPeek({
   const [selected, setSelected] = useState(0);
   const host = useRef<HTMLElement>(null);
   const location = result.locations[selected];
+  const canOpenLocation =
+    location &&
+    !(location.path.startsWith("node_modules/") && /\.d\.(?:ts|mts|cts)$/.test(location.path));
   useEffect(() => {
     host.current?.focus();
   }, []);
@@ -48,7 +51,7 @@ export function EditorPeek({
         <span className="truncate">{result.title}</span>
         <span className="text-iris-muted">{result.locations.length}</span>
         <span className="flex-1" />
-        {location && (
+        {canOpenLocation && (
           <button
             type="button"
             className={iconButton}

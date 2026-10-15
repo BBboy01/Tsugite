@@ -1,5 +1,6 @@
 import { expect, test } from "bun:test";
 import { createTypeScriptIntelligence } from "./typescript-intelligence";
+import { standardLibraries } from "./typescript-test-libraries";
 import {
   LatestIntelligenceRequest,
   matchesIntelligenceSnapshot,
@@ -13,7 +14,7 @@ const files = [
 ];
 
 test("navigation synchronizes collaborative edits before its async query", async () => {
-  const engine = createTypeScriptIntelligence("src/App.tsx", source, files);
+  const engine = createTypeScriptIntelligence("src/App.tsx", source, files, standardLibraries);
   try {
     const result = await queryEditorLocations(
       engine,
@@ -43,7 +44,7 @@ test("navigation synchronizes collaborative edits before its async query", async
 });
 
 test("navigation preserves empty and disposed results", async () => {
-  const engine = createTypeScriptIntelligence("src/App.tsx", source, files);
+  const engine = createTypeScriptIntelligence("src/App.tsx", source, files, standardLibraries);
   expect(
     await queryEditorLocations(engine, files, "src/App.tsx", source.length, "definition"),
   ).toEqual({ status: "empty" });

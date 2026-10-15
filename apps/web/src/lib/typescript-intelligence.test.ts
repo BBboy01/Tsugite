@@ -1,5 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { createTypeScriptIntelligence } from "./typescript-intelligence";
+import { standardLibraries } from "./typescript-test-libraries";
 import type { IntelligenceResult } from "./editor-intelligence";
 
 function value<T>(result: IntelligenceResult<T>): T {
@@ -10,7 +11,7 @@ function value<T>(result: IntelligenceResult<T>): T {
 
 describe("TypeScript intelligence plain-data boundary", () => {
   test("workspace subscribers observe complete updates and detach on unsubscribe", async () => {
-    const engine = createTypeScriptIntelligence("app.ts", "export {};");
+    const engine = createTypeScriptIntelligence("app.ts", "export {};", [], standardLibraries);
     const revisions: number[] = [];
     const stop = engine.subscribeWorkspace(() => revisions.push(engine.workspaceVersion));
     await engine.syncWorkspace([
@@ -28,7 +29,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
   });
   test("returns const literal hover and documentation with UTF-16 ranges", async () => {
     const source = "/** A <safe> value. */\nconst value = 1;\n// \uD83D\uDE00\nvalue;";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       expect(
         value(await engine.hover({ path: "value.ts", position: source.lastIndexOf("value") })),
@@ -45,7 +46,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
 
   test("returns member completion replacement ranges", async () => {
     const source = "const object = { alpha: 1, beta: true };\nobject.al";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       const entries = value(await engine.completion({ path: "value.ts", position: source.length }));
       expect(entries.find((entry) => entry.name === "alpha")).toMatchObject({
@@ -59,7 +60,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
 
   test("uses TypeScript's optional replacement span for a caret inside a property", async () => {
     const source = "const object = { alpha: 1, beta: true };\nobject.alpha";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       const position = source.lastIndexOf("alpha") + 2;
       const entries = value(await engine.completion({ path: "value.ts", position }));
@@ -75,7 +76,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
   test("reports the active signature parameter and documentation", async () => {
     const source =
       "/** Join values. */\nfunction join(first: string, second: number) {}\njoin('one', ";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       const help = value(await engine.signatureHelp({ path: "value.ts", position: source.length }));
       expect(help.activeParameter).toBe(1);
@@ -90,7 +91,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
 
   test("returns syntax and semantic diagnostics as JSON-safe data", async () => {
     const source = "const count: number = 'wrong';\nconst broken = ;";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       const diagnostics = value(await engine.diagnostics({ path: "value.ts" }));
       expect(diagnostics.some((item) => item.code === 2322 && item.severity === "error")).toBe(
@@ -103,9 +104,9 @@ describe("TypeScript intelligence plain-data boundary", () => {
     }
   });
 
-  test("provides basic global types when the main-thread adapter has no library snapshot", async () => {
+  test("uses official standard libraries for global value diagnostics", async () => {
     const source = "const value = String(1); console.log(value);";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       expect(await engine.diagnostics({ path: "value.ts" })).toEqual({ status: "empty" });
     } finally {
@@ -116,9 +117,12 @@ describe("TypeScript intelligence plain-data boundary", () => {
   test("synchronizes remote edits, deletion and recreation before cross-file navigation", async () => {
     const source = "import { value } from './value';\nvalue;";
     const active = { path: "app.ts", text: source };
-    const engine = createTypeScriptIntelligence(active.path, source, [
-      { path: "value.ts", text: "export const value = 1;" },
-    ]);
+    const engine = createTypeScriptIntelligence(
+      active.path,
+      source,
+      [{ path: "value.ts", text: "export const value = 1;" }],
+      standardLibraries,
+    );
     const query = { path: active.path, position: source.lastIndexOf("value") };
     try {
       expect(value(await engine.definition(query))[0]).toMatchObject({
@@ -158,7 +162,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
   test("resolves types and implementations and represents missing targets explicitly", async () => {
     const source =
       "interface Shape { size: number }\nclass Box implements Shape { size = 1 }\nconst shape: Shape = new Box();\nshape;";
-    const engine = createTypeScriptIntelligence("types.ts", source);
+    const engine = createTypeScriptIntelligence("types.ts", source, [], standardLibraries);
     try {
       expect(
         value(
@@ -183,7 +187,12 @@ describe("TypeScript intelligence plain-data boundary", () => {
   });
 
   test("cancels pending queries, applies deadlines and disposes idempotently", async () => {
-    const engine = createTypeScriptIntelligence("value.ts", "const value = 1;");
+    const engine = createTypeScriptIntelligence(
+      "value.ts",
+      "const value = 1;",
+      [],
+      standardLibraries,
+    );
     const pending = engine.hover({ path: "value.ts", position: 6, requestId: "hover" });
     engine.cancel("hover");
     expect(await pending).toEqual({ status: "cancelled" });
@@ -198,7 +207,7 @@ describe("TypeScript intelligence plain-data boundary", () => {
 
   test("rejects a query bound to an older workspace revision", async () => {
     const source = "const value = 1;\nvalue;";
-    const engine = createTypeScriptIntelligence("value.ts", source);
+    const engine = createTypeScriptIntelligence("value.ts", source, [], standardLibraries);
     try {
       const synced = await engine.syncWorkspace([{ path: "value.ts", text: source }]);
       expect(synced.status).toBe("ok");

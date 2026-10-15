@@ -1,11 +1,12 @@
 import { expect, test } from "bun:test";
 import { TypeScriptWorkerSession } from "./typescript-worker-session";
 import { createTypeScriptIntelligence } from "./typescript-intelligence";
+import { standardLibraries } from "./typescript-test-libraries";
 import type { EditorIntelligence } from "./editor-intelligence";
 
 test("real engine serializes incremental edits, deletions, UTF-16 and rejects stale versions", async () => {
   const session = new TypeScriptWorkerSession((files) =>
-    createTypeScriptIntelligence(files[0].path, files[0].text, files),
+    createTypeScriptIntelligence(files[0].path, files[0].text, files, standardLibraries),
   );
   const source = 'const emoji = "😀"; const value = 1; value;';
   const envelope = { epoch: 1, requestId: "init", workspaceVersion: 1 };
@@ -154,7 +155,7 @@ test("worker independently refuses unsafe snapshots before creating an engine", 
 
 test("worker independently rejects unsafe query paths", async () => {
   const session = new TypeScriptWorkerSession((files) =>
-    createTypeScriptIntelligence(files[0].path, files[0].text, files),
+    createTypeScriptIntelligence(files[0].path, files[0].text, files, standardLibraries),
   );
   await session.enqueue({
     epoch: 1,
@@ -175,7 +176,7 @@ test("worker independently rejects unsafe query paths", async () => {
   session.dispose();
 });
 
-test("navigation replies deduplicate source snapshots for repeated locations", async () => {
+test("navigation replies deduplicate source snapshots and bound location counts", async () => {
   const source = "x".repeat(7000);
   const makeSession = (count: number) => {
     const engine = {
@@ -219,4 +220,45 @@ test("navigation replies deduplicate source snapshots for repeated locations", a
     "source",
   );
   compact.dispose();
+
+  const oversized = makeSession(10_001);
+  await oversized.enqueue(initialize);
+  const rejected = await oversized.enqueue({
+    epoch: 1,
+    requestId: "large-refs",
+    workspaceVersion: 1,
+    kind: "query",
+    method: "references",
+    query: { path: "app.ts", position: 0 },
+  });
+  expect(rejected.result).toMatchObject({
+    status: "error",
+    message: "Too many TypeScript navigation results",
+  });
+  expect(rejected.sourceSnapshots).toBeUndefined();
+  oversized.dispose();
+});
+
+test("worker independently validates declaration snapshots before creating an engine", async () => {
+  let created = 0;
+  const session = new TypeScriptWorkerSession(() => {
+    created++;
+    throw new Error("unexpected");
+  });
+  const result = await session.enqueue({
+    epoch: 1,
+    requestId: "init",
+    workspaceVersion: 1,
+    kind: "initialize",
+    files: Array.from({ length: 9 }, (_, index) => ({
+      path: `node_modules/pkg/file${index}.d.ts`,
+      text: "x".repeat(1024 * 1024),
+      version: 1,
+    })),
+  });
+  expect(result.result).toMatchObject({
+    status: "error",
+    message: expect.stringContaining("declaration workspace limit"),
+  });
+  expect(created).toBe(0);
 });

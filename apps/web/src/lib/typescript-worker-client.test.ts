@@ -1,6 +1,5 @@
 import { expect, test } from "bun:test";
 import { TypeScriptWorkerClient } from "./typescript-worker-client";
-import { createTypeScriptIntelligence } from "./typescript-intelligence";
 import { files, transport } from "./typescript-worker-test-helpers";
 
 test("workspace subscribers observe readiness and changed snapshots but not identical writes", async () => {
@@ -204,183 +203,6 @@ test("crash retries exactly once from latest snapshot then disables language ser
   client.dispose();
 });
 
-test("falls back to the bounded main-thread adapter after worker retries are exhausted", async () => {
-  const workers = [transport(), transport()];
-  let created = 0;
-  let fallbackCreated = 0;
-  const client = new TypeScriptWorkerClient(files, {
-    createWorker: () => workers[created++].worker,
-    createFallback: (snapshot) => {
-      fallbackCreated++;
-      return createTypeScriptIntelligence(snapshot[0]!.path, snapshot[0]!.text, snapshot);
-    },
-  });
-  workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
-  workers[0].crash();
-  workers[1].crash();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(client.getStatusSnapshot().state).toBe("fallback");
-  expect(fallbackCreated).toBe(1);
-  expect(
-    await client.hover({
-      path: "app.ts",
-      position: 6,
-      revision: client.workspaceVersion,
-    }),
-  ).toMatchObject({
-    status: "ok",
-    value: { signature: "const value: 1" },
-  });
-  await client.updateFile({ path: "app.ts", text: "const value = 42; value;" });
-  expect(created).toBe(2);
-  expect(await client.hover({ path: "app.ts", position: 6 })).toMatchObject({
-    status: "ok",
-    value: { signature: "const value: 42" },
-  });
-  client.dispose();
-});
-
-test("routes lazy startup failures through a pending fallback and bounds queries", async () => {
-  const fallback = Promise.withResolvers<ReturnType<typeof createTypeScriptIntelligence>>();
-  let created = 0;
-  const client = new TypeScriptWorkerClient(files, {
-    lazyStart: true,
-    createWorker: () => {
-      created++;
-      throw new Error("CSP blocked");
-    },
-    createFallback: async () => fallback.promise,
-  });
-  const first = client.hover({ path: "app.ts", position: 6, timeoutMs: 30 });
-  expect(created).toBe(2);
-  expect(client.getStatusSnapshot().state).toBe("loading");
-  const queries = Array.from({ length: 33 }, (_, index) =>
-    client.hover({ path: "app.ts", position: 6, requestId: `fallback-query-${index}` }),
-  );
-  const overflow = await queries.at(-1);
-  fallback.resolve(createTypeScriptIntelligence(files[0]!.path, files[0]!.text, files));
-  const result = await first;
-  const queued = await queries[0];
-  const state = client.getStatusSnapshot().state;
-  client.dispose();
-  expect(overflow).toEqual({ status: "error", message: "TypeScript worker queue is full" });
-  expect(result).toMatchObject({ status: "ok", value: { signature: "const value: 1" } });
-  expect(queued).toMatchObject({ status: "ok", value: { signature: "const value: 1" } });
-  expect(state).toBe("fallback");
-});
-
-test("ready fallback enforces the query budget through cancellation and disposal", async () => {
-  const deferred = Promise.withResolvers<{ status: "empty" }>();
-  const intelligence = createTypeScriptIntelligence(files[0]!.path, files[0]!.text, files);
-  let forwardedTimeout: number | undefined;
-  intelligence.hover = (query) => {
-    forwardedTimeout = Math.max(forwardedTimeout ?? 0, query.timeoutMs ?? 0);
-    if ((query.timeoutMs ?? 0) < 20) {
-      Bun.sleepSync(25);
-      return Promise.resolve({ status: "empty" });
-    }
-    return deferred.promise;
-  };
-  const client = new TypeScriptWorkerClient(files, {
-    createWorker: () => {
-      throw new Error("blocked");
-    },
-    createFallback: () => intelligence,
-  });
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  const pending = Array.from({ length: 32 }, (_, index) =>
-    client.hover({ path: "app.ts", position: 6, requestId: `ready-${index}`, timeoutMs: 5000 }),
-  );
-  await Bun.sleep(0);
-  const overflow = client.hover({ path: "app.ts", position: 6 });
-  client.cancel("ready-0");
-  const timedResult = await client.hover({ path: "app.ts", position: 6, timeoutMs: 10 });
-  await client.updateFile({ path: "app.ts", text: "const value = 2;" });
-  deferred.resolve({ status: "empty" });
-  const [overflowResult, cancelled, stale] = await Promise.all([overflow, pending[0], pending[1]]);
-  intelligence.hover = () => new Promise(() => {});
-  const last = client.hover({ path: "app.ts", position: 6, timeoutMs: 40 });
-  await Bun.sleep(0);
-  client.dispose();
-  expect(overflowResult).toEqual({ status: "error", message: "TypeScript worker queue is full" });
-  expect(forwardedTimeout).toBeLessThanOrEqual(2000);
-  expect(cancelled).toEqual({ status: "cancelled" });
-  expect(timedResult).toEqual({ status: "timeout" });
-  expect(stale).toEqual({ status: "cancelled" });
-  expect(await last).toEqual({ status: "disposed" });
-});
-
-test("cancels a query immediately while the asynchronous fallback is loading", async () => {
-  const workers = [transport(), transport()];
-  const fallback = Promise.withResolvers<ReturnType<typeof createTypeScriptIntelligence>>();
-  let created = 0;
-  const client = new TypeScriptWorkerClient(files, {
-    createWorker: () => workers[created++].worker,
-    createFallback: () => fallback.promise,
-  });
-  workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
-  workers[0].crash();
-  workers[1].crash();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  const pending = client.hover({ path: "app.ts", position: 6, requestId: "cancel-me" });
-  client.cancel("cancel-me");
-  expect(await pending).toEqual({ status: "cancelled" });
-  expect(client.getStatusSnapshot().state).toBe("loading");
-  fallback.resolve(createTypeScriptIntelligence(files[0]!.path, files[0]!.text, files));
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(client.getStatusSnapshot().state).toBe("fallback");
-  client.dispose();
-});
-
-test.each([undefined, "dispose-me"])(
-  "disposes pending fallback queries with request ID %s",
-  async (requestId) => {
-    const fallback = Promise.withResolvers<ReturnType<typeof createTypeScriptIntelligence>>();
-    const client = new TypeScriptWorkerClient(files, {
-      createWorker: () => {
-        throw new Error("blocked");
-      },
-      createFallback: () => fallback.promise,
-    });
-    const pending = client.hover({ path: "app.ts", position: 6, requestId, timeoutMs: 40 });
-    client.dispose();
-    expect(await pending).toEqual({ status: "disposed" });
-    fallback.resolve(createTypeScriptIntelligence(files[0]!.path, files[0]!.text, files));
-  },
-);
-
-test("invalidates the fallback when a later workspace exceeds the resource budget", async () => {
-  const workers = [transport(), transport()];
-  let created = 0;
-  let fallbackCreated = 0;
-  const client = new TypeScriptWorkerClient(files, {
-    createWorker: () => workers[created++].worker,
-    createFallback: (snapshot) => {
-      fallbackCreated++;
-      return createTypeScriptIntelligence(snapshot[0]!.path, snapshot[0]!.text, snapshot);
-    },
-  });
-  workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
-  workers[0].crash();
-  workers[1].crash();
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(client.status).toBe("fallback");
-
-  const oversized = await client.syncWorkspace(
-    Array.from({ length: 17 }, (_, index) => ({
-      path: `file${index}.ts`,
-      text: "x".repeat(1024 * 1024),
-    })),
-  );
-  expect(oversized).toMatchObject({ status: "error" });
-  expect(client.status).toBe("disabled");
-  expect(fallbackCreated).toBe(1);
-  expect(await client.hover({ path: "app.ts", position: 0 })).toMatchObject({
-    status: "error",
-  });
-  client.dispose();
-});
-
 test("initialization failure retries once and does not start a main-thread compiler", async () => {
   const workers = [transport(), transport()];
   let created = 0;
@@ -396,7 +218,7 @@ test("initialization failure retries once and does not start a main-thread compi
   client.dispose();
 });
 
-test("resource and unsafe path rejection never creates a worker or fallback", async () => {
+test("resource and unsafe path rejection never creates a worker", async () => {
   let created = 0;
   for (const snapshot of [
     [{ path: "../escape.ts", text: "" }],
@@ -478,6 +300,37 @@ test("rejects unsafe query paths before sending them to the worker", async () =>
     status: "error",
   });
   expect(fake.sent).toHaveLength(1);
+  client.dispose();
+});
+
+test("publishes declaration metadata and enforces its independent byte budget", async () => {
+  const fake = transport();
+  const client = new TypeScriptWorkerClient(
+    [
+      ...files,
+      { path: "node_modules/pkg/package.json", text: '{"types":"index.d.ts"}' },
+      { path: "node_modules/pkg/index.d.ts", text: "export declare const value: number;" },
+    ],
+    { createWorker: () => fake.worker },
+  );
+  expect(fake.sent[0]).toMatchObject({
+    kind: "initialize",
+    files: expect.arrayContaining([
+      expect.objectContaining({ path: "node_modules/pkg/package.json" }),
+    ]),
+  });
+  const result = await client.syncWorkspace([
+    ...files,
+    ...Array.from({ length: 9 }, (_, index) => ({
+      path: `node_modules/pkg/file${index}.d.ts`,
+      text: "x".repeat(1024 * 1024),
+    })),
+  ]);
+  expect(result).toMatchObject({
+    status: "error",
+    message: expect.stringContaining("declaration workspace limit"),
+  });
+  expect(client.status).toBe("disabled");
   client.dispose();
 });
 

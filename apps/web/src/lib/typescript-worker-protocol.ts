@@ -4,10 +4,12 @@ import type {
   IntelligenceDiagnosticQuery,
   IntelligenceResult,
 } from "./editor-intelligence";
+import { validateDeclarationFiles } from "./typescript-declarations";
 
 export const SOURCE_LIMITS = { files: 512, fileBytes: 1024 * 1024, totalBytes: 16 * 1024 * 1024 };
 export const WORKER_QUEUE_LIMIT = 32;
 export const QUERY_TIMEOUT_MS = 2000;
+export const NAVIGATION_LIMITS = { locations: 10_000, sourceBytes: 24 * 1024 * 1024 } as const;
 export type QueryMethod =
   | "hover"
   | "completion"
@@ -32,7 +34,10 @@ export type WorkerReply = WorkerEnvelope & {
   sourceSnapshots?: Record<string, string>;
 };
 export const isSourcePath = (path: string) => /\.[cm]?[jt]sx?$/.test(path);
-export const isIntelligencePath = isSourcePath;
+export const isDeclarationResource = (path: string) =>
+  /\.d\.(?:ts|mts|cts)$/.test(path) || path === "package.json" || path.endsWith("/package.json");
+export const isIntelligencePath = (path: string) =>
+  isSourcePath(path) || isDeclarationResource(path);
 export function isSafeSourcePath(path: string): boolean {
   return (
     typeof path === "string" &&
@@ -74,5 +79,7 @@ export function validateSourceFiles(files: readonly IntelligenceFile[]): string 
 }
 
 export function validateWorkspaceFiles(files: readonly IntelligenceFile[]): string | undefined {
-  return validateSourceFiles(files);
+  const declarations = files.filter((file) => isDeclarationResource(file.path));
+  const sources = files.filter((file) => !isDeclarationResource(file.path));
+  return validateSourceFiles(sources) ?? validateDeclarationFiles(declarations);
 }

@@ -1,5 +1,5 @@
 export type TypeScriptWorkerStatus = Readonly<{
-  state: "loading" | "ready" | "fallback" | "unavailable" | "disposed";
+  state: "loading" | "ready" | "unavailable" | "disposed";
   reason?: string;
 }>;
 
@@ -7,7 +7,6 @@ export type TypeScriptWorkerMetrics = Readonly<{
   workerStarts: number;
   workerRetries: number;
   readyCount: number;
-  fallbackCount: number;
   unavailableCount: number;
 }>;
 
@@ -18,7 +17,6 @@ export class TypeScriptWorkerLifecycle {
     workerStarts: 0,
     workerRetries: 0,
     readyCount: 0,
-    fallbackCount: 0,
     unavailableCount: 0,
   } satisfies TypeScriptWorkerMetrics;
 
@@ -44,7 +42,6 @@ export class TypeScriptWorkerLifecycle {
     this.status = { state, reason };
     if (changedState)
       if (state === "ready") this.metrics.readyCount++;
-      else if (state === "fallback") this.metrics.fallbackCount++;
       else if (state === "unavailable") this.metrics.unavailableCount++;
     this.reportMetrics();
     this.listeners.forEach((listener) => listener());

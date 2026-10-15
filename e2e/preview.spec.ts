@@ -1,4 +1,7 @@
 import { expect, test, type Page } from "playwright/test";
+import type { ProjectFile } from "@iris/shared";
+import type { WebContainerRuntime, RuntimeEvent } from "../apps/web/src/lib/webcontainer-runtime";
+import type { TypeScriptWorkerClient } from "../apps/web/src/lib/typescript-worker-client";
 
 function starterCounter(page: Page, count = 0) {
   return page
@@ -17,6 +20,7 @@ async function expectPreviewReady(page: Page, timeout = 30_000) {
 
 test.afterEach(async ({ page }, testInfo) => {
   if (testInfo.status === testInfo.expectedStatus) return;
+  if (!(await page.getByRole("region", { name: "Live preview" }).isVisible())) return;
   const expand = page.getByRole("button", { name: "Expand output", exact: true });
   if (await expand.isVisible()) await expand.click();
   await testInfo.attach("preview-output", {
@@ -51,6 +55,93 @@ test("keeps the initial room socket open through development remounts", async ({
 test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => {
     if (window.top === window) localStorage.setItem("iris.language", "en");
+  });
+});
+
+test("real WebContainer scans installed declarations into the real TypeScript Worker", async ({
+  page,
+}, testInfo) => {
+  test.setTimeout(90_000);
+  await page.route("**/declaration-runtime", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<title>Declaration runtime</title>",
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+    }),
+  );
+  await page.goto("/declaration-runtime");
+  const result = await page.evaluate(async () => {
+    const runtimePath = "/src/lib/webcontainer-runtime.ts";
+    const clientPath = "/src/lib/typescript-worker-client.ts";
+    const { WebContainerRuntime: Runtime } = (await import(runtimePath)) as {
+      WebContainerRuntime: typeof WebContainerRuntime;
+    };
+    const { TypeScriptWorkerClient: Client } = (await import(clientPath)) as {
+      TypeScriptWorkerClient: typeof TypeScriptWorkerClient;
+    };
+    const source =
+      'import {\n answer\n} from "typed-pkg"; const label = "界\\\\path"; const value = answer;';
+    const resources = [
+      { path: "package.json", text: '{"dependencies":{"typed-pkg":"1.0.0"}}' },
+      { path: "node_modules/typed-pkg/package.json", text: '{"types":"index.d.ts"}' },
+      {
+        path: "node_modules/typed-pkg/index.d.ts",
+        text: 'export declare const answer: "webcontainer-types";',
+      },
+      { path: "src/app.ts", text: source },
+    ];
+    const files = resources.map(({ path, text }, id) => ({
+      id: String(id),
+      path,
+      language: "typescript",
+      text: { toString: () => text },
+    })) as unknown as ProjectFile[];
+    const events: RuntimeEvent[] = [];
+    const runtime = new Runtime();
+    const client = new Client([{ path: "src/app.ts", text: source }]);
+    try {
+      await runtime.start(files, [], (event) => events.push(event), {
+        packageManager: "npm",
+        autoInstall: false,
+        autoStartPreview: false,
+      });
+      if (!events.some((event) => event.type === "state" && event.state === "paused"))
+        return { events, status: "runtime-unavailable" };
+      const scanStart = performance.now();
+      const declarations = await runtime.readTypeScriptDeclarations([
+        { path: "src/app.ts", text: source },
+      ]);
+      await client.syncWorkspace([{ path: "src/app.ts", text: source }, ...declarations]);
+      const hover = await client.hover({
+        path: "src/app.ts",
+        position: source.lastIndexOf("answer"),
+      });
+      return {
+        events,
+        status: client.status,
+        hover,
+        paths: declarations.map(({ path }) => path),
+        scanMs: performance.now() - scanStart,
+      };
+    } catch (error) {
+      return { events, status: "scan-failed", error: String(error) };
+    } finally {
+      client.dispose();
+      runtime.dispose();
+    }
+  });
+  await testInfo.attach("real-webcontainer-declarations", {
+    body: JSON.stringify(result),
+    contentType: "application/json",
+  });
+  expect(result.status, JSON.stringify(result)).toBe("worker");
+  expect(result.paths).toContain("node_modules/typed-pkg/index.d.ts");
+  expect(result.hover).toMatchObject({
+    status: "ok",
+    value: { signature: expect.stringContaining('"webcontainer-types"') },
   });
 });
 

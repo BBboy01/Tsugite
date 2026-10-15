@@ -8,6 +8,7 @@ import {
   validateQueryPath,
   validateWorkspaceFiles,
   WORKER_QUEUE_LIMIT,
+  NAVIGATION_LIMITS,
   type VersionedFile,
   type WorkerReply,
   type WorkerRequest,
@@ -26,7 +27,10 @@ function compactNavigationReply(
     !Array.isArray(result.value)
   )
     return { result };
+  if (result.value.length > NAVIGATION_LIMITS.locations)
+    return { result: { status: "error", message: "Too many TypeScript navigation results" } };
   const sourceSnapshots: Record<string, string> = {};
+  let sourceBytes = 0;
   const value = result.value.map((location) => {
     if (!location || typeof location !== "object") return location;
     const item = location as Record<string, unknown>;
@@ -34,6 +38,9 @@ function compactNavigationReply(
     const source = item.source;
     if (typeof path !== "string" || typeof source !== "string") return location;
     if (!(path in sourceSnapshots)) {
+      sourceBytes += new TextEncoder().encode(source).byteLength;
+      if (sourceBytes > NAVIGATION_LIMITS.sourceBytes)
+        throw new Error("TypeScript navigation source snapshot limit exceeded");
       sourceSnapshots[path] = source;
     }
     const { source: _source, ...withoutSource } = item;

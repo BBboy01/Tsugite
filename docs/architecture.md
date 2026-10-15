@@ -11,7 +11,7 @@ flowchart TB
   subgraph Browser["Each collaborator's browser"]
     Web["React UI and AppShell"]
     Workspace["Scoped Jotai workspace state"]
-    Editor["CodeMirror editor"]
+    Editor["CodeMirror and Vim editor"]
     Controller["Workspace controller"]
     Session["RoomClient session facade"]
     Transport["RoomTransport"]
@@ -19,6 +19,8 @@ flowchart TB
     Presence["RoomPresence"]
     Drafts["RoomDrafts and DraftSyncPort"]
     Preview["WebContainer or single-file iframe"]
+    Intelligence["RoomTypeScriptIntelligence"]
+    TypeScript["TypeScript module Worker"]
     Web --> Workspace
     Web --> Controller
     Controller --> Editor
@@ -29,6 +31,9 @@ flowchart TB
     Session --> Presence
     Drafts --> Session
     Document --> Preview
+    Document --> Intelligence
+    Editor <--> Intelligence
+    Intelligence <-->|pure-data RPC| TypeScript
   end
   Proxy["Caddy static server and WebSocket proxy"]
   subgraph Backend["One Bun server process"]
@@ -49,12 +54,12 @@ flowchart TB
 
 ## Ownership
 
-| Area              | Owner                | Responsibility                                                                                |
-| ----------------- | -------------------- | --------------------------------------------------------------------------------------------- |
-| `apps/web`        | Browser              | Scoped UI state, CodeMirror lifecycle, local settings, WebContainer, preview iframe           |
-| `apps/server`     | Bun process + SQLite | Room membership, presence relay, validation, in-memory Loro documents and persisted snapshots |
-| `packages/shared` | Both                 | Project files, folders, settings, protocol messages, CRDT helpers                             |
-| Caddy             | Deployment           | Static files, SPA fallback, WebSocket proxy, cross-origin isolation headers                   |
+| Area              | Owner                | Responsibility                                                                                  |
+| ----------------- | -------------------- | ----------------------------------------------------------------------------------------------- |
+| `apps/web`        | Browser              | Scoped UI state, CodeMirror/Vim, local settings, language Workers, WebContainer, preview iframe |
+| `apps/server`     | Bun process + SQLite | Room membership, presence relay, validation, in-memory Loro documents and persisted snapshots   |
+| `packages/shared` | Both                 | Project files, folders, settings, protocol messages, CRDT helpers                               |
+| Caddy             | Deployment           | Static files, SPA fallback, WebSocket proxy, cross-origin isolation headers                     |
 
 The server never runs a user's project commands. Dependency installation and preview servers run inside each collaborator's browser.
 
@@ -62,32 +67,34 @@ The server never runs a user's project commands. Dependency installation and pre
 
 ### Source map
 
-| Responsibility                              | Entry point                                                                                                                                                                                                                                |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| UI composition                              | [app-shell.tsx](../apps/web/src/app-shell.tsx)                                                                                                                                                                                             |
-| Room subscriptions and invalidation         | [use-room-session.ts](../apps/web/src/lib/use-room-session.ts)                                                                                                                                                                             |
-| Workspace state and commands                | [workspace-state.ts](../apps/web/src/lib/workspace-state.ts), [workspace-atoms.ts](../apps/web/src/lib/workspace-atoms.ts)                                                                                                                 |
-| Tabs, follow state, file actions            | [use-workspace-controller.ts](../apps/web/src/lib/use-workspace-controller.ts)                                                                                                                                                             |
-| File-tree rows and inline actions           | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [file-tree-row.tsx](../apps/web/src/components/file-tree-row.tsx), [file-tree-inline-controls.tsx](../apps/web/src/components/file-tree-inline-controls.tsx)                    |
-| File and command search                     | [file-fuzzy-search.ts](../apps/web/src/lib/file-fuzzy-search.ts), [command-palette-model.ts](../apps/web/src/lib/command-palette-model.ts), [settings-registry.ts](../apps/web/src/lib/settings-registry.ts)                               |
-| Focus and shortcuts                         | [use-editor-focus.ts](../apps/web/src/lib/use-editor-focus.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                               |
-| Workspace shortcut model                    | [keymap.ts](../apps/web/src/lib/keymap.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                                   |
-| Navigation reconciliation                   | [use-workspace-navigation.ts](../apps/web/src/lib/use-workspace-navigation.ts), [workspace-navigation.ts](../apps/web/src/lib/workspace-navigation.ts)                                                                                     |
-| Follow projection                           | [use-workspace-follow.ts](../apps/web/src/lib/use-workspace-follow.ts), [workspace-follow.ts](../apps/web/src/lib/workspace-follow.ts)                                                                                                     |
-| Local editor preferences                    | [workspace-preferences.ts](../apps/web/src/lib/workspace-preferences.ts)                                                                                                                                                                   |
-| Localization resources and initialization   | [i18n.ts](../apps/web/src/lib/i18n.ts), [i18n-en.ts](../apps/web/src/lib/i18n-en.ts), [i18n-zh-cn.ts](../apps/web/src/lib/i18n-zh-cn.ts), [i18n-zh-tw.ts](../apps/web/src/lib/i18n-zh-tw.ts), [i18n-ja.ts](../apps/web/src/lib/i18n-ja.ts) |
-| Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Shiki updates in one editor instance                                                                                      |
-| Incremental visual settings                 | [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts)                                                                                                                                                       |
-| Vim integration lifecycle                   | [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                                                                                                                                                       |
-| Optional TypeScript services                | [editor-typescript-services.ts](../apps/web/src/lib/editor-typescript-services.ts)                                                                                                                                                         |
-| Session, transport and replay               | [room-client.ts](../apps/web/src/lib/room-client.ts), [room-transport.ts](../apps/web/src/lib/room-transport.ts), [room-outbox.ts](../apps/web/src/lib/room-outbox.ts)                                                                     |
-| Document and presence boundaries            | [room-document.ts](../apps/web/src/lib/room-document.ts), [room-presence.ts](../apps/web/src/lib/room-presence.ts)                                                                                                                         |
-| Preview mode composition and iframe events  | [use-preview-runtime.ts](../apps/web/src/lib/use-preview-runtime.ts)                                                                                                                                                                       |
-| Standalone preview compilation lifecycle    | [use-preview-standalone.ts](../apps/web/src/lib/use-preview-standalone.ts)                                                                                                                                                                 |
-| WebContainer React lifecycle                | [use-preview-webcontainer.ts](../apps/web/src/lib/use-preview-webcontainer.ts), [webcontainer-runtime.ts](../apps/web/src/lib/webcontainer-runtime.ts)                                                                                     |
-| WebSocket admission and messages            | [room-app.ts](../apps/server/src/room-app.ts)                                                                                                                                                                                              |
-| Room lifetime and persistence scheduling    | [room-service.ts](../apps/server/src/rooms/room-service.ts), [room-persistence.ts](../apps/server/src/rooms/room-persistence.ts)                                                                                                           |
-| SQLite initialization and storage           | [database.ts](../apps/server/src/db/database.ts), [room-repository.ts](../apps/server/src/rooms/room-repository.ts)                                                                                                                        |
+| Responsibility                              | Entry point                                                                                                                                                                                                                                      |
+| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| UI composition                              | [app-shell.tsx](../apps/web/src/app-shell.tsx)                                                                                                                                                                                                   |
+| Room subscriptions and invalidation         | [use-room-session.ts](../apps/web/src/lib/use-room-session.ts)                                                                                                                                                                                   |
+| Workspace state and commands                | [workspace-state.ts](../apps/web/src/lib/workspace-state.ts), [workspace-atoms.ts](../apps/web/src/lib/workspace-atoms.ts)                                                                                                                       |
+| Tabs, follow state, file actions            | [use-workspace-controller.ts](../apps/web/src/lib/use-workspace-controller.ts)                                                                                                                                                                   |
+| File-tree rows and inline actions           | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [file-tree-row.tsx](../apps/web/src/components/file-tree-row.tsx), [file-tree-inline-controls.tsx](../apps/web/src/components/file-tree-inline-controls.tsx)                          |
+| File and command search                     | [file-fuzzy-search.ts](../apps/web/src/lib/file-fuzzy-search.ts), [command-palette-model.ts](../apps/web/src/lib/command-palette-model.ts), [settings-registry.ts](../apps/web/src/lib/settings-registry.ts)                                     |
+| Focus and shortcuts                         | [use-editor-focus.ts](../apps/web/src/lib/use-editor-focus.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                     |
+| Workspace shortcut model                    | [keymap.ts](../apps/web/src/lib/keymap.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                                         |
+| Navigation reconciliation                   | [use-workspace-navigation.ts](../apps/web/src/lib/use-workspace-navigation.ts), [workspace-navigation.ts](../apps/web/src/lib/workspace-navigation.ts)                                                                                           |
+| Follow projection                           | [use-workspace-follow.ts](../apps/web/src/lib/use-workspace-follow.ts), [workspace-follow.ts](../apps/web/src/lib/workspace-follow.ts)                                                                                                           |
+| Local editor preferences                    | [workspace-preferences.ts](../apps/web/src/lib/workspace-preferences.ts)                                                                                                                                                                         |
+| Localization resources and initialization   | [i18n.ts](../apps/web/src/lib/i18n.ts), [i18n-en.ts](../apps/web/src/lib/i18n-en.ts), [i18n-zh-cn.ts](../apps/web/src/lib/i18n-zh-cn.ts), [i18n-zh-tw.ts](../apps/web/src/lib/i18n-zh-tw.ts), [i18n-ja.ts](../apps/web/src/lib/i18n-ja.ts)       |
+| Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Shiki updates in one editor instance                                                                                            |
+| Incremental visual settings                 | [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts)                                                                                                                                                             |
+| Vim integration lifecycle                   | [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                                                                                                                                                             |
+| Optional TypeScript services                | [editor-typescript-services.ts](../apps/web/src/lib/editor-typescript-services.ts)                                                                                                                                                               |
+| Room language-service ownership and RPC     | [room-typescript-intelligence.ts](../apps/web/src/lib/room-typescript-intelligence.ts), [editor-intelligence.ts](../apps/web/src/lib/editor-intelligence.ts), [typescript-worker-client.ts](../apps/web/src/lib/typescript-worker-client.ts)     |
+| Worker engine and declaration loading       | [typescript.worker.ts](../apps/web/src/lib/typescript.worker.ts), [typescript-standard-library.ts](../apps/web/src/lib/typescript-standard-library.ts), [webcontainer-declaration-scan.ts](../apps/web/src/lib/webcontainer-declaration-scan.ts) |
+| Session, transport and replay               | [room-client.ts](../apps/web/src/lib/room-client.ts), [room-transport.ts](../apps/web/src/lib/room-transport.ts), [room-outbox.ts](../apps/web/src/lib/room-outbox.ts)                                                                           |
+| Document and presence boundaries            | [room-document.ts](../apps/web/src/lib/room-document.ts), [room-presence.ts](../apps/web/src/lib/room-presence.ts)                                                                                                                               |
+| Preview mode composition and iframe events  | [use-preview-runtime.ts](../apps/web/src/lib/use-preview-runtime.ts)                                                                                                                                                                             |
+| Standalone preview compilation lifecycle    | [use-preview-standalone.ts](../apps/web/src/lib/use-preview-standalone.ts)                                                                                                                                                                       |
+| WebContainer React lifecycle                | [use-preview-webcontainer.ts](../apps/web/src/lib/use-preview-webcontainer.ts), [webcontainer-runtime.ts](../apps/web/src/lib/webcontainer-runtime.ts)                                                                                           |
+| WebSocket admission and messages            | [room-app.ts](../apps/server/src/room-app.ts)                                                                                                                                                                                                    |
+| Room lifetime and persistence scheduling    | [room-service.ts](../apps/server/src/rooms/room-service.ts), [room-persistence.ts](../apps/server/src/rooms/room-persistence.ts)                                                                                                                 |
+| SQLite initialization and storage           | [database.ts](../apps/server/src/db/database.ts), [room-repository.ts](../apps/server/src/rooms/room-repository.ts)                                                                                                                              |
 
 Workspace state is scoped to the application provider. Components subscribe to individual selectors instead of the full workspace object; modal visibility is read by each modal, so opening a search or command palette does not rerender the editor and preview tree.
 
@@ -257,27 +264,12 @@ The preview owns its text subscriptions, so removing broad AppShell invalidation
 
 Vim search maps existing decorations during edits and schedules one recount after 100 ms without postponing it on every keystroke. Query changes and explicit navigation refresh immediately. This reduces repeated scans; it does not cap the exact match count or change its linear recount cost.
 
-CodeMirror keeps the editor instance stable while shared visual settings change. Theme, font size/family, wrapping, and Shiki highlighting are installed through compartments and reconfigured in place; Vim mode and file identity remain initialization boundaries. This avoids rebuilding the TypeScript environment and editor DOM for a purely visual preference change.
+CodeMirror keeps the editor instance stable while shared visual settings change. Theme, font size/family, wrapping, and Shiki highlighting are installed through compartments and reconfigured in place; Vim mode and file identity remain initialization boundaries. The room's TypeScript Worker survives file switches and editor reconfiguration.
 
-The base editor mounts synchronously with collaboration, undo, syntax parsing,
-and focus available independently of TypeScript module downloads. Optional
-language services attach to the existing view after loading, using the latest
-document and project files. Their lifecycle is canceled when that view is
-destroyed; a late result cannot attach to another file. Download or initialization
-failure leaves basic editing available and language-navigation actions disabled.
-Readiness is React state so an already open context menu updates immediately.
-Focus requests are consumed after effects settle, avoiding focus loss when
-StrictMode replaces the first synchronous editor instance.
-
-```mermaid
-flowchart LR
-  Mount["Editor mount"] --> Base["Editing, collaboration and undo"]
-  Mount --> Load["Async TypeScript modules"]
-  Load -->|Success, view still active| Attach["Attach to current document"]
-  Attach --> Ready["Enable language navigation and hover"]
-  Load -->|Failure| Fallback["Keep basic editor available"]
-  Load -->|View destroyed| Discard["Discard late result"]
-```
+The base editor mounts synchronously with collaboration, undo, syntax parsing, and focus available independently of language-service startup.
+CodeMirror providers attach asynchronously and discard results for destroyed views or old documents.
+The room owns one bounded TypeScript Worker. It retries initialization once; if the Worker still fails, language services become visibly unavailable. Oversized or unsafe snapshots also become unavailable rather than bypassing resource limits. Editing, Vim, collaboration, and highlighting remain available independently of language services.
+Focus requests are consumed after effects settle, avoiding focus loss when StrictMode replaces the first editor instance.
 
 Vim cursor style and clipboard preferences reattach their integrations without
 recreating the editor. The project-owned base extensions preserve CodeMirror's
@@ -331,31 +323,57 @@ flowchart LR
 The worker uses Vite's ES module output because theme and language grammars are
 dynamically imported.
 
-TypeScript uses a versioned in-memory language-service host over the VFS system.
-Editor changes publish current text and a version synchronously, without asking
-for a `Program` or rebuilding a source AST on each keypress. A hover or navigation
-query then asks the existing TypeScript language service to parse the latest
-snapshot. Empty files remain real snapshots, and create, delete, and recreate
-operations invalidate the project version. Navigation also synchronizes other
-workspace files before querying, including unopened and remotely edited files.
-This is lazy analysis, not delayed document synchronization: a query immediately
-after an edit sees that edit. The editor keeps its existing TypeScript 5 runtime;
-the tooling compiler version and collaboration protocol do not change.
+### TypeScript intelligence
+
+CodeMirror, Vim, and Loro retain editor and document ownership. `RoomTypeScriptIntelligence` owns one lazily started TypeScript Worker per room session, with an injectable `EditorIntelligence` for focused tests. Compiler analysis runs exclusively in the Worker; exhausting its retry disables language services for that session.
+`EditorIntelligence` exposes asynchronous pure-data queries for hover, completion, signature help, diagnostics, and navigation; no compiler objects cross into UI code.
+The Worker uses `typescript-legacy` 6.0.3 and a versioned in-memory host with explicitly supplied standard libraries. Tooling uses TypeScript 7 independently. After local acceptance, the transitional main-thread adapter and minimal library, deprecated CodeMirror TypeScript adapter, VFS dependency, and Vite `typescript` compatibility alias were removed. The Worker imports `typescript-legacy` directly; the compiler is pre-optimized for its lazy import. Other Worker dependencies, including Shiki grammars and themes, can still trigger a development-server reload on first discovery; language-service tests wait for highlighting startup before editing.
 
 ```mermaid
-flowchart LR
-  Edit["Editor document change"] --> Text["Latest text + file version"]
-  Query["Hover or navigation query"] --> Service["TypeScript language service"]
-  Workspace["Other workspace files"] -->|Before navigation| Text
-  Text -->|Snapshot on demand| Service
-  Service --> Result["Current types and source locations"]
+flowchart TB
+  Loro["Local and remote Loro changes"] --> Owner["RoomTypeScriptIntelligence"]
+  Owner -->|source and declaration deltas| Engine["Injected EditorIntelligence"]
+  Engine --> Client["TypeScriptWorkerClient"]
+  Editor["CodeMirror providers"] -->|UTF-16 query positions| Engine
+  Client <-->|request ID, epoch, workspace version| Worker["Worker session and TypeScript 6 host"]
+  Libs["Bundled official standard libraries"] --> Worker
+  Container["Installed WebContainer dependencies"] --> Scan["Bounded declaration scanner"]
+  Scan --> Owner
+  Client -->|retry exhausted or invalid snapshot| Disabled["Disable language services; keep base editor"]
+  Client -->|workspace update| Refresh["Refresh CodeMirror diagnostics"]
 ```
+
+The room owner publishes unopened and remotely edited files as well as the active file.
+Updates carry file and workspace versions; stale epochs, revisions, and cancelled queries cannot replace current results.
+Compiler parsing is deferred until a query needs a snapshot. Diagnostics wait 200 ms after edits and are explicitly refreshed when declaration or workspace snapshots change.
+Navigation results are capped at 10,000 locations. Worker replies carry one source snapshot per path and the client restores it for the peek UI, so repeated references do not duplicate whole files across the RPC boundary.
+
+| Resource                                  | Limit                                                                     |
+| ----------------------------------------- | ------------------------------------------------------------------------- |
+| Project source                            | 512 files, 1 MiB per file, 16 MiB total UTF-8 text                        |
+| Project declarations and package metadata | 1,024 files, 1 MiB per declaration, 64 KiB per metadata file, 8 MiB total |
+| Declaration scan                          | 8,192 traversed entries, 16 MiB serialized output, two-second deadline    |
+| Worker requests                           | Queue of 32; two-second query and initialization deadlines                |
+| Navigation result                         | 10,000 locations; 24 MiB of unique source snapshots per reply             |
+| Worker recovery                           | One restart per crash; valid over-budget snapshots can recover services   |
+
+The standard-library loader follows the official `lib.es2022.full.d.ts` reference graph from bundled assets under a reserved `__typescript/` namespace.
+After dependency installation, and when source imports change, the WebContainer scanner reads only declarations and package metadata, including package type entries and `@types` companions.
+The browser import index caches each file's references until its text changes and yields between files after an eight-millisecond time slice. Concurrent scans cannot restore stale import keys after newer edits or preview teardown.
+It uses a fixed filesystem-only script, bounds reads before allocation, and rejects unsafe paths and escaping symlinks. No arbitrary type CDN or package code is evaluated.
+Reinstall clears stale declarations; loading and unavailable states are visible. Scan failure clears project dependency types; Worker failure leaves the base editor usable.
+An imported package without its own declarations, companion types, or an ambient module marks project declarations unavailable. Unimported JavaScript tooling does not require types. This package-level check does not replace TypeScript's entry-point and subpath resolution.
+Cancellation rejects late results but cannot preempt synchronous compiler work already running in the Worker.
+
+The engine replacement in [#71](https://github.com/BBboy01/Tsugite/issues/71) requires an official browser-compatible TypeScript 7 API and distribution.
+As of 2026-10-10, [upstream browser/WASI support](https://github.com/microsoft/TypeScript/pull/64174) is a draft PR, not a released browser engine.
+Keep the Worker contract stable until that gate and equivalent functional and performance checks pass.
 
 Preview syntax validation retains Babel's parser and error locations but disables
 code generation; only the standalone execution path needs generated JavaScript.
 Parsing and traversal still run on the main thread, after the preview debounce.
 These changes do not establish that all long-file work is bounded; unusually large
-single parses and on-demand language queries still need workload-specific measurement.
+single parses and complex Worker queries still need workload-specific measurement.
 
 ### Preview selection
 
@@ -481,8 +499,4 @@ flowchart TD
 
 ## Browser test ownership
 
-The Playwright suite uses a dedicated in-memory room server on port 3003 and a Vite server on port 5175, without loading environment files or reusing development servers. The test server permits larger test-room batches; production admission limits remain unchanged.
-
-The `ui` project runs ordinary browser scenarios with up to two local workers. After it passes, the `preview` project runs WebContainer startup and recovery scenarios with one worker, avoiding overlap with the UI batch. Use `--project=preview --no-deps` for an isolated preview diagnosis. A dependency failure prevents that dependent project from running and must not be reported as a passing preview check.
-
-Browser CI remains reserved for release candidates, version tags and manual runs. Unit checks do not establish that remote WebContainer services or dependency downloads work in a real browser. Commands and test ownership are documented in the [development guide](development.md#test-data-and-browser-tests).
+The Playwright suite uses an in-memory room server on port 3003 and Vite on 5175, without environment files or reused development servers. The test server permits larger test-room batches; production admission limits remain unchanged. The `ui` project runs ordinary browser scenarios with up to two local workers; after it passes, `preview` runs WebContainer startup and recovery scenarios with one worker. Use `--project=preview --no-deps` for isolated diagnosis; a dependency failure prevents the dependent project from running and is not a passing preview check. Browser CI is reserved for release candidates, version tags and manual runs; unit checks do not establish that remote WebContainer services or dependency downloads work in a real browser. Commands and test ownership are documented in the [development guide](development.md#test-data-and-browser-tests).

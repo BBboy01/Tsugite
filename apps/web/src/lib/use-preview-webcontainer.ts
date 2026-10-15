@@ -9,6 +9,8 @@ import type { RuntimeError, RuntimeEvent, RuntimeState } from "./webcontainer-ru
 import type { PreviewSourceError } from "./preview-error-model";
 import { getRuntimeError } from "./webcontainer-errors";
 import { getRuntimeSettingsKey } from "./preview-runtime-model";
+import type { ProjectDeclarations } from "./room-typescript-intelligence";
+import { PreviewTypeScriptDeclarations } from "./preview-typescript-declarations";
 
 type WebContainerRuntimeInstance = import("./webcontainer-runtime").WebContainerRuntime;
 
@@ -25,6 +27,7 @@ export function usePreviewWebContainer({
   runKey,
   requestRun,
   translate,
+  declarations,
 }: {
   enabled: boolean;
   file: ProjectFile;
@@ -38,7 +41,12 @@ export function usePreviewWebContainer({
   runKey: number;
   requestRun: () => void;
   translate: TFunction;
+  declarations?: ProjectDeclarations;
 }) {
+  const declarationSync = useMemo(
+    () => declarations && new PreviewTypeScriptDeclarations(declarations),
+    [declarations],
+  );
   const [outputs, setOutputs] = useState<PreviewOutput[]>([]);
   const [runtimeState, setRuntimeState] = useState<RuntimeState>("idle");
   const [runtimeError, setRuntimeError] = useState<RuntimeError | undefined>(undefined);
@@ -65,6 +73,13 @@ export function usePreviewWebContainer({
 
   useEffect(
     () => () => {
+      void declarationSync?.clear();
+    },
+    [declarationSync],
+  );
+
+  useEffect(
+    () => () => {
       runtimeRef.current?.dispose();
       runtimeRef.current = undefined;
     },
@@ -73,6 +88,7 @@ export function usePreviewWebContainer({
 
   useEffect(() => {
     if (!enabled) {
+      void declarationSync?.clear();
       runtimeRef.current?.dispose();
       runtimeRef.current = undefined;
       runtimeStartedRef.current = false;
@@ -107,6 +123,8 @@ export function usePreviewWebContainer({
       }
       setRuntimeState(event.state);
       setRuntimeError(event.error);
+      const runtime = runtimeRef.current;
+      if (runtime) void declarationSync?.onRuntimeState(event.state, runtime, event.error);
       if (event.error) {
         setSourceError(undefined);
         setPreviewLoaded(false);
@@ -127,6 +145,7 @@ export function usePreviewWebContainer({
       setPreviewLoaded(false);
       setPreviewUrl(undefined);
       setOutputs((current) => appendOutput(current, { level: "error", message }));
+      void declarations?.clearDeclarations(message);
     };
     const setupRuntime = async () => {
       if (!runtimeRef.current) {
@@ -184,6 +203,7 @@ export function usePreviewWebContainer({
             ),
           )
             .then(() => {
+              if (runtimeRef.current !== runtime) return;
               acknowledgeContentChanges(pending);
               lastSyncedStructureKeyRef.current = latest.structureKey;
             })
@@ -208,6 +228,8 @@ export function usePreviewWebContainer({
                 acknowledgeContentChanges(pending);
                 lastSyncedStructureKeyRef.current = latest.structureKey;
                 if (packageChanged) setPackageSyncRevision((revision) => revision + 1);
+                else
+                  void declarationSync?.syncSources(runtime, getDeclarationSources(latest.files));
               });
             })
             .catch(reportRuntimeFailure);
@@ -230,6 +252,7 @@ export function usePreviewWebContainer({
               forceStart,
             })
             .then(() => {
+              if (runtimeRef.current !== runtime) return;
               acknowledgeContentChanges(pending);
               lastSyncedStructureKeyRef.current = latest.structureKey;
             })
@@ -251,6 +274,7 @@ export function usePreviewWebContainer({
             lastSyncedStructureKeyRef.current = latest.structureKey;
             // A completed write requests a restart; the latest preflight decides when it is safe.
             if (packageChanged) setPackageSyncRevision((revision) => revision + 1);
+            else void declarationSync?.syncSources(runtime, getDeclarationSources(latest.files));
           })
           .catch(reportRuntimeFailure);
       }, 250);
@@ -283,6 +307,8 @@ export function usePreviewWebContainer({
     settings.autoInstall,
     settings.autoStartPreview,
     settings.packageManager,
+    declarationSync,
+    declarations,
   ]);
 
   useEffect(() => {
@@ -331,6 +357,10 @@ export function usePreviewWebContainer({
 
 function getStructureKey(files: ProjectFile[], folders: string[]): string {
   return JSON.stringify([files.map(({ id, path }) => [id, path]), folders]);
+}
+
+function getDeclarationSources(files: readonly ProjectFile[]) {
+  return files.map(({ path, text }) => ({ path, text: text.toString() }));
 }
 
 function appendOutput(outputs: PreviewOutput[], output: PreviewOutput): PreviewOutput[] {

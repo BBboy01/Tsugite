@@ -9,12 +9,10 @@ export default defineConfig({
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "apps/web/src"),
-      // codemirror-ts executes the TypeScript language service in the browser.
-      // Keep that runtime on the compatible legacy build while tsc uses 7.0.2.
-      typescript: path.resolve(import.meta.dirname, "node_modules/typescript-legacy"),
     },
   },
   plugins: [react(), tailwindcss(), wasm()],
+  optimizeDeps: { include: ["typescript-legacy"] },
   worker: { format: "es" },
   server: {
     port: 5173,

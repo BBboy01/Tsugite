@@ -257,7 +257,7 @@ function AppShellContent({ roomId }: { roomId: string }) {
                 <EditorPane
                   doc={client.doc}
                   intelligence={typeScript.intelligence}
-                  serviceStatus={typeScript}
+                  declarations={typeScript}
                   file={selectedFile}
                   files={files}
                   tabs={openFiles}
@@ -288,6 +288,7 @@ function AppShellContent({ roomId }: { roomId: string }) {
             >
               {previewFile ? (
                 <PreviewPane
+                  declarations={typeScript}
                   file={previewFile}
                   files={files}
                   folders={folders}

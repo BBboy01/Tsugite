@@ -89,7 +89,7 @@ test("follows a collaborator's file and cursor until a local action", async ({
   await secondPage.keyboard.press("ArrowDown");
   await expect(firstPage.locator('section[aria-label="Editing index.html"]')).toBeVisible();
 
-  await secondPage.locator(".cm-content").click();
+  await secondPage.locator(".cm-content").focus();
   await secondPage.keyboard.press("ControlOrMeta+End");
   await secondPage.keyboard.insertText("\n" + "// expanded gutter\n".repeat(1500));
   await onlineMembers.click();

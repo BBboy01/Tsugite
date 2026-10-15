@@ -19,8 +19,8 @@ const range = (span: ts.TextSpan) => ({ from: span.start, to: span.start + span.
 export function createTypeScriptIntelligence(
   path: string,
   source: string,
-  files: readonly IntelligenceFile[] = [],
-  libraries: readonly IntelligenceFile[] = [],
+  files: readonly IntelligenceFile[],
+  libraries: readonly IntelligenceFile[],
 ): EditorIntelligence {
   const environment = createEditorTypeScriptEnvironment(path, source, files, libraries);
   const service = environment.languageService;

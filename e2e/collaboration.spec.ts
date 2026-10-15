@@ -224,8 +224,9 @@ test("keeps a collapsed cursor when a selected collaborator leaves", async ({ br
     pages.map((page) => expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 })),
   );
 
-  await pages[1].locator(".cm-content").click({ position: { x: 12, y: 12 } });
-  await pages[2].locator(".cm-content").click();
+  await pages[1].locator(".cm-content").focus();
+  await pages[1].keyboard.press("Home");
+  await pages[2].locator(".cm-content").focus();
   await pages[2].keyboard.press("ControlOrMeta+A");
   await Promise.all([
     expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible({

@@ -40,30 +40,52 @@ async function rightClickText(page: Page, line: string, token: string) {
 }
 
 async function hoverText(page: Page, line: string, token: string) {
-  const point = await page
-    .locator(".cm-line")
-    .filter({ hasText: line })
-    .last()
-    .evaluate((element, word) => {
-      const start = element.textContent?.indexOf(word) ?? -1;
-      if (start < 0) throw new Error(`Missing symbol ${word}`);
-      const end = start + word.length;
-      const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
-      const range = document.createRange();
-      let offset = 0;
-      while (walker.nextNode()) {
-        const node = walker.currentNode;
-        const length = node.textContent?.length ?? 0;
-        if (start < offset + length && end <= offset + length) {
-          range.setStart(node, start - offset);
-          range.setEnd(node, end - offset);
-          const rect = range.getBoundingClientRect();
-          return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
-        }
-        offset += length;
+  await expect
+    .poll(() => page.evaluate(() => getComputedStyle(document.body).pointerEvents))
+    .not.toBe("none");
+  const lineLocator = page.locator(".cm-line").filter({ hasText: line }).last();
+  await expect(lineLocator).toBeVisible();
+  await lineLocator.scrollIntoViewIfNeeded();
+  await lineLocator.evaluate(
+    (element) =>
+      new Promise<void>((resolve) => {
+        let previous = "";
+        let stableSince = performance.now();
+        const started = stableSince;
+        const check = () => {
+          const rect = element.getBoundingClientRect();
+          const current = [rect.x, rect.y, rect.width, rect.height].join(":");
+          const now = performance.now();
+          if (current !== previous) {
+            previous = current;
+            stableSince = now;
+          }
+          if (now - stableSince >= 250 || now - started >= 2500) resolve();
+          else requestAnimationFrame(check);
+        };
+        requestAnimationFrame(check);
+      }),
+  );
+  const point = await lineLocator.evaluate((element, word) => {
+    const start = element.textContent?.indexOf(word) ?? -1;
+    if (start < 0) throw new Error(`Missing symbol ${word}`);
+    const end = start + word.length;
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const range = document.createRange();
+    let offset = 0;
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      const length = node.textContent?.length ?? 0;
+      if (start < offset + length && end <= offset + length) {
+        range.setStart(node, start - offset);
+        range.setEnd(node, end - offset);
+        const rect = range.getBoundingClientRect();
+        return { x: rect.x + rect.width / 2, y: rect.y + rect.height / 2 };
       }
-      throw new Error(`Missing text node ${word}`);
-    }, token);
+      offset += length;
+    }
+    throw new Error(`Missing text node ${word}`);
+  }, token);
   await page.mouse.move(point.x, point.y);
 }
 
@@ -110,6 +132,8 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
   await rightClickText(page, "console.log(answer)", "answer");
   await expect(page.getByRole("menuitem", { name: "Go to definition", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
+  await expect(page.getByRole("menu")).toHaveCount(0);
+  await expect(page.locator(".cm-content")).toBeFocused();
   await page.mouse.move(0, 0);
   await hoverText(page, "console.log(answer)", "answer");
 

@@ -8,7 +8,13 @@ import { usePreviewStandalone } from "./use-preview-standalone";
 import { usePreviewWebContainer } from "./use-preview-webcontainer";
 import { PreviewContentChanges } from "./preview-content-changes";
 
-export function usePreviewRuntime({ file, files, folders, settings }: PreviewPaneProps) {
+export function usePreviewRuntime({
+  file,
+  files,
+  folders,
+  settings,
+  declarations,
+}: PreviewPaneProps) {
   const { t } = useTranslation();
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [previewLoadKey, setPreviewLoadKey] = useState(0);
@@ -38,6 +44,7 @@ export function usePreviewRuntime({ file, files, folders, settings }: PreviewPan
     runKey,
     requestRun,
     translate: t,
+    declarations,
   });
   const outputs = hasRuntime ? webcontainer.outputs : standalone.outputs;
   const previewUrl = hasRuntime ? webcontainer.previewUrl : undefined;

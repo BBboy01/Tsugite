@@ -33,9 +33,6 @@ export type IntelligenceWorker = {
 };
 export type TypeScriptWorkerOptions = {
   createWorker?: () => IntelligenceWorker;
-  createFallback?: (
-    files: readonly IntelligenceFile[],
-  ) => EditorIntelligence | Promise<EditorIntelligence>;
   lazyStart?: boolean;
   onMetrics?: (metrics: TypeScriptWorkerMetrics) => void;
 };
@@ -46,7 +43,7 @@ type Pending = WorkerEnvelope & {
   kind: WorkerRequest["kind"];
   method?: QueryMethod;
 };
-type FallbackQuery = IntelligenceQuery | IntelligenceDiagnosticQuery;
+
 export class TypeScriptWorkerClient implements EditorIntelligence {
   private files = new Map<string, VersionedFile>();
   private versions = new Map<string, number>();
@@ -54,14 +51,6 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   private epoch = 0;
   private counter = 0;
   private worker?: IntelligenceWorker;
-  private fallback?: EditorIntelligence;
-  private fallbackPending?: Promise<EditorIntelligence | undefined>;
-  private cancelledFallbackRequests = new Set<string>();
-  private pendingFallbackRequests = new Map<
-    string,
-    Set<(result: IntelligenceResult<unknown>) => void>
-  >();
-  private fallbackSettlers = new Set<(result: IntelligenceResult<unknown>) => void>();
   private pending = new Map<string, Pending>();
   private disposed = false;
   private disabled?: string;
@@ -79,14 +68,12 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   get workspaceVersion(): number {
     return this.version;
   }
-  get status(): "worker" | "fallback" | "disabled" | "disposed" {
+  get status(): "worker" | "disabled" | "disposed" {
     return this.disposed
       ? "disposed"
-      : this.fallback
-        ? "fallback"
-        : this.disabled || this.rejectedSnapshot
-          ? "disabled"
-          : "worker";
+      : this.disabled || this.rejectedSnapshot
+        ? "disabled"
+        : "worker";
   }
   get disabledReason(): string | undefined {
     return this.disabled ?? this.rejectedSnapshot;
@@ -107,8 +94,6 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     const invalid = validateWorkspaceFiles(sources);
     if (invalid) {
       this.rejectedSnapshot = invalid;
-      this.fallback?.dispose();
-      this.fallback = undefined;
       this.stop();
       this.version++;
       this.settle({ status: "cancelled" });
@@ -146,12 +131,6 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
           this.post({ ...envelope, kind: "update", changes, deleted });
         }
       }
-      if (this.fallback) void this.fallback.syncWorkspace([...this.files.values()]);
-      if (this.fallbackPending)
-        void this.fallbackPending.then((fallback) => {
-          if (fallback && this.fallback === fallback)
-            return fallback.syncWorkspace([...this.files.values()]);
-        });
       this.notifyWorkspace();
     } else if (recovered) this.notifyWorkspace();
     return { status: "ok", value: this.version };
@@ -220,10 +199,6 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     if (query.revision !== undefined && query.revision !== this.version)
       return Promise.resolve({ status: "cancelled" } as R);
     this.ensureStarted();
-    if (this.fallback)
-      return this.queryPendingFallback<R>(Promise.resolve(this.fallback), method, query);
-    if (this.fallbackPending)
-      return this.queryPendingFallback<R>(this.fallbackPending, method, query);
     if (this.disabled) return Promise.resolve({ status: "error", message: this.disabled } as R);
     if (this.pending.size >= WORKER_QUEUE_LIMIT)
       return Promise.resolve({ status: "error", message: "TypeScript worker queue is full" } as R);
@@ -249,21 +224,6 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     }) as Promise<R>;
   }
   cancel(requestId: string): void {
-    if (this.fallback || this.fallbackPending) {
-      this.fallback?.cancel(requestId);
-      const resolveAll = this.pendingFallbackRequests.get(requestId);
-      if (resolveAll) {
-        resolveAll.forEach((resolve) => resolve({ status: "cancelled" }));
-        return;
-      }
-      if (this.fallback) return;
-      this.cancelledFallbackRequests.add(requestId);
-      if (this.cancelledFallbackRequests.size > WORKER_QUEUE_LIMIT)
-        this.cancelledFallbackRequests.delete(
-          this.cancelledFallbackRequests.values().next().value!,
-        );
-      return;
-    }
     for (const pending of this.pending.values())
       if (pending.callerId === requestId) {
         this.finish(pending, { status: "cancelled" });
@@ -298,8 +258,7 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     };
   }
   private ensureStarted(): void {
-    if (!this.worker && !this.disabled && !this.fallback && !this.fallbackPending && !this.disposed)
-      this.start();
+    if (!this.worker && !this.disabled && !this.disposed) this.start();
   }
   private start(): void {
     this.epoch++;
@@ -355,115 +314,14 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     }
   }
   private fail(): void {
-    if (this.disposed || this.disabled || this.fallback || this.fallbackPending) return;
+    if (this.disposed || this.disabled) return;
     this.stop();
     this.settle({ status: "error", message: "TypeScript worker failed" });
     if (this.epoch < 2) this.start();
-    else if (this.options.createFallback) {
-      this.lifecycle.setStatus("loading", "Loading local language services");
-      const pending = Promise.resolve()
-        .then(() => this.options.createFallback?.([...this.files.values()]))
-        .then(async (fallback) => {
-          if (!fallback) return undefined;
-          if (this.disposed || this.rejectedSnapshot) {
-            fallback.dispose();
-            return undefined;
-          }
-          const synced = await fallback.syncWorkspace([...this.files.values()]);
-          if (synced.status !== "ok" || this.disposed || this.rejectedSnapshot) {
-            fallback.dispose();
-            if (!this.disposed && !this.rejectedSnapshot) {
-              this.disabled = "TypeScript worker failed";
-              this.lifecycle.setStatus("unavailable", this.disabled);
-            }
-            return undefined;
-          }
-          this.fallback = fallback;
-          this.disabled = undefined;
-          this.lifecycle.setStatus(
-            "fallback",
-            "TypeScript worker failed; using main-thread services",
-          );
-          this.notifyWorkspace();
-          return fallback;
-        })
-        .catch(() => {
-          if (!this.disposed && !this.rejectedSnapshot) {
-            this.disabled = "TypeScript worker failed";
-            this.lifecycle.setStatus("unavailable", this.disabled);
-          }
-          return undefined;
-        })
-        .finally(() => {
-          if (this.fallbackPending === pending) this.fallbackPending = undefined;
-        });
-      this.fallbackPending = pending;
-    } else {
+    else {
       this.disabled = "TypeScript worker failed";
       this.lifecycle.setStatus("unavailable", this.disabled);
     }
-  }
-  private queryPendingFallback<R extends IntelligenceResult<unknown>>(
-    pending: Promise<EditorIntelligence | undefined>,
-    method: QueryMethod,
-    query: IntelligenceQuery | IntelligenceDiagnosticQuery,
-  ): Promise<R> {
-    const revision = this.version;
-    if (this.cancelledFallbackRequests.delete(query.requestId ?? ""))
-      return Promise.resolve({ status: "cancelled" } as R);
-    if (this.fallbackSettlers.size >= WORKER_QUEUE_LIMIT)
-      return Promise.resolve({ status: "error", message: "TypeScript worker queue is full" } as R);
-    const timeoutMs = Math.min(QUERY_TIMEOUT_MS, Math.max(0, query.timeoutMs ?? QUERY_TIMEOUT_MS));
-    const deadline = performance.now() + timeoutMs;
-    return new Promise<R>((resolve) => {
-      let settled = false;
-      const finish = (result: IntelligenceResult<unknown>) => {
-        if (settled) return;
-        settled = true;
-        this.fallbackSettlers.delete(finish);
-        if (query.requestId) {
-          const requests = this.pendingFallbackRequests.get(query.requestId);
-          requests?.delete(finish);
-          if (!requests?.size) this.pendingFallbackRequests.delete(query.requestId);
-        }
-        clearTimeout(timer);
-        resolve(result as R);
-      };
-      const timer = setTimeout(() => finish({ status: "timeout" }), timeoutMs);
-      this.fallbackSettlers.add(finish);
-      if (query.requestId) {
-        const requests = this.pendingFallbackRequests.get(query.requestId) ?? new Set();
-        requests.add(finish);
-        this.pendingFallbackRequests.set(query.requestId, requests);
-      }
-      void pending.then((fallback) => {
-        if (this.disposed) return finish({ status: "disposed" });
-        if (this.rejectedSnapshot)
-          return finish({ status: "error", message: this.rejectedSnapshot });
-        if (!fallback) return finish({ status: "error", message: "TypeScript worker failed" });
-        if (settled) return;
-        if (revision !== this.version) return finish({ status: "cancelled" });
-        const remaining = Math.max(0, deadline - performance.now());
-        if (!remaining) return finish({ status: "timeout" });
-        const handler = fallback[method] as (
-          query: FallbackQuery,
-        ) => Promise<IntelligenceResult<unknown>>;
-        void Promise.resolve()
-          .then(() => handler({ ...query, revision: undefined, timeoutMs: remaining }))
-          .then(
-            (result) => {
-              if (revision !== this.version) finish({ status: "cancelled" });
-              else if (performance.now() >= deadline) finish({ status: "timeout" });
-              else finish(result);
-            },
-            (error: unknown) =>
-              finish({
-                status: "error",
-                message: error instanceof Error ? error.message : "TypeScript fallback failed",
-              }),
-          );
-      });
-    });
   }
   private finish(pending: Pending, result: IntelligenceResult<unknown>): void {
     clearTimeout(pending.timer);
@@ -484,14 +342,9 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     this.disposed = true;
     this.lifecycle.setStatus("disposed");
     this.stop();
-    this.fallback?.dispose();
-    this.fallback = undefined;
     this.settle({ status: "disposed" });
-    for (const finish of this.fallbackSettlers) finish({ status: "disposed" });
     this.files.clear();
     this.versions.clear();
-    this.cancelledFallbackRequests.clear();
-    this.pendingFallbackRequests.clear();
     this.lifecycle.clearListeners();
     this.workspaceListeners.clear();
   }
