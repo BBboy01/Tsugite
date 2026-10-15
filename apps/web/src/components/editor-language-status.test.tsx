@@ -23,7 +23,7 @@ function createWorker(): IntelligenceWorker {
   return worker;
 }
 
-test("disabled language services expose the source budget failure", async () => {
+test("disabled language services are visible even when project declarations are ready", async () => {
   await i18n.changeLanguage("en");
   const owner = new RoomTypeScriptIntelligence(
     { doc: createProjectDoc() },
@@ -31,31 +31,28 @@ test("disabled language services expose the source budget failure", async () => 
       createIntelligence: (files) => new TypeScriptWorkerClient(files, { createWorker }),
     },
   );
+  await owner.clearDeclarations();
   await owner.intelligence.updateFile({ path: "huge.ts", text: "x".repeat(1024 * 1024 + 1) });
-  expect(renderToStaticMarkup(<EditorLanguageStatus serviceStatus={owner} />)).toContain(
+  expect(renderToStaticMarkup(<EditorLanguageStatus declarations={owner} />)).toContain(
     "Language services unavailable",
-  );
-  expect(renderToStaticMarkup(<EditorLanguageStatus serviceStatus={owner} />)).toContain(
-    "TypeScript source file limit exceeded",
   );
   owner.dispose();
 });
 
-test("language status shows loading and clears after worker initialization", async () => {
+test("project declaration failure exposes the reason without removing editing", async () => {
   await i18n.changeLanguage("en");
-  const worker = createWorker();
   const owner = new RoomTypeScriptIntelligence(
     { doc: createProjectDoc() },
-    {
-      createIntelligence: (files) =>
-        new TypeScriptWorkerClient(files, { lazyStart: true, createWorker: () => worker }),
-    },
+    { createIntelligence: (files) => new TypeScriptWorkerClient(files, { createWorker }) },
   );
-  expect(renderToStaticMarkup(<EditorLanguageStatus serviceStatus={owner} />)).toContain(
-    "Loading language services",
+  await owner.loadDeclarations(async () => {
+    throw new Error("Types not installed");
+  });
+  expect(renderToStaticMarkup(<EditorLanguageStatus declarations={owner} />)).toContain(
+    "Project types unavailable",
   );
-  await owner.intelligence.syncWorkspace([]);
-  await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(renderToStaticMarkup(<EditorLanguageStatus serviceStatus={owner} />)).toBe("");
+  expect(renderToStaticMarkup(<EditorLanguageStatus declarations={owner} />)).toContain(
+    "Types not installed",
+  );
   owner.dispose();
 });

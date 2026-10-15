@@ -76,6 +76,19 @@ export function EditorContextMenu({
   };
   const navigate = (location: EditorLocation) => {
     const foundFile = files.find((file) => file.path === location.path);
+    if (
+      !foundFile &&
+      location.path.startsWith("node_modules/") &&
+      /\.d\.(?:ts|mts|cts)$/.test(location.path)
+    ) {
+      setPeek((existingPeek) =>
+        existingPeek
+          ? { ...existingPeek, locations: [location] }
+          : { title: t("editor.context.definition"), locations: [location] },
+      );
+      keepPeekFocus.current = true;
+      return;
+    }
     if (foundFile?.text.toString() !== location.source) {
       setPeek(null);
       setError("staleTarget");

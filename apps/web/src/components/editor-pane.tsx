@@ -38,7 +38,7 @@ type SavedEditorSelection = EditorSelection & { fileId: string };
 export const EditorPane = memo(function EditorPane({
   doc,
   intelligence,
-  serviceStatus: service,
+  declarations,
   file,
   files,
   tabs,
@@ -58,9 +58,9 @@ export const EditorPane = memo(function EditorPane({
 }: EditorPaneProps) {
   const { t } = useTranslation();
   const serviceStatus = useSyncExternalStore(
-    service.subscribeServiceStatus,
-    service.getServiceStatus,
-    service.getServiceStatus,
+    declarations.subscribeServiceStatus,
+    declarations.getServiceStatus,
+    declarations.getServiceStatus,
   );
   const [systemClipboard] = useSystemClipboard();
   const systemClipboardRef = useRef(systemClipboard);
@@ -250,9 +250,9 @@ export const EditorPane = memo(function EditorPane({
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
       />
-      <EditorLanguageStatus serviceStatus={service} />
+      <EditorLanguageStatus declarations={declarations} />
       <EditorContextMenu
-        languageAvailable={serviceStatus.state === "ready" || serviceStatus.state === "fallback"}
+        languageAvailable={serviceStatus.state === "ready"}
         key={file.id + file.path}
         viewRef={viewRef}
         intelligence={

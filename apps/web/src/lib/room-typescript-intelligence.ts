@@ -1,14 +1,24 @@
 import { getFileById, listFiles } from "@iris/shared";
 import type { EditorIntelligence, IntelligenceFile } from "./editor-intelligence";
 import type { RoomClient } from "./room-client";
+import { validateDeclarationFiles } from "./typescript-declarations";
 import { TypeScriptWorkerClient } from "./typescript-worker-client";
-import { isSourcePath } from "./typescript-worker-protocol";
 
 const SNAPSHOT_RECOVERY_DELAY_MS = 100;
 
-export type EditorIntelligenceService = Pick<
+export type DeclarationsStatus =
+  | { status: "loading" | "ready" }
+  | { status: "unavailable"; reason: string };
+
+export type ProjectDeclarations = Pick<
   RoomTypeScriptIntelligence,
-  "getServiceStatus" | "subscribeServiceStatus"
+  | "loadDeclarations"
+  | "clearDeclarations"
+  | "prepareDeclarations"
+  | "getDeclarationsStatus"
+  | "subscribeDeclarations"
+  | "getServiceStatus"
+  | "subscribeServiceStatus"
 >;
 
 export type RoomTypeScriptIntelligenceOptions = {
@@ -16,7 +26,7 @@ export type RoomTypeScriptIntelligenceOptions = {
 };
 
 export type EditorIntelligenceServiceStatus = Readonly<{
-  state: "loading" | "ready" | "fallback" | "unavailable" | "disposed";
+  state: "loading" | "ready" | "unavailable" | "disposed";
   reason?: string;
 }>;
 
@@ -26,23 +36,20 @@ type StatusAwareIntelligence = EditorIntelligence & {
 };
 
 function createWorkerIntelligence(files: readonly IntelligenceFile[]): EditorIntelligence {
-  return new TypeScriptWorkerClient(files, {
-    lazyStart: true,
-    createFallback: async (snapshot) => {
-      const { createMainThreadTypeScriptIntelligence } =
-        await import("./typescript-main-thread-fallback");
-      return createMainThreadTypeScriptIntelligence(snapshot);
-    },
-  });
+  return new TypeScriptWorkerClient(files, { lazyStart: true });
 }
 
 export class RoomTypeScriptIntelligence {
   readonly intelligence: EditorIntelligence;
+  private declarations = new Map<string, IntelligenceFile>();
   private unsubscribe: () => void;
   private disposed = false;
   private snapshotRevision = 0;
   private sources = new Map<string, IntelligenceFile>();
   private fileIds = new Map<string, string>();
+  private declarationGeneration = 0;
+  private declarationStatus: DeclarationsStatus = { status: "loading" };
+  private declarationListeners = new Set<() => void>();
   private serviceListeners = new Set<() => void>();
   private serviceStatus: EditorIntelligenceServiceStatus = { state: "ready" };
   private snapshotRecoveryTimer?: ReturnType<typeof setTimeout>;
@@ -74,9 +81,7 @@ export class RoomTypeScriptIntelligence {
       this.snapshotRevision++;
       if (roots.some((root) => root === "files" || root === "filePaths")) {
         const next = this.readSources();
-        this.sources = new Map(
-          next.filter((file) => isSourcePath(file.path)).map((file) => [file.path, file]),
-        );
+        this.sources = new Map(next.map((file) => [file.path, file]));
         void this.intelligence.syncWorkspace(next);
         return;
       }
@@ -91,10 +96,6 @@ export class RoomTypeScriptIntelligence {
             this.sources.delete(previousPath);
             if (this.isRecoverableSourceSnapshot()) this.scheduleSnapshotRecovery();
           }
-          continue;
-        }
-        if (!isSourcePath(current.path)) {
-          if (previousPath) this.sources.delete(previousPath);
           continue;
         }
         const file = { path: current.path, text: current.text.toString() };
@@ -113,11 +114,81 @@ export class RoomTypeScriptIntelligence {
       }
     });
   }
+  async syncDeclarations(files: readonly IntelligenceFile[]): Promise<void> {
+    if (this.disposed) return;
+    const generation = ++this.declarationGeneration;
+    await this.publishDeclarations(files, generation);
+  }
+  loadDeclarations = async (
+    read: (sources: readonly IntelligenceFile[]) => Promise<readonly IntelligenceFile[]>,
+  ): Promise<void> => {
+    if (this.disposed) return;
+    const generation = ++this.declarationGeneration;
+    this.declarations.clear();
+    void this.intelligence.syncWorkspace(this.readSources());
+    this.setDeclarationStatus({ status: "loading" });
+    try {
+      const files = await read(this.readSources());
+      if (this.disposed || generation !== this.declarationGeneration) return;
+      await this.publishDeclarations(files, generation);
+    } catch (error) {
+      if (this.disposed || generation !== this.declarationGeneration) return;
+      await this.clearDeclarations(
+        error instanceof Error ? error.message : "Declaration scan failed",
+      );
+    }
+  };
+  prepareDeclarations = (): void => {
+    if (this.disposed) return;
+    ++this.declarationGeneration;
+    this.declarations.clear();
+    void this.intelligence.syncWorkspace(this.readSources());
+    this.setDeclarationStatus({ status: "loading" });
+  };
+  clearDeclarations = async (reason?: string): Promise<void> => {
+    if (this.disposed) return;
+    const generation = ++this.declarationGeneration;
+    this.declarations.clear();
+    await this.intelligence.syncWorkspace(this.readSources());
+    if (!this.disposed && generation === this.declarationGeneration)
+      this.setDeclarationStatus(reason ? { status: "unavailable", reason } : { status: "ready" });
+  };
+  getDeclarationsStatus = (): DeclarationsStatus => this.declarationStatus;
+  subscribeDeclarations = (listener: () => void): (() => void) => {
+    this.declarationListeners.add(listener);
+    return () => this.declarationListeners.delete(listener);
+  };
   getServiceStatus = (): EditorIntelligenceServiceStatus => this.serviceStatus;
   subscribeServiceStatus = (listener: () => void): (() => void) => {
     this.serviceListeners.add(listener);
     return () => this.serviceListeners.delete(listener);
   };
+  private async publishDeclarations(files: readonly IntelligenceFile[], generation: number) {
+    const invalid = validateDeclarationFiles(files);
+    if (invalid) {
+      await this.clearDeclarations(invalid);
+      return;
+    }
+    this.declarations = new Map(files.map((file) => [file.path, file]));
+    const result = await this.intelligence.syncWorkspace(this.readSources());
+    if (this.disposed || generation !== this.declarationGeneration) return;
+    this.setDeclarationStatus(
+      result.status === "error"
+        ? { status: "unavailable", reason: result.message }
+        : { status: "ready" },
+    );
+  }
+  private setDeclarationStatus(status: DeclarationsStatus): void {
+    const previous = this.declarationStatus;
+    if (
+      previous.status === status.status &&
+      (previous.status !== "unavailable" ||
+        (status.status === "unavailable" && previous.reason === status.reason))
+    )
+      return;
+    this.declarationStatus = status;
+    this.declarationListeners.forEach((listener) => listener());
+  }
   get revision(): number {
     return this.intelligence.workspaceVersion;
   }
@@ -127,8 +198,6 @@ export class RoomTypeScriptIntelligence {
         return "worker";
       case "unavailable":
         return "disabled";
-      case "fallback":
-        return "fallback";
       default:
         return this.serviceStatus.state;
     }
@@ -136,16 +205,24 @@ export class RoomTypeScriptIntelligence {
   get disabledReason(): string | undefined {
     return this.serviceStatus.reason;
   }
+  get budgets() {
+    return { maxFiles: 512, maxFileBytes: 1024 * 1024, maxWorkspaceBytes: 16 * 1024 * 1024 };
+  }
   get currentSnapshotRevision(): number {
     return this.snapshotRevision;
+  }
+  getDeclarationsSnapshot(): readonly IntelligenceFile[] {
+    return [...this.declarations.values()];
   }
   private readSources(): IntelligenceFile[] {
     const files = this.client.doc.getByPath("files") ? listFiles(this.client.doc) : [];
     this.fileIds = new Map(files.map((file) => [file.id, file.path]));
-    const source = files
-      .filter((file) => isSourcePath(file.path))
-      .map((file) => ({ path: file.path, text: file.text.toString() }));
-    return source;
+    const source = files.map((file) => ({ path: file.path, text: file.text.toString() }));
+    const sourcePaths = new Set(source.map((file) => file.path));
+    return [
+      ...source,
+      ...[...this.declarations.values()].filter((file) => !sourcePaths.has(file.path)),
+    ];
   }
   private isRecoverableSourceSnapshot(): boolean {
     return (
@@ -160,9 +237,7 @@ export class RoomTypeScriptIntelligence {
       this.snapshotRecoveryTimer = undefined;
       if (!this.isRecoverableSourceSnapshot() || this.disposed) return;
       const next = this.readSources();
-      this.sources = new Map(
-        next.filter((file) => isSourcePath(file.path)).map((file) => [file.path, file]),
-      );
+      this.sources = new Map(next.map((file) => [file.path, file]));
       void this.intelligence.syncWorkspace(next);
     }, SNAPSHOT_RECOVERY_DELAY_MS);
   }
@@ -173,14 +248,17 @@ export class RoomTypeScriptIntelligence {
   dispose(): void {
     if (this.disposed) return;
     this.disposed = true;
+    ++this.declarationGeneration;
     this.serviceStatus = { state: "disposed" };
     this.serviceListeners.forEach((listener) => listener());
     this.cancelSnapshotRecovery();
     this.unsubscribe();
     this.unsubscribeServiceStatus?.();
     this.intelligence.dispose();
+    this.declarations.clear();
     this.sources.clear();
     this.fileIds.clear();
+    this.declarationListeners.clear();
     this.serviceListeners.clear();
   }
 }

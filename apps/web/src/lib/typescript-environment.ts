@@ -3,31 +3,11 @@ import type { IntelligenceFile } from "./editor-intelligence";
 
 const normalizeDirectory = (name: string) => name.replace(/\/$/, "") || "/";
 
-// Temporary #68 boundary. #70 replaces this with the complete TypeScript lib.* set.
-const TEMPORARY_EDITOR_LIBRARY: IntelligenceFile = {
-  path: "__typescript/lib/lib.es2022.full.d.ts",
-  text: `
-interface Array<T = any> { length: number; [n: number]: T }
-interface Boolean {}
-interface CallableFunction {}
-interface Function {}
-interface IArguments {}
-interface NewableFunction {}
-interface Number {}
-interface Object {}
-interface RegExp {}
-interface String { length: number }
-interface StringConstructor { (value?: any): string; new(value?: any): String }
-declare const String: StringConstructor;
-declare const console: { log(...args: any[]): void; warn(...args: any[]): void; error(...args: any[]): void };
-`,
-};
-
 export function createEditorTypeScriptEnvironment(
   path: string,
   source: string,
-  projectFiles: readonly IntelligenceFile[] = [],
-  libraries: readonly IntelligenceFile[] = [],
+  projectFiles: readonly IntelligenceFile[],
+  libraries: readonly IntelligenceFile[],
 ) {
   const compilerOptions = {
     allowJs: true,
@@ -40,12 +20,8 @@ export function createEditorTypeScriptEnvironment(
     strict: true,
     target: ts.ScriptTarget.ES2022,
   };
-  const effectiveLibraries = libraries.length === 0 ? [TEMPORARY_EDITOR_LIBRARY] : libraries;
   const files = new Map<string, string>(
-    [...effectiveLibraries, ...projectFiles].map((file) => [
-      `/${file.path.replace(/^\//, "")}`,
-      file.text,
-    ]),
+    [...libraries, ...projectFiles].map((file) => [`/${file.path.replace(/^\//, "")}`, file.text]),
   );
   const absolutePath = `/${path.replace(/^\//, "")}`;
   files.set(absolutePath, source);
@@ -93,6 +69,7 @@ export function createEditorTypeScriptEnvironment(
     system.writeFile(fileName, content);
     addDirectories(fileName);
     versions.set(fileName, ++projectVersion);
+    if (fileName.endsWith("/package.json")) languageService.cleanupSemanticCache();
   };
   return {
     sys: system,
@@ -116,6 +93,7 @@ export function createEditorTypeScriptEnvironment(
       files.forEach((_, name) => addDirectories(name));
       versions.delete(fileName);
       projectVersion++;
+      if (fileName.endsWith("/package.json")) languageService.cleanupSemanticCache();
     },
   };
 }
