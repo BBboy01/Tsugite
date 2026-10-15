@@ -97,10 +97,11 @@ test("import-looking strings and comments do not refresh or clear declarations",
   const initial = [{ path: "app.ts", text: "const example = 'ordinary text';" }];
   sink.setSources(initial);
   let reads = 0;
+  const scanFailureMarker = ["https:", "", "example.test"].join("/") + "/";
   const runtime = {
     readTypeScriptDeclarations: async (sources: readonly IntelligenceFile[] = []) => {
       reads++;
-      if (sources.some(({ text }) => text.includes("https://example.test/"))) {
+      if (sources.some(({ text }) => text.includes(scanFailureMarker))) {
         throw new Error("TypeScript declaration scan disabled");
       }
       return declarations;
