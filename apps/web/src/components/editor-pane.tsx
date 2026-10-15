@@ -4,7 +4,7 @@ import { EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
 import { LoroExtensions } from "loro-codemirror";
 import { vim } from "@replit/codemirror-vim";
-import type { VirtualTypeScriptEnvironment } from "@typescript/vfs";
+import type { EditorIntelligence } from "../lib/editor-intelligence";
 
 import { buildEditorTabViewModels } from "../lib/editor-tab-model";
 import { useEditorUndoManager } from "../lib/editor-undo";
@@ -83,9 +83,8 @@ export const EditorPane = memo(function EditorPane({
   const [typeScriptEnvironment, setTypeScriptEnvironment] = useState<{
     fileId: string;
     path: string;
-    environment: VirtualTypeScriptEnvironment;
+    intelligence: EditorIntelligence;
   } | null>(null);
-  const projectFilesRef = useRef(files);
   const tabViewModels = useMemo(
     () => buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
     [tabs, file.path, remoteMembers, currentUserId],
@@ -96,7 +95,6 @@ export const EditorPane = memo(function EditorPane({
   isFollowingRef.current = isFollowing;
   settingsRef.current = settings;
   remoteMembersRef.current = remoteMembers;
-  projectFilesRef.current = files;
 
   useEffect(() => {
     if (!hostRef.current) return;
@@ -178,16 +176,8 @@ export const EditorPane = memo(function EditorPane({
     }
 
     const detachTypeScript = supportsTypeScriptServices(language)
-      ? attachEditorTypeScriptServices(
-          view,
-          file.path,
-          () =>
-            projectFilesRef.current.map((projectFile) => ({
-              path: projectFile.path,
-              text: projectFile.text.toString(),
-            })),
-          (environment) =>
-            setTypeScriptEnvironment({ fileId: file.id, path: file.path, environment }),
+      ? attachEditorTypeScriptServices(view, file.path, doc, (intelligence) =>
+          setTypeScriptEnvironment({ fileId: file.id, path: file.path, intelligence }),
         )
       : undefined;
 
@@ -251,9 +241,9 @@ export const EditorPane = memo(function EditorPane({
       <EditorContextMenu
         key={file.id + file.path}
         viewRef={viewRef}
-        environment={
+        intelligence={
           typeScriptEnvironment?.fileId === file.id && typeScriptEnvironment.path === file.path
-            ? typeScriptEnvironment.environment
+            ? typeScriptEnvironment.intelligence
             : null
         }
         path={file.path}

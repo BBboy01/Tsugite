@@ -13,7 +13,7 @@ test("keeps editing while language services load and enables an already open men
   const requested = Promise.withResolvers<void>();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/src/lib/typescript-environment.ts*", async (route) => {
+  await page.route("**/src/lib/typescript-intelligence.ts*", async (route) => {
     requested.resolve();
     await release.promise;
     await route.continue();
@@ -25,6 +25,7 @@ test("keeps editing while language services load and enables an already open men
     await requested.promise;
     const content = page.locator(".cm-content");
     await expect(content).toBeFocused();
+    await expect(page.locator(".cm-editor").locator("..")).toHaveCSS("opacity", "1");
     await page.locator(".cm-editor").evaluate((element) => {
       element.setAttribute("data-test-editor-instance", "original");
     });
@@ -57,14 +58,15 @@ test("keeps editing while language services load and enables an already open men
 test("keeps editing and collaboration available when language services fail to load", async ({
   page,
   browser,
-}) => {
+}, testInfo) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/src/lib/typescript-environment.ts*", (route) => route.abort("failed"));
+  await page.route("**/src/lib/typescript-intelligence.ts*", (route) => route.abort("failed"));
   const room = `/room/language-failure-${crypto.randomUUID()}`;
   await page.goto(room, { waitUntil: "domcontentloaded" });
   const content = page.locator(".cm-content");
   await expect(content).toBeFocused();
+  await expect(page.locator(".cm-editor").locator("..")).toHaveCSS("opacity", "1");
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText("const survives = 42;");
   await page.keyboard.press("Shift+F10");
@@ -89,10 +91,10 @@ test("keeps editing and collaboration available when language services fail to l
       .toBe("const survives = 42;");
     await expect(page).toHaveTitle(/Tsugite/i);
     await page.setViewportSize({ width: 1280, height: 800 });
-    await page.screenshot({ path: "/tmp/iris-language-fallback-desktop.png" });
+    await page.screenshot({ path: testInfo.outputPath("language-fallback-desktop.png") });
     await page.setViewportSize({ width: 390, height: 844 });
     await expect(content).toBeVisible();
-    await page.screenshot({ path: "/tmp/iris-language-fallback-narrow.png" });
+    await page.screenshot({ path: testInfo.outputPath("language-fallback-narrow.png") });
     await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     expect(errors).toEqual([]);
   } finally {
@@ -107,7 +109,7 @@ test("discards pending language services after switching to a non-TypeScript fil
   const requested = Promise.withResolvers<void>();
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/src/lib/typescript-environment.ts*", async (route) => {
+  await page.route("**/src/lib/typescript-intelligence.ts*", async (route) => {
     requested.resolve();
     await release.promise;
     await route.continue();
@@ -118,13 +120,14 @@ test("discards pending language services after switching to a non-TypeScript fil
     });
     await requested.promise;
     await expect(page.locator(".cm-content")).toBeFocused();
+    await expect(page.locator(".cm-editor").locator("..")).toHaveCSS("opacity", "1");
     await page.getByRole("treeitem", { name: "index.html", exact: true }).click();
     await expect(page.locator(".cm-content")).toBeFocused();
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.insertText("<p>still editing HTML</p>");
     release.resolve();
     await page.evaluate(async () => {
-      const modulePath = "/src/lib/typescript-environment.ts";
+      const modulePath = "/src/lib/typescript-intelligence.ts";
       await import(/* @vite-ignore */ modulePath);
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });

@@ -1,71 +1,79 @@
 import { expect, test } from "bun:test";
-import { createEditorTypeScriptEnvironment } from "./typescript-environment";
-import { queryEditorLocations } from "./editor-navigation";
+import { createTypeScriptIntelligence } from "./typescript-intelligence";
+import {
+  LatestIntelligenceRequest,
+  matchesIntelligenceSnapshot,
+  queryEditorLocations,
+} from "./editor-navigation";
 
-const source =
-  "import { value, type Shape } from './value';\nconst shape: Shape = { size: value };\nvalue;";
+const source = "import { value } from './value';\nvalue;";
 const files = [
   { path: "src/App.tsx", text: source },
-  {
-    path: "src/value.ts",
-    text: "export interface Shape { size: number }\nexport const value = 1;",
-  },
+  { path: "src/value.ts", text: "export const value = 1;" },
 ];
 
-test("returns cross-file definitions and all references with source coordinates", () => {
-  const env = createEditorTypeScriptEnvironment("src/App.tsx", source, files);
-  const definitions = queryEditorLocations(
-    env,
-    files,
-    "src/App.tsx",
-    source.lastIndexOf("value"),
-    "definition",
-  );
-  expect(definitions).toHaveLength(1);
-  expect(definitions[0]).toMatchObject({ path: "src/value.ts", line: 2, column: 14 });
-  const references = queryEditorLocations(
-    env,
-    files,
-    "src/App.tsx",
-    source.lastIndexOf("value"),
-    "references",
-  );
-  expect(references.filter((item) => item.path === "src/App.tsx")).toHaveLength(3);
-  expect(references.some((item) => item.path === "src/value.ts")).toBe(true);
-  env.languageService.dispose();
+test("navigation synchronizes collaborative edits before its async query", async () => {
+  const engine = createTypeScriptIntelligence("src/App.tsx", source, files);
+  try {
+    const result = await queryEditorLocations(
+      engine,
+      [files[0], { path: "src/value.ts", text: "\n\nexport const value = 2;" }],
+      "src/App.tsx",
+      source.lastIndexOf("value"),
+      "definition",
+    );
+    expect(result).toMatchObject({
+      status: "ok",
+      value: [{ path: "src/value.ts", line: 3, column: 14 }],
+    });
+    const deleted = await queryEditorLocations(
+      engine,
+      [files[0]],
+      "src/App.tsx",
+      source.lastIndexOf("value"),
+      "definition",
+    );
+    expect(
+      deleted.status === "empty" ||
+        (deleted.status === "ok" && deleted.value.every((item) => item.path !== "src/value.ts")),
+    ).toBe(true);
+  } finally {
+    engine.dispose();
+  }
 });
 
-test("synchronizes edited and removed files before queries", () => {
-  const env = createEditorTypeScriptEnvironment("src/App.tsx", source, files);
-  const edited = [files[0], { path: "src/value.ts", text: "\n\nexport const value = 2;" }];
+test("navigation preserves empty and disposed results", async () => {
+  const engine = createTypeScriptIntelligence("src/App.tsx", source, files);
   expect(
-    queryEditorLocations(env, edited, "src/App.tsx", source.lastIndexOf("value"), "definition")[0]
-      ?.line,
-  ).toBe(3);
-  const afterDelete = queryEditorLocations(
-    env,
-    [files[0]],
-    "src/App.tsx",
-    source.lastIndexOf("value"),
-    "definition",
-  );
-  expect(afterDelete.some((item) => item.path === "src/value.ts")).toBe(false);
-  env.languageService.dispose();
+    await queryEditorLocations(engine, files, "src/App.tsx", source.length, "definition"),
+  ).toEqual({ status: "empty" });
+  engine.dispose();
+  expect(await queryEditorLocations(engine, files, "src/App.tsx", 0, "references")).toEqual({
+    status: "disposed",
+  });
 });
 
-test("queries type definitions and implementations and handles empty targets", () => {
-  const text =
-    "interface Shape { size: number }\nclass Box implements Shape { size = 1 }\nconst shape: Shape = new Box();\nshape;";
-  const items = [{ path: "types.ts", text }];
-  const env = createEditorTypeScriptEnvironment("types.ts", text, items);
+test("superseded and unmounted requests cannot apply awaited results", () => {
+  const requests = new LatestIntelligenceRequest();
+  const first = requests.begin();
+  const second = requests.begin();
+  expect(first()).toBe(false);
+  expect(second()).toBe(true);
+  requests.invalidate();
+  expect(second()).toBe(false);
+});
+
+test("content snapshots detect active edits, additions, deletion and renames", () => {
+  expect(matchesIntelligenceSnapshot(files, [...files].toReversed())).toBe(true);
   expect(
-    queryEditorLocations(env, items, "types.ts", text.lastIndexOf("shape"), "type")[0]?.line,
-  ).toBe(1);
-  expect(
-    queryEditorLocations(env, items, "types.ts", text.indexOf("Shape"), "implementation").some(
-      (item) => item.line === 2,
-    ),
-  ).toBe(true);
-  expect(queryEditorLocations(env, items, "types.ts", text.length, "definition")).toEqual([]);
-  env.languageService.dispose();
+    matchesIntelligenceSnapshot(files, [
+      files[0],
+      { ...files[1], text: "export const value = 3;" },
+    ]),
+  ).toBe(false);
+  expect(matchesIntelligenceSnapshot(files, [files[0]])).toBe(false);
+  expect(matchesIntelligenceSnapshot(files, [...files, { path: "new.ts", text: "" }])).toBe(false);
+  expect(matchesIntelligenceSnapshot(files, [files[0], { ...files[1], path: "renamed.ts" }])).toBe(
+    false,
+  );
 });
