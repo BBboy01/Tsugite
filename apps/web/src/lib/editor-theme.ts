@@ -25,6 +25,28 @@ export function editorTheme(settings: ProjectSettings) {
       fontFamily: "var(--mono-font)",
       fontSize: "11px",
     },
+    ".cm-tooltip.cm-tooltip-autocomplete": {
+      backgroundColor: "var(--editor-surface)",
+      border: "1px solid var(--divider)",
+      borderRadius: "6px",
+      boxShadow: "0 8px 24px color-mix(in srgb, var(--ink-strong) 18%, transparent)",
+      color: "var(--ink)",
+      fontFamily: "var(--mono-font)",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul": {
+      fontFamily: "inherit",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected]": {
+      backgroundColor: "var(--editor-selection-surface)",
+      boxShadow: "inset 2px 0 var(--accent)",
+      color: "var(--ink)",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail": {
+      color: "color-mix(in srgb, var(--ink-strong) 70%, var(--muted))",
+    },
+    ".cm-tooltip.cm-tooltip-autocomplete .cm-completionMatchedText": {
+      color: "var(--accent-deep)",
+    },
     ".cm-tooltip.cm-tooltip-hover": {
       backgroundColor: "var(--editor-surface)",
       border: "none",
@@ -141,8 +163,17 @@ export function editorTheme(settings: ProjectSettings) {
     ".cm-activeLine": {
       backgroundColor: "color-mix(in srgb, var(--accent) 8%, transparent)",
     },
-    ".cm-selectionBackground, ::selection": {
-      backgroundColor: "color-mix(in srgb, var(--accent) 22%, transparent)",
+    "&.cm-has-selection .cm-activeLine": {
+      backgroundColor: "transparent",
+    },
+    ".cm-selectionBackground": {
+      backgroundColor: "var(--editor-selection-surface)",
+    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
+      backgroundColor: "var(--editor-selection-surface)",
+    },
+    ".cm-content::selection, .cm-content ::selection": {
+      backgroundColor: "var(--editor-selection-surface)",
     },
     ".cm-remote-selection": {
       backgroundColor: "color-mix(in srgb, var(--remote-color) 24%, transparent)",

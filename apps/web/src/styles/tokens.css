@@ -8,6 +8,7 @@
   --focus-ring-strong: color-mix(in srgb, var(--accent) 72%, white);
   --focus-halo: color-mix(in srgb, var(--accent) 18%, transparent);
   --selection-surface: color-mix(in srgb, var(--accent) 14%, transparent);
+  --editor-selection-surface: color-mix(in srgb, var(--accent) 12%, transparent);
   --hover-surface: color-mix(in srgb, var(--accent) 8%, transparent);
   --control-surface: color-mix(in srgb, var(--canvas) 72%, transparent);
 }

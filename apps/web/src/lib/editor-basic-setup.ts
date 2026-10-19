@@ -20,6 +20,7 @@ import {
   crosshairCursor,
   drawSelection,
   dropCursor,
+  EditorView,
   highlightActiveLine,
   highlightActiveLineGutter,
   highlightSpecialChars,
@@ -55,6 +56,9 @@ export function editorLineNumbers(relativeLineNumbers: boolean) {
 
 export function editorBasicSetup() {
   return [
+    EditorView.editorAttributes.compute(["selection"], (state) => ({
+      class: state.selection.ranges.some((range) => !range.empty) ? "cm-has-selection" : "",
+    })),
     highlightActiveLineGutter(),
     highlightSpecialChars(),
     history(),
