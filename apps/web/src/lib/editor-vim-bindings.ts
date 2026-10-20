@@ -3,7 +3,7 @@ import type { ProjectSettings } from "@iris/shared";
 
 import { attachVimClipboard } from "./vim-clipboard";
 import { attachVimSearch } from "./vim-search";
-import { attachVimCursorStyle, attachVimStatus } from "./vim-status";
+import { attachVimCursorStyle, attachVimNotifications, attachVimStatus } from "./vim-status";
 
 type CursorStyle = ProjectSettings["normalCursorStyle"];
 
@@ -12,6 +12,7 @@ export class EditorVimBindings {
   private systemClipboard?: boolean;
   private detachCursorStyle = () => {};
   private detachClipboard = () => {};
+  private readonly detachNotifications: () => void;
   private readonly detachSearch: () => void;
   private readonly detachStatus: () => void;
 
@@ -23,6 +24,8 @@ export class EditorVimBindings {
     onStatus: (status: string) => void,
   ) {
     this.update(cursorStyle, systemClipboard);
+    // Dismiss old messages before capture-phase Vim search commands run.
+    this.detachNotifications = enabled ? attachVimNotifications(view) : () => {};
     this.detachSearch = enabled ? attachVimSearch(view) : () => {};
     this.detachStatus = enabled ? attachVimStatus(view, onStatus) : () => {};
   }
@@ -46,6 +49,7 @@ export class EditorVimBindings {
   }
 
   destroy(): void {
+    this.detachNotifications();
     this.detachStatus();
     this.detachSearch();
     this.detachCursorStyle();

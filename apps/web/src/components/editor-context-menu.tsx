@@ -190,7 +190,7 @@ export function EditorContextMenu({
       >
         <ContextMenu.Trigger asChild>
           <div
-            className="relative min-h-0 flex-1"
+            className="relative flex min-h-0 flex-1 flex-col"
             onMouseDownCapture={(event) => {
               if (event.button === 2)
                 beforeRightClick.current = viewRef.current?.state.selection ?? null;

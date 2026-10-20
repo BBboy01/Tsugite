@@ -1,6 +1,7 @@
 :root,
 [class^="theme-"],
 [class*=" theme-"] {
+  --accent-track: var(--accent);
   --text-dimmed: color-mix(in srgb, var(--muted) 45%, transparent);
   --text-secondary: color-mix(in srgb, var(--muted) 45%, var(--ink));
   --focus-ring: color-mix(in srgb, var(--accent) 48%, transparent);
@@ -11,4 +12,26 @@
   --editor-selection-surface: color-mix(in srgb, var(--accent) 12%, transparent);
   --hover-surface: color-mix(in srgb, var(--accent) 8%, transparent);
   --control-surface: color-mix(in srgb, var(--canvas) 72%, transparent);
+}
+
+.preview-console-select.rt-SelectContent[class*="theme-"] {
+  background-color: var(--glass-popover);
+  color: var(--ink);
+}
+
+.preview-console-select.rt-SelectContent[class*="theme-"] .rt-SelectItem {
+  color: var(--ink);
+}
+
+.preview-console-select.rt-SelectContent[class*="theme-"] .rt-SelectItem[data-highlighted],
+.preview-console-select.rt-SelectContent[class*="theme-"] .rt-SelectItem[data-state="checked"] {
+  background-color: var(--selection-surface);
+  color: var(--accent-deep);
+}
+
+[class^="theme-"] .settings-sidebar button:not([aria-current="page"]):is(:hover, :focus-visible),
+[class*=" theme-"] .settings-sidebar button:not([aria-current="page"]):is(:hover, :focus-visible),
+[class^="theme-"] .mobile-panel-trigger:is(:hover, :focus-visible),
+[class*=" theme-"] .mobile-panel-trigger:is(:hover, :focus-visible) {
+  background-color: var(--hover-surface);
 }

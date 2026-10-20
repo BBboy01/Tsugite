@@ -1,19 +1,28 @@
 import { EditorView } from "@codemirror/view";
 import type { ProjectSettings } from "@iris/shared";
 
+import { isDarkWorkspaceTheme } from "./workspace-theme";
+
 export function editorTheme(settings: ProjectSettings) {
-  return EditorView.theme({
+  const theme = {
     "&": {
+      display: "flex",
+      flexDirection: "column",
       height: "100%",
+      minWidth: "0",
       color: "var(--ink)",
       backgroundColor: "var(--editor-surface)",
       fontFamily: `'${settings.fontFamily}', 'IBM Plex Mono', ui-monospace, monospace`,
       fontSize: `${settings.fontSize}px`,
+      width: "100%",
     },
     "&.cm-focused": {
       outline: "none",
     },
     ".cm-scroller": {
+      flex: "1 1 auto",
+      minHeight: "0",
+      minWidth: "0",
       overflow: "auto",
       fontFamily: "inherit",
       lineHeight: "1.75",
@@ -24,6 +33,83 @@ export function editorTheme(settings: ProjectSettings) {
       color: "var(--ink)",
       fontFamily: "var(--mono-font)",
       fontSize: "11px",
+    },
+    ".cm-panels": {
+      backgroundColor: "var(--editor-surface)",
+      color: "var(--ink)",
+    },
+    ".cm-panels-bottom": {
+      borderTop: "1px solid var(--divider)",
+    },
+    ".cm-vim-panel": {
+      alignItems: "center",
+      backgroundColor: "var(--editor-surface)",
+      boxSizing: "border-box",
+      color: "var(--muted)",
+      display: "flex",
+      gap: "12px",
+      justifyContent: "space-between",
+      fontFamily: "var(--mono-font)",
+      fontSize: "10px",
+      lineHeight: "22px",
+      minHeight: "24px",
+      padding: "0 12px",
+    },
+    ".cm-vim-panel input": {
+      backgroundColor: "transparent",
+      border: "none",
+      caretColor: "var(--accent)",
+      color: "var(--ink)",
+      fontFamily: "inherit",
+      fontSize: "inherit",
+      minWidth: "0",
+      outline: "none",
+      width: "100%",
+    },
+    ".iris-editor-statusbar": {
+      alignItems: "center",
+      backgroundColor: "var(--editor-surface)",
+      borderTop: "1px solid var(--divider)",
+      boxSizing: "border-box",
+      color: "var(--muted)",
+      display: "flex",
+      flex: "none",
+      fontFamily: "var(--mono-font)",
+      fontSize: "10px",
+      gap: "12px",
+      justifyContent: "space-between",
+      lineHeight: "22px",
+      minHeight: "24px",
+      overflow: "hidden",
+      padding: "0 12px",
+      whiteSpace: "nowrap",
+    },
+    ".iris-editor-status-group": {
+      alignItems: "center",
+      display: "flex",
+      gap: "12px",
+      minWidth: "0",
+    },
+    ".iris-editor-status-leading": {
+      overflow: "hidden",
+    },
+    ".iris-editor-status-mode": {
+      color: "var(--ink)",
+      flex: "none",
+    },
+    ".iris-editor-status-path": {
+      minWidth: "0",
+      overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+    },
+    ".iris-editor-status-command": {
+      color: "var(--accent)",
+      flex: "none",
+    },
+    ".iris-editor-status-trailing": {
+      flex: "none",
+      fontVariantNumeric: "tabular-nums",
     },
     ".cm-tooltip.cm-tooltip-autocomplete": {
       backgroundColor: "var(--editor-surface)",
@@ -87,6 +173,7 @@ export function editorTheme(settings: ProjectSettings) {
     },
     ".cm-panel.cm-search .cm-button": {
       backgroundColor: "transparent",
+      backgroundImage: "none",
       border: "1px solid transparent",
       borderRadius: "5px",
       color: "var(--accent-deep)",
@@ -95,6 +182,12 @@ export function editorTheme(settings: ProjectSettings) {
     },
     ".cm-panel.cm-search .cm-button:hover": {
       backgroundColor: "color-mix(in srgb, var(--accent) 12%, transparent)",
+      backgroundImage: "none",
+      color: "var(--ink-strong)",
+    },
+    ".cm-panel.cm-search .cm-button:active": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)",
+      backgroundImage: "none",
       color: "var(--ink-strong)",
     },
     ".cm-panel.cm-search label": {
@@ -121,6 +214,15 @@ export function editorTheme(settings: ProjectSettings) {
     ".cm-panel.cm-search [name=close]:hover": {
       color: "var(--ink-strong)",
     },
+    ".cm-panel.cm-panel-lint": {
+      backgroundColor: "var(--editor-surface)",
+      color: "var(--ink)",
+    },
+    ".cm-panel.cm-panel-lint ul [aria-selected], .cm-panel.cm-panel-lint ul:focus [aria-selected]":
+      {
+        backgroundColor: "var(--editor-selection-surface)",
+        color: "var(--ink)",
+      },
     ".cm-cursor, .cm-dropCursor": {
       marginLeft: "-1px",
       borderLeft: "1px solid var(--accent) !important",
@@ -175,6 +277,27 @@ export function editorTheme(settings: ProjectSettings) {
     ".cm-content::selection, .cm-content ::selection": {
       backgroundColor: "var(--editor-selection-surface)",
     },
+    ".cm-searchMatch, .cm-selectionMatch": {
+      backgroundColor: "var(--editor-selection-surface)",
+    },
+    ".cm-searchMatch-selected": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 24%, transparent)",
+    },
+    ".cm-searchMatch .cm-selectionMatch": {
+      backgroundColor: "transparent",
+    },
+    "&.cm-focused .cm-matchingBracket": {
+      backgroundColor: "var(--editor-selection-surface)",
+    },
+    "&.cm-focused .cm-nonmatchingBracket": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 18%, transparent)",
+      textDecoration: "underline wavy var(--accent)",
+    },
+    ".cm-foldPlaceholder": {
+      backgroundColor: "color-mix(in srgb, var(--accent) 8%, var(--editor-surface))",
+      border: "1px solid var(--divider)",
+      color: "var(--muted)",
+    },
     ".cm-remote-selection": {
       backgroundColor: "color-mix(in srgb, var(--remote-color) 24%, transparent)",
     },
@@ -210,5 +333,6 @@ export function editorTheme(settings: ProjectSettings) {
     ".cm-content .cm-remote-cursor-label": {
       color: "var(--editor-surface)",
     },
-  });
+  };
+  return EditorView.theme(theme, { dark: isDarkWorkspaceTheme(settings.theme) });
 }

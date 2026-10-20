@@ -32,6 +32,9 @@ import { useSystemClipboard } from "../lib/use-system-clipboard";
 import { editorBasicSetup } from "../lib/editor-basic-setup";
 import { attachEditorTypeScriptServices } from "../lib/editor-typescript-services";
 import { EditorLanguageStatus } from "./editor-language-status";
+import { EditorStatusBar } from "./editor-status-bar";
+import { editorStatus, editorStatusAt } from "../lib/editor-status";
+import { attachVimStatusDetails, type VimStatusDetails } from "../lib/vim-status";
 
 type SavedEditorSelection = EditorSelection & { fileId: string };
 
@@ -69,6 +72,7 @@ export const EditorPane = memo(function EditorPane({
   const viewRef = useRef<EditorView | null>(null);
   const visualConfigurationRef = useRef<EditorVisualConfiguration | null>(null);
   const vimBindingsRef = useRef<EditorVimBindings | null>(null);
+  const vimStatusDetailsRef = useRef<VimStatusDetails | null>(null);
   const settingsRef = useRef(settings);
   const remoteMembersRef = useRef(remoteMembers);
   const cursorChangeRef = useRef(onCursorChange);
@@ -78,6 +82,7 @@ export const EditorPane = memo(function EditorPane({
   const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
+  const [statusDetails, setStatusDetails] = useState(() => editorStatus(file.path, 1, 1, 1));
   const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
   const currentFileKey = `${file.id}:${file.path}`;
   const { navigateToLocation, applyPendingLocation } = useEditorLocation({
@@ -121,7 +126,7 @@ export const EditorPane = memo(function EditorPane({
       state: EditorState.create({
         doc: source,
         extensions: [
-          ...(vimMode ? [vim()] : []),
+          ...(vimMode ? [vim({ status: true })] : []),
           ...(vimMode ? [vimSearchExtension] : []),
           visualExtensions.lineNumbers,
           editorBasicSetup(),
@@ -133,6 +138,10 @@ export const EditorPane = memo(function EditorPane({
           groupedLoroUndo(undoManager),
           LoroExtensions(doc, undefined, undoManager, () => file.text),
           EditorView.updateListener.of((update) => {
+            if (update.selectionSet || update.docChanged) {
+              setStatusDetails(editorStatusAt(update.view, file.path));
+              vimStatusDetailsRef.current?.refresh();
+            }
             const hasUserEvent = update.transactions.some((transaction) =>
               Boolean(transaction.annotation(Transaction.userEvent)),
             );
@@ -162,6 +171,9 @@ export const EditorPane = memo(function EditorPane({
       setVimStatus,
     );
     vimBindingsRef.current = vimBindings;
+    const vimStatusDetails = vimMode ? attachVimStatusDetails(view, file.path) : null;
+    vimStatusDetailsRef.current = vimStatusDetails;
+    setStatusDetails(editorStatusAt(view, file.path));
     onEditorFocusReady?.(() => view.focus());
     updateRemotePresence(
       view,
@@ -196,6 +208,8 @@ export const EditorPane = memo(function EditorPane({
     return () => {
       onEditorFocusReady?.(undefined);
       vimBindings.destroy();
+      vimStatusDetails?.destroy();
+      if (vimStatusDetailsRef.current === vimStatusDetails) vimStatusDetailsRef.current = null;
       vimBindingsRef.current = null;
       savedSelectionRef.current = {
         fileId: file.id,
@@ -244,6 +258,7 @@ export const EditorPane = memo(function EditorPane({
     <section
       className="flex min-w-0 min-h-0 flex-1 flex-col bg-[var(--editor-surface)]"
       aria-label={t("files.editing", { path: file.path })}
+      data-vim-mode={vimMode ? vimStatus.toLowerCase() : undefined}
     >
       <EditorFileTabs
         tabViewModels={tabViewModels}
@@ -268,20 +283,13 @@ export const EditorPane = memo(function EditorPane({
         onNavigate={navigateToLocation}
       >
         <div
-          className="h-full min-h-0 [&_.cm-editor]:h-full"
+          className="flex min-h-0 min-w-0 flex-1 [&_.cm-editor]:h-full"
           ref={hostRef}
-          style={{ opacity: highlightedFile === currentFileKey ? 1 : 0 }}
+          data-editor-content-ready={highlightedFile === currentFileKey}
         />
+        {!vimMode && <EditorStatusBar status={statusDetails} />}
         {isFollowing && <EditorFollowingOutline />}
       </EditorContextMenu>
-      {vimMode && (
-        <div
-          className="flex h-6 flex-none items-center border-t border-iris-divider px-3 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted"
-          data-vim-mode={vimStatus.toLowerCase()}
-        >
-          {vimStatus}
-        </div>
-      )}
     </section>
   );
 });
