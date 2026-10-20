@@ -39,11 +39,11 @@ Commit headers, including type and scope, are limited to 100 characters by [comm
 
 Describe the user-visible behavior, affected runtime boundaries, verification commands and results, and any remaining limitations. Include screenshots for visual changes when useful. Identify migrations, backup requirements, protocol changes, and coordinated web/server deployment requirements before merge.
 
-Do not describe a running or skipped check as passing. Browser CI is release/manual-only; run the affected browser workflows locally for interaction changes even when the PR workflow will skip them. Avoid bundling unrelated cleanup into a fix.
+Do not describe a running or skipped check as passing. Run the affected browser workflows locally for interaction changes; [browser CI](docs/development.md#browser-ci) does not run for ordinary PRs. Avoid bundling unrelated cleanup into a fix.
 
 ## Releases and dependencies
 
-Release tags must match the version in `package.json`. The [release workflow](.github/workflows/release.yml) checks that match, runs quality checks, and publishes a static web archive, checksum, and provenance attestation with the GitHub Release. The archive is not a complete deployment: it does not contain the room server or database. The [Docker workflow](.github/workflows/docker-publish.yml) publishes web and server images separately; verify both jobs before deploying a tag. The browser workflow runs separately and is not a dependency of the release job.
+Release tags must match the version in `package.json`. The [release workflow](.github/workflows/release.yml) checks that match, runs quality checks, and attaches a static web archive and its checksum to the GitHub Release. It also records a GitHub build provenance attestation for the archive; this is not a separate Release attachment. The archive is not a complete deployment: it does not contain the room server or database. The [Docker workflow](.github/workflows/docker-publish.yml) publishes web and server images separately; verify both jobs before deploying a tag. [Browser CI](docs/development.md#browser-ci) runs separately and is not a dependency of the release job.
 
 Keep operational examples version-neutral. A release should not rewrite the deployment guide merely to replace sample version numbers. Use [the deployment guide](docs/deployment.md) for upgrade and rollback requirements, not as a release checklist.
 

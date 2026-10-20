@@ -39,7 +39,7 @@ The workspace keeps the file tree, editor, preview, output, and room presence in
 ## What it includes
 
 - Shared files, folders, workspace settings, cursors, and presence, with SQLite persistence for project data
-- CodeMirror 6 with optional Vim mode, relative line numbers, configurable normal-mode cursors, and browser-local keymaps
+- CodeMirror 6 with optional Vim mode, relative line numbers, configurable cursors, browser-local keymaps, and a persistent file/cursor status bar
 - Fuzzy file search, a searchable Command Palette, TypeScript navigation, references, hover information, and inline Peek
 - Browser-local live previews with incremental file synchronization, console output, and runtime recovery actions
 - Inline file and folder creation or rename, context-menu copy, and deletion with undo
@@ -84,6 +84,7 @@ For Docker Compose or published images, see the [deployment guide](docs/deployme
 - [Development guide](docs/development.md): repository layout, local workflows, and verification
 - [Deployment guide](docs/deployment.md): Docker Compose, Caddy, images, and configuration
 - [Architecture](docs/architecture.md): runtime boundaries, data flow, and failure boundaries
+- [TypeScript intelligence](docs/typescript-intelligence.md): browser Worker, limits, and language-service recovery
 - [Contributing](CONTRIBUTING.md): focused changes, verification, commits, and dependency updates
 
 ## Verification
@@ -104,3 +105,7 @@ Use the [development guide](docs/development.md#verification) for scoped static 
 - Project dependencies and preview processes run independently in each collaborator's browser.
 - A project without a root `package.json` uses the single-file Babel iframe fallback instead of WebContainer.
 - See [resource limits and recovery](docs/deployment.md#resource-limits) before exposing a deployment to the internet.
+
+## License
+
+[MIT](LICENSE).

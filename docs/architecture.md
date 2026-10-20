@@ -1,6 +1,6 @@
 # Architecture
 
-[Documentation home](../README.md#documentation) · [Development](development.md) · [Deployment](deployment.md)
+[Documentation home](../README.md#documentation) · [Development](development.md) · [Deployment](deployment.md) · [TypeScript intelligence](typescript-intelligence.md)
 
 Tsugite is a browser-first collaborative editor. The server synchronizes room state, while every browser owns its editor, preview runtime, and presentation of that state.
 
@@ -9,47 +9,27 @@ Tsugite is a browser-first collaborative editor. The server synchronizes room st
 ```mermaid
 flowchart TB
   subgraph Browser["Each collaborator's browser"]
-    Web["React UI and AppShell"]
-    Workspace["Scoped Jotai workspace state"]
+    Web["React UI and scoped Jotai state"]
     Editor["CodeMirror and Vim editor"]
-    Controller["Workspace controller"]
-    Session["RoomClient session facade"]
-    Transport["RoomTransport"]
-    Document["RoomDocument"]
-    Presence["RoomPresence"]
-    Drafts["RoomDrafts and DraftSyncPort"]
+    Session["RoomClient and local Loro document"]
+    Drafts[("IndexedDB recovery drafts")]
     Preview["WebContainer or single-file iframe"]
-    Intelligence["RoomTypeScriptIntelligence"]
     TypeScript["TypeScript module Worker"]
-    Web --> Workspace
-    Web --> Controller
-    Controller --> Editor
-    Controller --> Session
-    Editor <--> Document
-    Session --> Transport
-    Session --> Document
-    Session --> Presence
-    Drafts --> Session
-    Document --> Preview
-    Document --> Intelligence
-    Editor <--> Intelligence
-    Intelligence <-->|pure-data RPC| TypeScript
+    Web --> Editor
+    Web --> Session
+    Editor <--> Session
+    Session -->|checkpoint and restore| Drafts
+    Session -->|shared project files| Preview
+    Session -->|versioned snapshots| TypeScript
+    Editor <-->|pure-data queries| TypeScript
   end
-  Proxy["Caddy static server and WebSocket proxy"]
-  subgraph Backend["One Bun server process"]
-    Server["Elysia validation and admission"]
-    Room["RoomService"]
-    ServerDocument[("Room Loro documents")]
-    Persistence["RoomPersistence and RoomRepository"]
-    Server --> Room
-    Room <--> ServerDocument
-    Room --> Persistence
-  end
+  Proxy["Caddy static files and WebSocket proxy"]
+  Server["One Bun process: Elysia and RoomService"]
   Database[("SQLite BLOB snapshots")]
   Proxy -->|static application| Web
-  Transport <-->|updates, acknowledgements, presence| Proxy
+  Session <-->|updates, acknowledgements, presence| Proxy
   Proxy <-->|WebSocket traffic| Server
-  Persistence <-->|load and save| Database
+  Server <-->|load and save| Database
 ```
 
 ## Ownership
@@ -84,6 +64,7 @@ The server never runs a user's project commands. Dependency installation and pre
 | Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Shiki updates in one editor instance                                                                                            |
 | Incremental visual settings                 | [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts)                                                                                                                                                             |
 | Vim integration lifecycle                   | [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                                                                                                                                                             |
+| Editor status and command line              | [editor-status-bar.tsx](../apps/web/src/components/editor-status-bar.tsx), [editor-status.ts](../apps/web/src/lib/editor-status.ts), [vim-status.ts](../apps/web/src/lib/vim-status.ts)                                                          |
 | Optional TypeScript services                | [editor-typescript-services.ts](../apps/web/src/lib/editor-typescript-services.ts)                                                                                                                                                               |
 | Room language-service ownership and RPC     | [room-typescript-intelligence.ts](../apps/web/src/lib/room-typescript-intelligence.ts), [editor-intelligence.ts](../apps/web/src/lib/editor-intelligence.ts), [typescript-worker-client.ts](../apps/web/src/lib/typescript-worker-client.ts)     |
 | Worker engine and declaration loading       | [typescript.worker.ts](../apps/web/src/lib/typescript.worker.ts), [typescript-standard-library.ts](../apps/web/src/lib/typescript-standard-library.ts), [webcontainer-declaration-scan.ts](../apps/web/src/lib/webcontainer-declaration-scan.ts) |
@@ -158,7 +139,7 @@ descriptions. The rendered controls remain owned by their workspace, editor,
 keyboard, or runtime section rather than generated from the registry.
 
 ```mermaid
-flowchart LR
+flowchart TB
   Controller["Workspace controller"] --> Navigation["Navigation and tab reconciliation"]
   Controller --> Follow["Follow target and cursor projection"]
   Controller --> Preferences["Local Vim, keymap, and language preferences"]
@@ -309,7 +290,7 @@ The editor theme suppresses nested native token colors only inside marked Shiki
 spans; it must not suppress the native colors when those decorations are absent.
 
 ```mermaid
-flowchart LR
+flowchart TB
   Edit["Edit or viewport change"] --> Queue["One active + latest pending request"]
   Queue --> Worker["Shiki module worker"]
   Worker --> Cache["Latest document tokens"]
@@ -325,49 +306,16 @@ dynamically imported.
 
 ### TypeScript intelligence
 
-CodeMirror, Vim, and Loro retain editor and document ownership. `RoomTypeScriptIntelligence` owns one lazily started TypeScript Worker per room session, with an injectable `EditorIntelligence` for focused tests. Compiler analysis runs exclusively in the Worker; exhausting its retry disables language services for that session.
-`EditorIntelligence` exposes asynchronous pure-data queries for hover, completion, signature help, diagnostics, and navigation; no compiler objects cross into UI code.
-The Worker uses `typescript-legacy` 6.0.3 and a versioned in-memory host with explicitly supplied standard libraries. Tooling uses TypeScript 7 independently. After local acceptance, the transitional main-thread adapter and minimal library, deprecated CodeMirror TypeScript adapter, VFS dependency, and Vite `typescript` compatibility alias were removed. The Worker imports `typescript-legacy` directly; the compiler is pre-optimized for its lazy import. Other Worker dependencies, including Shiki grammars and themes, can still trigger a development-server reload on first discovery; language-service tests wait for highlighting startup before editing.
+The editor keeps CodeMirror, Vim, and Loro ownership. Language services are a
+room-scoped TypeScript Worker with a pure-data `EditorIntelligence` contract;
+compiler objects never cross into UI code. The Worker uses the pinned runtime
+compiler and explicit standard libraries, while tooling TypeScript remains
+independent. Worker failure or an unsafe snapshot disables language services but
+leaves editing, collaboration, and highlighting available.
 
-```mermaid
-flowchart TB
-  Loro["Local and remote Loro changes"] --> Owner["RoomTypeScriptIntelligence"]
-  Owner -->|source and declaration deltas| Engine["Injected EditorIntelligence"]
-  Engine --> Client["TypeScriptWorkerClient"]
-  Editor["CodeMirror providers"] -->|UTF-16 query positions| Engine
-  Client <-->|request ID, epoch, workspace version| Worker["Worker session and TypeScript 6 host"]
-  Libs["Bundled official standard libraries"] --> Worker
-  Container["Installed WebContainer dependencies"] --> Scan["Bounded declaration scanner"]
-  Scan --> Owner
-  Client -->|retry exhausted or invalid snapshot| Disabled["Disable language services; keep base editor"]
-  Client -->|workspace update| Refresh["Refresh CodeMirror diagnostics"]
-```
-
-The room owner publishes unopened and remotely edited files as well as the active file.
-Updates carry file and workspace versions; stale epochs, revisions, and cancelled queries cannot replace current results.
-Compiler parsing is deferred until a query needs a snapshot. Diagnostics wait 200 ms after edits and are explicitly refreshed when declaration or workspace snapshots change.
-Navigation results are capped at 10,000 locations. Worker replies carry one source snapshot per path and the client restores it for the peek UI, so repeated references do not duplicate whole files across the RPC boundary.
-
-| Resource                                  | Limit                                                                     |
-| ----------------------------------------- | ------------------------------------------------------------------------- |
-| Project source                            | 512 files, 1 MiB per file, 16 MiB total UTF-8 text                        |
-| Project declarations and package metadata | 1,024 files, 1 MiB per declaration, 64 KiB per metadata file, 8 MiB total |
-| Declaration scan                          | 8,192 traversed entries, 16 MiB serialized output, two-second deadline    |
-| Worker requests                           | Queue of 32; two-second query and initialization deadlines                |
-| Navigation result                         | 10,000 locations; 24 MiB of unique source snapshots per reply             |
-| Worker recovery                           | One restart per crash; valid over-budget snapshots can recover services   |
-
-The standard-library loader follows the official `lib.es2022.full.d.ts` reference graph from bundled assets under a reserved `__typescript/` namespace.
-After dependency installation, and when source imports change, the WebContainer scanner reads only declarations and package metadata, including package type entries and `@types` companions.
-The browser import index caches each file's references until its text changes and yields between files after an eight-millisecond time slice. Concurrent scans cannot restore stale import keys after newer edits or preview teardown.
-It uses a fixed filesystem-only script, bounds reads before allocation, and rejects unsafe paths and escaping symlinks. No arbitrary type CDN or package code is evaluated.
-Reinstall clears stale declarations; loading and unavailable states are visible. Scan failure clears project dependency types; Worker failure leaves the base editor usable.
-An imported package without its own declarations, companion types, or an ambient module marks project declarations unavailable. Unimported JavaScript tooling does not require types. This package-level check does not replace TypeScript's entry-point and subpath resolution.
-Cancellation rejects late results but cannot preempt synchronous compiler work already running in the Worker.
-
-The engine replacement in [#71](https://github.com/BBboy01/Tsugite/issues/71) requires an official browser-compatible TypeScript 7 API and distribution.
-As of 2026-10-10, [upstream browser/WASI support](https://github.com/microsoft/TypeScript/pull/64174) is a draft PR, not a released browser engine.
-Keep the Worker contract stable until that gate and equivalent functional and performance checks pass.
+The Worker contract, versioned snapshots, declaration scanning, resource limits,
+fallback states, and the TypeScript 7 replacement gate are documented in the
+[TypeScript intelligence guide](typescript-intelligence.md).
 
 Preview syntax validation retains Babel's parser and error locations but disables
 code generation; only the standalone execution path needs generated JavaScript.
@@ -382,7 +330,7 @@ single parses and complex Worker queries still need workload-specific measuremen
 - Source changes are written incrementally to the local container.
 
 ```mermaid
-flowchart LR
+flowchart TB
   Hook["usePreviewRuntime"] --> Mode{"package.json present?"}
   Mode -->|No| Standalone["usePreviewStandalone"]
   Mode -->|Yes| WebContainerHook["usePreviewWebContainer"]

@@ -44,7 +44,7 @@ Room IDs contain 1-80 ASCII letters, digits, underscores, or hyphens. Opening an
 2. Edit a file in one tab and watch the change arrive in the other.
 3. Open the presence list to follow another collaborator.
 4. Use the file tree context menu to create, rename, copy, or delete files. Creation and rename use an inline input; Enter or leaving the input commits the value, while an empty new path cancels. Deletion asks for confirmation and offers a separate undo action. Undo refuses paths that now conflict with collaborator changes.
-5. Open shared settings to change the theme, editor behavior, Vim mode, keymaps, or preview runtime.
+5. Open settings to change the shared theme and editor behavior, your local Vim mode and keymaps, or the preview runtime.
 
 New rooms start from the shared example project and open `src/App.tsx`. The user card lets you change your anonymous display name and avatar color.
 
@@ -69,9 +69,13 @@ Settings > Keyboard displays the workspace shortcuts. `Mod` in the defaults mean
 
 Settings opens with the current sidebar item focused. Arrow keys switch the displayed section or search result without requiring `Enter`. `Tab` moves from the current menu item to search, through the right-hand controls, then back to the menu; `Shift-Tab` reverses the order. Search matches section names and setting labels or descriptions.
 
-## Vim mode
+## Editor status and Vim mode
 
-Enable Vim mode in Settings > Keyboard. The mode indicator appears in the editor status bar only while Vim mode is enabled. Normal, insert, and visual modes use the Vim key behavior provided by the CodeMirror Vim integration. Search with `/` or `?`, move through matches with `n` and `N`, and use `*` on a visual selection to search for that text. The current search and its match count appear in the editor. Normal-mode cursor shape can be selected under Settings > Editor; its color follows the room's accent color. Relative line numbers are a shared editor setting and keep the active line's absolute number.
+The status bar stays at the bottom of the active editor, with the file path on the left and the cursor's `line:column` and document progress on the right. Progress shows `Top` on the first line, `Bot` on the last, and a rounded percentage between them. It follows the active cursor, not the scroll position.
+
+Enable Vim mode in Settings > Keyboard to add the `NORMAL`, `INSERT`, or `VISUAL` mode indicator. With Vim disabled, the other status fields remain visible. Type `:` in normal mode to enter a command in the same bottom bar; commands and notifications use the current theme rather than opening a separate white row. The next Vim key operation dismisses a notification and still performs that operation.
+
+Search with `/` or `?`, move through matches with `n` and `N`, and use `*` on a visual selection to search for that text. The current search and its match count appear in the editor. Normal-mode cursor shape and blinking can be selected under Settings > Editor; cursor colors follow the room's accent color. Relative line numbers are a shared editor setting: the active line keeps its absolute number, and other lines show their distance from it.
 
 System clipboard integration is an optional browser-local setting. When enabled and permitted by the browser, Vim yank and paste use the system clipboard. The editor context menu also provides clipboard actions, undo/redo, select all, TypeScript navigation, references, and Peek where language services are available.
 
@@ -84,8 +88,6 @@ System clipboard integration is an optional browser-local setting. When enabled 
 | Package manager, automatic install and preview start | Keymap and Vim system-clipboard preference |
 
 Shared preferences affect collaborators and survive server restarts. Browser preferences apply to that origin. Open tabs, current selection, follow state, and undo history are session state rather than persisted room settings.
-
-Relative line numbers keep the current line's real number and show distances on other lines. Vim mode adds a mode indicator and configurable normal-mode cursor shapes. System clipboard integration requires browser permission. The editor context menu provides clipboard actions, TypeScript navigation, references, and Peek; unavailable targets are reported in the editor.
 
 ## Preview requirements
 
@@ -106,6 +108,7 @@ A project without `package.json` uses the single-file Babel iframe fallback. It 
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Editor stays reconnecting        | Verify the room ID, server availability, and WebSocket connection. Both development processes must be running.                |
 | No second collaborator appears   | Use separate browser profiles; tabs in one profile share the same identity.                                                   |
+| Language services unavailable    | Editing still works. Check the reported Worker or workspace-limit error; reopen the room after fixing the cause.              |
 | Cross-origin isolation error     | Check `window.crossOriginIsolated` in browser DevTools. Preserve both headers above and use HTTPS for a remote deployment.    |
 | Storage partitioning error       | Check browser storage/privacy settings for the WebContainer preview.                                                          |
 | Dependency installation fails    | Read Output for registry or package errors. Installation has a two-minute deadline; try reinstall after correcting the cause. |

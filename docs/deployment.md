@@ -58,6 +58,8 @@ docker compose up -d --no-build --pull always
 
 For a fork, replace `bbboy01` with its lowercase GitHub repository owner. Private images also require Docker registry authentication. `latest` follows the default branch. For repeatable deployments, choose the same published version tag or commit tag for both images and verify both publishing jobs completed; the images are not published atomically. Use the documentation from that revision.
 
+The publishing workflow currently builds `linux/amd64` images only. On ARM hosts, including Apple Silicon, build the checkout with `docker compose up -d --build` for native images instead of relying on the published images. The workflow does not publish a multi-architecture manifest.
+
 Keep both image variables set for subsequent Compose commands as well, preferably in the deployment shell or service configuration. Changing `TSUGITE_PORT` changes only the published web port.
 
 ## Configuration
