@@ -33,7 +33,11 @@ export class EditorVisualConfiguration {
   reconfigure(settings: ProjectSettings): StateEffect<unknown>[] {
     const previous = this.settings;
     const effects: StateEffect<unknown>[] = [];
-    if (settings.fontFamily !== previous.fontFamily || settings.fontSize !== previous.fontSize) {
+    if (
+      settings.theme !== previous.theme ||
+      settings.fontFamily !== previous.fontFamily ||
+      settings.fontSize !== previous.fontSize
+    ) {
       effects.push(this.theme.reconfigure(editorTheme(settings)));
     }
     if (settings.wordWrap !== previous.wordWrap) {

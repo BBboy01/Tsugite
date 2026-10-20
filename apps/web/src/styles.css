@@ -67,6 +67,62 @@
     color: var(--ink-strong);
   }
 
+  .iris-editor-statusbar {
+    align-items: center;
+    background-color: var(--editor-surface);
+    border-top: 1px solid var(--divider);
+    box-sizing: border-box;
+    color: var(--muted);
+    display: flex;
+    flex: none;
+    font-family: var(--mono-font);
+    font-size: 10px;
+    gap: 12px;
+    justify-content: space-between;
+    line-height: 22px;
+    min-height: 24px;
+    overflow: hidden;
+    padding: 0 12px;
+    white-space: nowrap;
+  }
+
+  [data-editor-content-ready="false"] .cm-scroller {
+    opacity: 0;
+  }
+
+  .iris-editor-status-group {
+    align-items: center;
+    display: flex;
+    gap: 12px;
+    min-width: 0;
+  }
+
+  .iris-editor-status-leading {
+    overflow: hidden;
+  }
+
+  .iris-editor-status-mode {
+    color: var(--ink);
+    flex: none;
+  }
+
+  .iris-editor-status-path {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .iris-editor-status-command {
+    color: var(--accent);
+    flex: none;
+  }
+
+  .iris-editor-status-trailing {
+    flex: none;
+    font-variant-numeric: tabular-nums;
+  }
+
   .live-dot[data-status="connecting"],
   .live-dot[data-status="reconnecting"] {
     --status-color: #ff9f0a;

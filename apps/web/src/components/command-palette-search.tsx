@@ -49,13 +49,13 @@ export function CommandPaletteSearch({
   };
 
   return (
-    <div className="flex items-center gap-2 border-b border-[var(--border)] px-3 py-2.5">
+    <div className="flex items-center gap-2 border-b border-iris-divider px-3 py-2.5">
       {onBack ? (
         <button
           type="button"
           aria-label={backLabel}
           title={backLabel}
-          className="grid size-7 shrink-0 place-items-center text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
+          className="grid size-7 shrink-0 place-items-center text-[var(--muted)] transition-colors hover:bg-[var(--hover-surface)] hover:text-iris-strong"
           onClick={onBack}
         >
           <ArrowLeft size={16} aria-hidden="true" />
@@ -71,7 +71,7 @@ export function CommandPaletteSearch({
         onKeyDown={handleKeyDown}
         placeholder={placeholder}
         spellCheck={false}
-        className="min-w-0 flex-1 bg-transparent text-sm text-[var(--foreground)] outline-none placeholder:text-[var(--text-secondary)] max-[760px]:text-base"
+        className="min-w-0 flex-1 bg-transparent text-sm text-iris-ink outline-none placeholder:text-[var(--text-secondary)] max-[760px]:text-base"
       />
     </div>
   );

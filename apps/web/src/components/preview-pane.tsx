@@ -129,6 +129,7 @@ export const PreviewPane = memo(function PreviewPane(props: PreviewPaneProps) {
         open={props.previewConsoleOpen}
         onOpenChange={props.onPreviewConsoleOpenChange}
         getPreviewHeight={() => sectionRef.current?.getBoundingClientRect().height ?? 288}
+        theme={props.settings.theme}
       />
     </motion.section>
   );

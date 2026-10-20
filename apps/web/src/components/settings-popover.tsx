@@ -127,7 +127,7 @@ export function SettingsPopover({
                         if (node) sidebarEntryRefs.current.set(entryId, node);
                         else sidebarEntryRefs.current.delete(entryId);
                       }}
-                      className={`flex min-h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-white/35 hover:text-iris-strong"}`}
+                      className={`flex min-h-8 w-full min-w-0 items-center gap-2 overflow-hidden rounded-lg border-0 px-2.5 text-left font-iris-mono text-[11px] transition-[background-color,color] duration-150 focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] ${sectionEntry ? "" : "pl-7 text-[10px]"} ${active ? "bg-[color-mix(in_srgb,var(--accent)_15%,transparent)] text-[var(--accent-deep)]" : "bg-transparent text-iris-muted hover:bg-[var(--hover-surface)] hover:text-iris-strong focus-visible:bg-[var(--hover-surface)]"}`}
                       key={entryId}
                       type="button"
                       tabIndex={active ? 0 : -1}

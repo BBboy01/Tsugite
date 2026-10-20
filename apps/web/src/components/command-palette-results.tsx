@@ -40,8 +40,8 @@ export function CommandPaletteResults({
               ref={(element) => registerCommand(command.id, element)}
               className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition-none ${
                 selectedIndex === index
-                  ? "bg-[var(--selection-surface)] text-[var(--foreground)]"
-                  : "text-[var(--text-secondary)] hover:bg-[var(--surface-hover)] hover:text-[var(--foreground)]"
+                  ? "bg-[var(--selection-surface)] text-iris-ink"
+                  : "text-[var(--text-secondary)] hover:bg-[var(--hover-surface)] hover:text-iris-ink"
               }`}
               onMouseMove={() => onHighlight(index)}
               onFocus={() => onHighlight(index)}

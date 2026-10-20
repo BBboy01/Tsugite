@@ -3,6 +3,7 @@ import { Select } from "@radix-ui/themes";
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 
+import type { WorkspaceTheme } from "@iris/shared";
 import type { PreviewOutput } from "../lib/preview-runner";
 import {
   DEFAULT_PREVIEW_CONSOLE_HEIGHT,
@@ -18,6 +19,7 @@ type PreviewConsoleProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   getPreviewHeight: () => number;
+  theme: WorkspaceTheme;
 };
 
 export function PreviewConsole({
@@ -26,6 +28,7 @@ export function PreviewConsole({
   open,
   onOpenChange,
   getPreviewHeight,
+  theme,
 }: PreviewConsoleProps) {
   const { t } = useTranslation();
   const [height, setHeight] = useState(DEFAULT_PREVIEW_CONSOLE_HEIGHT);
@@ -119,7 +122,7 @@ export function PreviewConsole({
               radius="small"
               variant="ghost"
             />
-            <Select.Content position="popper">
+            <Select.Content className={`theme-${theme} preview-console-select`} position="popper">
               <Select.Item value="all">{t("preview.filterAll")}</Select.Item>
               <Select.Item value="log">{t("preview.filterLog")}</Select.Item>
               <Select.Item value="warn">{t("preview.filterWarn")}</Select.Item>
