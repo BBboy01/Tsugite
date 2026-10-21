@@ -38,6 +38,15 @@ for (const outcome of ["exit", "rejection"] as const) {
             async spawn(command, args) {
               const output = new ReadableStream({ start(controller) { controller.close(); } });
               if (args[0] === "install") return { output, exit: Promise.resolve(0), kill() {} };
+              if (args[0] === "-e") {
+                const scanOutput = new ReadableStream({
+                  start(controller) {
+                    controller.enqueue("IRIS_DECLARATION_SCAN_READY:[]");
+                    controller.close();
+                  },
+                });
+                return { output: scanOutput, exit: Promise.resolve(0), kill() {} };
+              }
               const exit = Promise.withResolvers();
               window.stopPreviewProcess = () => ${outcome === "rejection" ? 'exit.reject(new Error("process connection lost"))' : "exit.resolve(1)"};
               queueMicrotask(() => listeners.get("server-ready")?.(

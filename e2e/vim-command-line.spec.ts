@@ -131,6 +131,13 @@ test("shows the Vim mode control only in Vim mode and updates its label", async 
   await expect(statusline.locator("[data-status-mode]")).toHaveText("--INSERT--");
   await page.keyboard.press("Escape");
   await expect(statusline.locator("[data-status-mode]")).toHaveText("--NORMAL--");
+  await expect(content).toBeFocused();
+  await page.evaluate(
+    () =>
+      new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      ),
+  );
   await page.keyboard.press("v");
   await expect(statusline.locator("[data-status-mode]")).toHaveText("--VISUAL--");
   await page.keyboard.press("Escape");

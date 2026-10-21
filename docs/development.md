@@ -114,7 +114,7 @@ The Worker imports the `typescript-legacy` package alias for the TypeScript 6 ru
 
 Playwright starts its own in-memory server on `3003` and Vite on `5175`. It does not reuse running servers or load environment files. Keep those ports free. Development servers on `3001` / `5173` can stay running. The test server raises room capacity and shortens idle retention to accommodate independent cases; production defaults are unchanged.
 
-Use unique, valid room IDs. Create separate browser contexts for collaborators so they do not share local-storage identities. Keep real WebContainer startup and recovery scenarios in `e2e/preview.spec.ts`: the `preview` project runs with one worker after `ui` completes. UI tests use two local workers and one in CI.
+Use unique, valid room IDs. Create separate browser contexts for collaborators so they do not share local-storage identities. Keep real WebContainer startup and recovery scenarios in `e2e/preview.spec.ts`: the `preview` project runs with one worker after `ui` completes. The ordinary `ui` project uses two workers locally and in CI; this parallelizes isolated browser contexts while keeping the shared WebContainer process serialized.
 
 Install the browser once, then run the relevant project or file:
 

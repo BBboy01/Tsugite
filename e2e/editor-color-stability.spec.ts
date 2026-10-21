@@ -27,11 +27,11 @@ test("opening a file does not recolor code after worker highlighting arrives", a
   await expect(page.locator(".cm-shiki").first()).toBeVisible();
   await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
 
-  const editorHost = page.locator(".cm-editor").locator("..");
+  const editorScroller = page.locator(".cm-scroller");
   const keyword = page.locator(".cm-line").first().getByText("import", { exact: true });
-  await expect(editorHost).toHaveCSS("opacity", "0");
+  await expect(editorScroller).toHaveCSS("opacity", "0");
   await expect(page.locator(".cm-shiki")).toHaveCount(0);
   await expect(page.locator(".cm-shiki").first()).toBeVisible();
-  await expect(editorHost).toHaveCSS("opacity", "1");
+  await expect(editorScroller).toHaveCSS("opacity", "1");
   await expect(keyword).toHaveCSS("color", "rgb(30, 117, 79)");
 });
