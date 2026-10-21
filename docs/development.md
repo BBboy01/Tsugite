@@ -129,7 +129,7 @@ bun --no-env-file x --no-install playwright test --project=preview --no-deps
 
 ### Browser CI
 
-Browser CI is reserved for version tags, manual dispatches, and PRs marked by the `release` label, a `chore(release):` title, or a `release/` branch. Ordinary PRs still run the quality workflow. See [the workflow](../.github/workflows/e2e.yml) for the exact condition. The browser job is independent of the release and Docker publishing jobs; their success does not establish that browser checks passed.
+Browser CI runs on pushes to `main`, version tags, manual dispatches, and PRs marked by the `release` label, a `chore(release):` title, or a `release/` branch. Ordinary PRs still run the quality workflow. See [the workflow](../.github/workflows/e2e.yml) for the exact condition. The browser job is independent of the release and Docker publishing jobs; their success does not establish that browser checks passed.
 
 Inspect Playwright's retained trace, screenshot, and video on failure. Report the failing step and distinguish application regressions from unavailable browser capabilities or dependency downloads. Keep diagnostic artifacts out of source control, and do not replace failing assertions with retries or skips without a cause.
 
