@@ -29,7 +29,7 @@ test.afterEach(async ({ page }, testInfo) => {
   });
 });
 
-test("keeps the initial room socket open through development remounts", async ({
+test("keeps the initial room socket open through development remounts @smoke", async ({
   page,
 }, testInfo) => {
   test.setTimeout(180_000);
