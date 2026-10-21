@@ -30,7 +30,7 @@ jobs:
       startsWith(github.event.pull_request.title, 'chore(release):') ||
       startsWith(github.head_ref, 'release/')))
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -48,8 +48,14 @@ jobs:
       - name: Install Chromium
         run: bunx playwright install --with-deps chromium
 
-      - name: Run browser smoke tests
-        run: bun run test:e2e
+      - name: Run browser tests
+        run: |
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref }}" = "refs/heads/main" ]; then
+            E2E_PROFILE=smoke bun run test:e2e -- --project=smoke --workers=1
+            bun run test:e2e -- --project=preview --grep "@smoke" --no-deps --workers=1
+          else
+            bun run test:e2e -- --workers=1
+          fi
 
       - name: Upload Playwright report
         if: ${{ !cancelled() }}
