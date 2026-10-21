@@ -1,8 +1,10 @@
 name: Browser E2E
 
-# Browser E2E is reserved for release candidates, version tags, and manual runs.
+# Browser E2E runs on main, release candidates, version tags, and manual runs.
 on:
   push:
+    branches:
+      - main
     tags:
       - "v*.*.*"
   pull_request:
@@ -21,6 +23,7 @@ jobs:
     name: Playwright smoke
     if: >-
       github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'push' && github.ref == 'refs/heads/main') ||
       (github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')) ||
       (github.event_name == 'pull_request' &&
       (contains(github.event.pull_request.labels.*.name, 'release') ||

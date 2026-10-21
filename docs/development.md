@@ -114,7 +114,7 @@ The Worker imports the `typescript-legacy` package alias for the TypeScript 6 ru
 
 Playwright starts its own in-memory server on `3003` and Vite on `5175`. It does not reuse running servers or load environment files. Keep those ports free. Development servers on `3001` / `5173` can stay running. The test server raises room capacity and shortens idle retention to accommodate independent cases; production defaults are unchanged.
 
-Use unique, valid room IDs. Create separate browser contexts for collaborators so they do not share local-storage identities. Keep real WebContainer startup and recovery scenarios in `e2e/preview.spec.ts`: the `preview` project runs with one worker after `ui` completes. UI tests use two local workers and one in CI.
+Use unique, valid room IDs. Create separate browser contexts for collaborators so they do not share local-storage identities. Keep real WebContainer startup and recovery scenarios in `e2e/preview.spec.ts`: the `preview` project runs with one worker after `ui` completes. The ordinary `ui` project uses two workers locally and in CI; this parallelizes isolated browser contexts while keeping the shared WebContainer process serialized.
 
 Install the browser once, then run the relevant project or file:
 
@@ -129,7 +129,7 @@ bun --no-env-file x --no-install playwright test --project=preview --no-deps
 
 ### Browser CI
 
-Browser CI is reserved for version tags, manual dispatches, and PRs marked by the `release` label, a `chore(release):` title, or a `release/` branch. Ordinary PRs still run the quality workflow. See [the workflow](../.github/workflows/e2e.yml) for the exact condition. The browser job is independent of the release and Docker publishing jobs; their success does not establish that browser checks passed.
+Browser CI runs on pushes to `main`, version tags, manual dispatches, and PRs marked by the `release` label, a `chore(release):` title, or a `release/` branch. Ordinary PRs still run the quality workflow. See [the workflow](../.github/workflows/e2e.yml) for the exact condition. The browser job is independent of the release and Docker publishing jobs; their success does not establish that browser checks passed.
 
 Inspect Playwright's retained trace, screenshot, and video on failure. Report the failing step and distinguish application regressions from unavailable browser capabilities or dependency downloads. Keep diagnostic artifacts out of source control, and do not replace failing assertions with retries or skips without a cause.
 

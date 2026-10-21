@@ -144,7 +144,7 @@ test("scrolls the keyboard-selected command into view", async ({ page }) => {
   }
 
   const selectedCommand = commands.last();
-  await expect(selectedCommand).toHaveClass(/text-\[var\(--foreground\)\]/);
+  await expect(selectedCommand).toHaveClass(/text-iris-ink/);
   await expect.poll(() => commandList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(selectedCommand).toBeInViewport();
 });

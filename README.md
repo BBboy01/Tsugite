@@ -95,7 +95,7 @@ Run unit and integration tests:
 bun run test
 ```
 
-Use the [development guide](docs/development.md#verification) for scoped static checks and browser tests. Playwright starts isolated test servers on ports `3003` and `5175`; it does not reuse development servers or the development database. Browser CI runs for release candidates, version tags, and manual runs.
+Use the [development guide](docs/development.md#verification) for scoped static checks and browser tests. Playwright starts isolated test servers on ports `3003` and `5175`; it does not reuse development servers or the development database. Browser CI runs on `main`, for release candidates, version tags, and manual runs.
 
 ## Current limitations
 

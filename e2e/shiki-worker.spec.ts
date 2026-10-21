@@ -106,9 +106,9 @@ test("a nonresponsive highlight worker reveals the editable native fallback", as
     };
   });
   await page.goto(`/room/highlight-worker-stall-${crypto.randomUUID()}`);
-  const editorHost = page.locator(".cm-editor").locator("..");
-  await expect(editorHost).toHaveCSS("opacity", "0");
-  await expect(editorHost).toHaveCSS("opacity", "1", { timeout: 5000 });
+  const editorScroller = page.locator(".cm-scroller");
+  await expect(editorScroller).toHaveCSS("opacity", "0");
+  await expect(editorScroller).toHaveCSS("opacity", "1", { timeout: 5000 });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
   await page.keyboard.insertText("// editable after timeout");
