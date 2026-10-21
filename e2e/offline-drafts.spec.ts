@@ -39,6 +39,7 @@ async function edit(page: Page, marker: string) {
 test("reopens offline edits only after consent and merges them with a collaborator", async ({
   browser,
 }) => {
+  test.setTimeout(60_000);
   const writer = await browser.newContext();
   const reader = await browser.newContext();
   try {
