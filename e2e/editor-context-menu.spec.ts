@@ -128,7 +128,7 @@ test("definition navigation and Peek have different effects and references retai
 });
 
 test("TypeScript hover blends its wrapper into the editor surface", async ({ page }) => {
-  await replaceCode(page, "const answer = 42;\nconsole.log(answer);");
+  await replaceCode(page, "/** Answer documentation. */\nconst answer = 42;\nconsole.log(answer);");
   await rightClickText(page, "console.log(answer)", "answer");
   await expect(page.getByRole("menuitem", { name: "Go to definition", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
@@ -146,12 +146,16 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
     const inner = element.querySelector(".iris-ts-hover");
     if (!inner) throw new Error("Missing TypeScript hover content");
     const innerStyle = getComputedStyle(inner);
+    const description = inner.querySelector(".iris-ts-hover-description");
+    if (!description) throw new Error("Missing TypeScript hover documentation");
     return {
       editorBackground: getComputedStyle(editor).backgroundColor,
       tooltipBackground: tooltipStyle.backgroundColor,
       tooltipBorderWidth: tooltipStyle.borderWidth,
       tooltipBorderStyle: tooltipStyle.borderStyle,
       innerBorderRadius: innerStyle.borderRadius,
+      descriptionColor: getComputedStyle(description).color,
+      inkColor: getComputedStyle(editor).color,
     };
   });
 
@@ -159,9 +163,13 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
   expect(styles.tooltipBorderWidth).toBe("0px");
   expect(styles.tooltipBorderStyle).toBe("none");
   expect(styles.innerBorderRadius).toBe("8px");
+  expect(styles.descriptionColor).toBe(styles.inkColor);
 
   await page.mouse.move(0, 0);
-  await replaceCode(page, 'const answer = "updated";\nconsole.log(answer);');
+  await replaceCode(
+    page,
+    '/** Updated answer documentation. */\nconst answer = "updated";\nconsole.log(answer);',
+  );
   await expect(tooltip).toBeHidden();
   await hoverText(page, "console.log(answer)", "answer");
   await expect(tooltip).toContainText('"updated"');
