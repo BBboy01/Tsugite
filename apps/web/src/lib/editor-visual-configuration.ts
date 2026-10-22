@@ -5,7 +5,7 @@ import type { ProjectSettings } from "@iris/shared";
 import { editorLineNumbers } from "./editor-basic-setup";
 import type { EditorLanguage } from "./editor-language";
 import { editorTheme } from "./editor-theme";
-import { highlightsHighlight } from "./highlights-highlighting";
+import { highlightsHighlight, setHighlightsTheme } from "./highlights-highlighting";
 
 export class EditorVisualConfiguration {
   private readonly lineNumbers = new Compartment();
@@ -43,11 +43,7 @@ export class EditorVisualConfiguration {
       effects.push(this.wordWrap.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []));
     }
     if (settings.theme !== previous.theme) {
-      effects.push(
-        this.highlighting.reconfigure(
-          highlightsHighlight(this.language, settings.theme, this.onHighlightReady),
-        ),
-      );
+      effects.push(setHighlightsTheme.of(settings.theme));
     }
     if (settings.relativeLineNumbers !== previous.relativeLineNumbers) {
       effects.push(this.lineNumbers.reconfigure(editorLineNumbers(settings.relativeLineNumbers)));
