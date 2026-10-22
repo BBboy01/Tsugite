@@ -12,26 +12,42 @@ export type WorkspaceThemeOption = {
   };
 };
 
-type HighlightsThemeLoader = () => Promise<{ default: Theme }>;
-
-const HIGHLIGHTS_THEME_LOADERS = new Map<WorkspaceTheme, HighlightsThemeLoader>([
-  ["paper", () => import("@pierre/highlights/themes/vitesse-light")],
-  ["ink", () => import("@pierre/highlights/themes/vitesse-dark")],
-  ["solarized-light", () => import("@pierre/highlights/themes/solarized-light")],
-  ["solarized-dark", () => import("@pierre/highlights/themes/solarized-dark")],
-  ["tokyo-night", () => import("@pierre/highlights/themes/tokyo-night")],
-  ["dracula", () => import("@pierre/highlights/themes/dracula")],
-  ["catppuccin-latte", () => import("@pierre/highlights/themes/catppuccin-latte")],
-  ["catppuccin-mocha", () => import("@pierre/highlights/themes/catppuccin-mocha")],
-  ["github-light", () => import("@pierre/highlights/themes/github-light")],
-  ["github-dark", () => import("@pierre/highlights/themes/github-dark")],
-  ["nord", () => import("@pierre/highlights/themes/nord")],
-  ["gruvbox-dark-medium", () => import("@pierre/highlights/themes/gruvbox-dark-medium")],
-  ["one-dark-pro", () => import("@pierre/highlights/themes/one-dark-pro")],
-  ["rose-pine", () => import("@pierre/highlights/themes/rose-pine")],
-  ["everforest-dark", () => import("@pierre/highlights/themes/everforest-dark")],
-  ["kanagawa-wave", () => import("@pierre/highlights/themes/kanagawa-wave")],
-]);
+function loadHighlightsTheme(theme: WorkspaceTheme): Promise<{ default: Theme }> {
+  switch (theme) {
+    case "paper":
+      return import("@pierre/highlights/themes/vitesse-light");
+    case "ink":
+      return import("@pierre/highlights/themes/vitesse-dark");
+    case "solarized-light":
+      return import("@pierre/highlights/themes/solarized-light");
+    case "solarized-dark":
+      return import("@pierre/highlights/themes/solarized-dark");
+    case "tokyo-night":
+      return import("@pierre/highlights/themes/tokyo-night");
+    case "dracula":
+      return import("@pierre/highlights/themes/dracula");
+    case "catppuccin-latte":
+      return import("@pierre/highlights/themes/catppuccin-latte");
+    case "catppuccin-mocha":
+      return import("@pierre/highlights/themes/catppuccin-mocha");
+    case "github-light":
+      return import("@pierre/highlights/themes/github-light");
+    case "github-dark":
+      return import("@pierre/highlights/themes/github-dark");
+    case "nord":
+      return import("@pierre/highlights/themes/nord");
+    case "gruvbox-dark-medium":
+      return import("@pierre/highlights/themes/gruvbox-dark-medium");
+    case "one-dark-pro":
+      return import("@pierre/highlights/themes/one-dark-pro");
+    case "rose-pine":
+      return import("@pierre/highlights/themes/rose-pine");
+    case "everforest-dark":
+      return import("@pierre/highlights/themes/everforest-dark");
+    case "kanagawa-wave":
+      return import("@pierre/highlights/themes/kanagawa-wave");
+  }
+}
 
 const highlightsThemeCache = new Map<WorkspaceTheme, Promise<Theme>>();
 
@@ -170,9 +186,7 @@ export function getHighlightsTheme(theme: WorkspaceTheme): Promise<Theme> {
     : "paper";
   const cached = highlightsThemeCache.get(validTheme);
   if (cached) return cached;
-  const loader = HIGHLIGHTS_THEME_LOADERS.get(validTheme);
-  if (!loader) throw new Error(`Missing Highlights theme loader: ${validTheme}`);
-  const loaded = loader().then(({ default: loadedTheme }) => loadedTheme);
+  const loaded = loadHighlightsTheme(validTheme).then(({ default: loadedTheme }) => loadedTheme);
   highlightsThemeCache.set(validTheme, loaded);
   return loaded;
 }
