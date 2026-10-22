@@ -5,16 +5,18 @@ test("opening a file does not recolor code after worker highlighting arrives", a
     if (window === window.top) localStorage.setItem("iris.language", "en");
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
-      private readonly isShiki: boolean;
+      private readonly isHighlights: boolean;
 
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
-        this.isShiki = String(url).includes("shiki.worker");
+        this.isHighlights = String(url).includes("highlights.worker");
       }
 
       override set onmessage(listener: ((event: MessageEvent) => void) | null) {
         super.onmessage =
-          this.isShiki && listener ? (event) => setTimeout(() => listener(event), 800) : listener;
+          this.isHighlights && listener
+            ? (event) => setTimeout(() => listener(event), 800)
+            : listener;
       }
 
       override get onmessage() {

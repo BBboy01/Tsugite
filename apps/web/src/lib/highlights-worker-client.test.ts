@@ -99,6 +99,21 @@ test("forces a full reset after cancellation before reusing the worker client", 
   client.dispose();
 });
 
+test("forces a reset when a completed editor session is replaced", async () => {
+  const fake = fakeWorker();
+  const client = new HighlightsWorkerClient(() => fake.worker);
+  const first = client.highlight(input);
+  fake.reply(fake.sent[0].id);
+  expect(await first).toEqual(spans);
+
+  client.cancelInFlight();
+  const replacement = client.highlight({ ...input, source: "const replacement = 1" });
+  expect(fake.sent[1]).toMatchObject({ reset: true, source: "const replacement = 1" });
+  fake.reply(fake.sent[1].id);
+  expect(await replacement).toEqual(spans);
+  client.dispose();
+});
+
 test("falls back to native highlighting after a stalled worker", async () => {
   const fake = fakeWorker();
   const client = new HighlightsWorkerClient(() => fake.worker, 10);
