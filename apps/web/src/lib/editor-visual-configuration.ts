@@ -5,8 +5,7 @@ import type { ProjectSettings } from "@iris/shared";
 import { editorLineNumbers } from "./editor-basic-setup";
 import type { EditorLanguage } from "./editor-language";
 import { editorTheme } from "./editor-theme";
-import { shikiHighlight } from "./shiki-highlighting";
-import { getShikiTheme } from "./workspace-theme";
+import { highlightsHighlight } from "./highlights-highlighting";
 
 export class EditorVisualConfiguration {
   private readonly lineNumbers = new Compartment();
@@ -25,7 +24,7 @@ export class EditorVisualConfiguration {
       theme: this.theme.of(editorTheme(settings)),
       wordWrap: this.wordWrap.of(settings.wordWrap ? EditorView.lineWrapping : []),
       highlighting: this.highlighting.of(
-        shikiHighlight(language, getShikiTheme(settings.theme), onHighlightReady),
+        highlightsHighlight(language, settings.theme, onHighlightReady),
       ),
     };
   }
@@ -43,10 +42,10 @@ export class EditorVisualConfiguration {
     if (settings.wordWrap !== previous.wordWrap) {
       effects.push(this.wordWrap.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []));
     }
-    if (getShikiTheme(settings.theme) !== getShikiTheme(previous.theme)) {
+    if (settings.theme !== previous.theme) {
       effects.push(
         this.highlighting.reconfigure(
-          shikiHighlight(this.language, getShikiTheme(settings.theme), this.onHighlightReady),
+          highlightsHighlight(this.language, settings.theme, this.onHighlightReady),
         ),
       );
     }

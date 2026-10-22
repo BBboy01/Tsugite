@@ -74,6 +74,11 @@ export class HighlightsWorkerClient {
       this.needsReset = false;
       const next = { request, resolve };
       if (this.active) {
+        if (this.pending) {
+          request.reset = true;
+          request.source = input.source;
+          request.edits = [];
+        }
         this.pending?.resolve(undefined);
         this.pending = next;
       } else this.send(next);

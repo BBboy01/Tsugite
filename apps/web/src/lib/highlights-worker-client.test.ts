@@ -72,7 +72,7 @@ test("keeps only the newest pending request and discards stale colors", async ()
   fake.reply(fake.sent[0].id);
   expect(await first).toBeUndefined();
   expect(fake.sent).toHaveLength(2);
-  expect(fake.sent[1]).toMatchObject({ reset: false, edits: [], source: undefined });
+  expect(fake.sent[1]).toMatchObject({ reset: true, edits: [], source: "const n = 3" });
   fake.reply(fake.sent[1].id);
   expect(await newest).toEqual(spans);
   client.dispose();
