@@ -1,4 +1,5 @@
 import { WORKSPACE_THEME_IDS, type WorkspaceTheme } from "@iris/shared";
+import type { Theme } from "@pierre/highlights";
 
 import type { ShikiTheme } from "./shiki-highlighting";
 
@@ -13,6 +14,29 @@ export type WorkspaceThemeOption = {
     foreground: string;
   };
 };
+
+type HighlightsThemeLoader = () => Promise<{ default: Theme }>;
+
+const HIGHLIGHTS_THEME_LOADERS: Record<WorkspaceTheme, HighlightsThemeLoader> = {
+  paper: () => import("@pierre/highlights/themes/vitesse-light"),
+  ink: () => import("@pierre/highlights/themes/vitesse-dark"),
+  "solarized-light": () => import("@pierre/highlights/themes/solarized-light"),
+  "solarized-dark": () => import("@pierre/highlights/themes/solarized-dark"),
+  "tokyo-night": () => import("@pierre/highlights/themes/tokyo-night"),
+  dracula: () => import("@pierre/highlights/themes/dracula"),
+  "catppuccin-latte": () => import("@pierre/highlights/themes/catppuccin-latte"),
+  "catppuccin-mocha": () => import("@pierre/highlights/themes/catppuccin-mocha"),
+  "github-light": () => import("@pierre/highlights/themes/github-light"),
+  "github-dark": () => import("@pierre/highlights/themes/github-dark"),
+  nord: () => import("@pierre/highlights/themes/nord"),
+  "gruvbox-dark-medium": () => import("@pierre/highlights/themes/gruvbox-dark-medium"),
+  "one-dark-pro": () => import("@pierre/highlights/themes/one-dark-pro"),
+  "rose-pine": () => import("@pierre/highlights/themes/rose-pine"),
+  "everforest-dark": () => import("@pierre/highlights/themes/everforest-dark"),
+  "kanagawa-wave": () => import("@pierre/highlights/themes/kanagawa-wave"),
+};
+
+const highlightsThemeCache = new Map<WorkspaceTheme, Promise<Theme>>();
 
 export const WORKSPACE_THEME_OPTIONS: readonly WorkspaceThemeOption[] = [
   {
@@ -161,6 +185,19 @@ export function isDarkWorkspaceTheme(theme: WorkspaceTheme): boolean {
 
 export function getShikiTheme(theme: WorkspaceTheme): ShikiTheme {
   return WORKSPACE_THEME_OPTIONS.find((option) => option.id === theme)?.shiki ?? "vitesse-light";
+}
+
+export function getHighlightsTheme(theme: WorkspaceTheme): Promise<Theme> {
+  const validTheme = WORKSPACE_THEME_OPTIONS.some((option) => option.id === theme)
+    ? theme
+    : "paper";
+  const cached = highlightsThemeCache.get(validTheme);
+  if (cached) return cached;
+  const loaded = HIGHLIGHTS_THEME_LOADERS[validTheme]().then(
+    ({ default: loadedTheme }) => loadedTheme,
+  );
+  highlightsThemeCache.set(validTheme, loaded);
+  return loaded;
 }
 
 export function getRandomWorkspaceTheme(
