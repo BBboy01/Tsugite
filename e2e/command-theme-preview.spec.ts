@@ -28,7 +28,7 @@ test("discarded theme loading cannot overwrite the restored editor colors", asyn
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   const pendingTheme = Promise.withResolvers<void>();
   const themeRequested = Promise.withResolvers<void>();
-  await page.route("**/@shikijs_themes_dracula.js*", async (route) => {
+  await page.route("**/dracula*.js*", async (route) => {
     themeRequested.resolve();
     await pendingTheme.promise;
     await route.continue();
@@ -54,9 +54,9 @@ test("discarded theme loading cannot overwrite the restored editor colors", asyn
 
     pendingTheme.resolve();
     await page.evaluate(async () => {
-      const modulePath = "/src/lib/shiki-engine.ts";
-      const { highlightShikiTokens } = await import(/* @vite-ignore */ modulePath);
-      await highlightShikiTokens("const value = 1", "tsx", "dracula");
+      const modulePath = "/src/lib/workspace-theme.ts";
+      const { getHighlightsTheme } = await import(/* @vite-ignore */ modulePath);
+      await getHighlightsTheme("dracula");
       await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     });
     await expect.poll(colors).toEqual(originalColors);

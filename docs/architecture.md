@@ -61,7 +61,7 @@ The server never runs a user's project commands. Dependency installation and pre
 | Follow projection                           | [use-workspace-follow.ts](../apps/web/src/lib/use-workspace-follow.ts), [workspace-follow.ts](../apps/web/src/lib/workspace-follow.ts)                                                                                                           |
 | Local editor preferences                    | [workspace-preferences.ts](../apps/web/src/lib/workspace-preferences.ts)                                                                                                                                                                         |
 | Localization resources and initialization   | [i18n.ts](../apps/web/src/lib/i18n.ts), [i18n-en.ts](../apps/web/src/lib/i18n-en.ts), [i18n-zh-cn.ts](../apps/web/src/lib/i18n-zh-cn.ts), [i18n-zh-tw.ts](../apps/web/src/lib/i18n-zh-tw.ts), [i18n-ja.ts](../apps/web/src/lib/i18n-ja.ts)       |
-| Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Shiki updates in one editor instance                                                                                            |
+| Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Highlights updates in one editor instance                                                                                       |
 | Incremental visual settings                 | [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts)                                                                                                                                                             |
 | Vim integration lifecycle                   | [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                                                                                                                                                             |
 | Editor status and command line              | [editor-status-bar.tsx](../apps/web/src/components/editor-status-bar.tsx), [editor-status.ts](../apps/web/src/lib/editor-status.ts), [vim-status.ts](../apps/web/src/lib/vim-status.ts)                                                          |
@@ -245,7 +245,7 @@ The preview owns its text subscriptions, so removing broad AppShell invalidation
 
 Vim search maps existing decorations during edits and schedules one recount after 100 ms without postponing it on every keystroke. Query changes and explicit navigation refresh immediately. This reduces repeated scans; it does not cap the exact match count or change its linear recount cost.
 
-CodeMirror keeps the editor instance stable while shared visual settings change. Theme, font size/family, wrapping, and Shiki highlighting are installed through compartments and reconfigured in place; Vim mode and file identity remain initialization boundaries. The room's TypeScript Worker survives file switches and editor reconfiguration.
+CodeMirror keeps the editor instance stable while shared visual settings change. Theme, font size/family, wrapping, and Highlights highlighting are installed through compartments and reconfigured in place; Vim mode and file identity remain initialization boundaries. The room's TypeScript Worker survives file switches and editor reconfiguration.
 
 The base editor mounts synchronously with collaboration, undo, syntax parsing, and focus available independently of language-service startup.
 CodeMirror providers attach asynchronously and discard results for destroyed views or old documents.
@@ -261,39 +261,40 @@ extension precedes the fold gutter, preserving their visual order.
 
 `EditorVisualConfiguration` owns the compartments and compares the previous
 settings before dispatch: font changes update editor styles, wrapping changes
-update layout, relative numbering changes update the gutter, and only a Shiki
+update layout, relative numbering changes update the gutter, and only a Highlights
 theme change replaces the highlighter. Runtime preferences produce no editor
 reconfiguration. `EditorVimBindings` owns the status, search, cursor-style, and
 clipboard integrations and releases them together before the view is destroyed.
 
-Each Shiki plugin invalidates its pending request when destroyed. A delayed
+Each Highlights plugin invalidates its pending request when destroyed. A delayed
 theme or grammar load from an abandoned preview cannot publish decorations to
 the replacement plugin, including after the user restores the committed theme.
 
-Shiki tokenization runs in one lazily created module worker shared by the editor's
-successive plugin instances. Keeping it warm across file switches and theme
-previews avoids reloading grammars and themes on each replacement. The
+Highlights tokenization runs in one lazily created module worker shared by the
+editor's successive plugin instances. Keeping the worker and its LiveTokenizer
+session warm across edits and scrolls avoids full-document retokenization. The
 client keeps at most one active request and one newest pending request, so rapid
-typing cannot create an unbounded backlog. Requests carry an increasing request
-identifier and the CodeMirror viewport; only the newest result can replace
-decorations. Existing decorations are mapped through edits while work is pending.
-The worker retains one tokenized document for scroll-only requests and returns
-only spans intersecting the viewport, keeping message and main-thread decoration
-costs bounded by the rendered region. Destroying the plugin cancels in-flight
-work from that instance, restarting the worker only when a replacement request
-needs it; an idle worker remains warm until the page is unloaded.
+typing cannot create an unbounded backlog. If a pending request replaces another
+pending request, it carries a full snapshot reset so edits remain based on the
+worker's active document. Requests carry an increasing request identifier and the
+CodeMirror viewport; only the newest result can replace decorations. Existing
+decorations are mapped through edits while work is pending. The worker prioritizes
+the visible line range and returns only absolute spans for that range, keeping
+message and main-thread decoration costs bounded by the rendered region.
+Destroying the plugin cancels in-flight work and forces a full reset before the
+next request; an idle worker remains warm until the page is unloaded.
 When a new file opens, its editor keeps layout and keyboard input active but
 does not paint code until the first highlight result is applied. Worker startup,
 loading, or messaging failure, including a two-second response timeout, reveals
 native CodeMirror highlighting and editing instead of leaving the editor blank.
-The editor theme suppresses nested native token colors only inside marked Shiki
-spans; it must not suppress the native colors when those decorations are absent.
+The editor theme suppresses nested native token colors only inside marked highlight
+spans; it must not suppress native colors when those decorations are absent.
 
 ```mermaid
 flowchart TB
   Edit["Edit or viewport change"] --> Queue["One active + latest pending request"]
-  Queue --> Worker["Shiki module worker"]
-  Worker --> Cache["Latest document tokens"]
+  Queue --> Worker["Highlights module worker"]
+  Worker --> Cache["LiveTokenizer document"]
   Cache --> Spans["Viewport color spans"]
   Spans --> Current{"Still current?"}
   Current -->|Yes| Apply["Update CodeMirror decorations"]

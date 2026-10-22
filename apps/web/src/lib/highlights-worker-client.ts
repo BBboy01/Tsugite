@@ -95,12 +95,12 @@ export class HighlightsWorkerClient {
   }
 
   cancelInFlight(): void {
+    this.needsReset = true;
     if (!this.active && !this.pending) return;
     this.stop();
     this.active?.resolve(undefined);
     this.pending?.resolve(undefined);
     this.active = this.pending = undefined;
-    this.needsReset = true;
   }
 
   private send(next: Pending): void {

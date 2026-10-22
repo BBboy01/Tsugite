@@ -15,7 +15,7 @@ test("highlights edited and scrolled code in a worker without replacing the edit
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
   await expect
-    .poll(() => page.workers().some((worker) => worker.url().includes("shiki.worker")))
+    .poll(() => page.workers().some((worker) => worker.url().includes("highlights.worker")))
     .toBe(true);
   await page
     .locator(".cm-editor")
@@ -41,7 +41,7 @@ test("highlights edited and scrolled code in a worker without replacing the edit
 test("keeps the highlight worker warm while switching files", async ({ page }) => {
   const highlightWorkers: string[] = [];
   page.on("worker", (worker) => {
-    if (worker.url().includes("shiki.worker")) highlightWorkers.push(worker.url());
+    if (worker.url().includes("highlights.worker")) highlightWorkers.push(worker.url());
   });
 
   await page.goto(`/room/highlight-switch-${crypto.randomUUID()}`);
@@ -65,7 +65,7 @@ test("a blocked highlight worker leaves native highlighting and editing availabl
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
-        if (String(url).includes("shiki.worker")) throw new Error("highlight worker blocked");
+        if (String(url).includes("highlights.worker")) throw new Error("highlight worker blocked");
         super(url, options);
       }
     };
@@ -89,15 +89,15 @@ test("a nonresponsive highlight worker reveals the editable native fallback", as
   await page.addInitScript(() => {
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
-      private readonly isShiki: boolean;
+      private readonly isHighlights: boolean;
 
       constructor(url: string | URL, options?: WorkerOptions) {
         super(url, options);
-        this.isShiki = String(url).includes("shiki.worker");
+        this.isHighlights = String(url).includes("highlights.worker");
       }
 
       override set onmessage(listener: ((event: MessageEvent) => void) | null) {
-        super.onmessage = this.isShiki ? null : listener;
+        super.onmessage = this.isHighlights ? null : listener;
       }
 
       override get onmessage() {
@@ -122,7 +122,7 @@ test("fallback syntax colors follow the selected theme across editor remounts", 
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
-        if (String(url).includes("shiki.worker")) throw new Error("highlight worker blocked");
+        if (String(url).includes("highlights.worker")) throw new Error("highlight worker blocked");
         super(url, options);
       }
     };

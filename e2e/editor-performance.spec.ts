@@ -2,6 +2,12 @@ import { createProjectDoc, getFileByPath } from "@iris/shared";
 import { expect, test } from "playwright/test";
 import type { WorkspaceProfile } from "./workspace-profile-harness";
 
+declare global {
+  interface Window {
+    firstHighlightMs?: number;
+  }
+}
+
 for (const lineCount of [500, 10_000]) {
   test(`records editing cost and bounds rendered rows for ${lineCount} lines`, async ({
     page,
@@ -21,6 +27,18 @@ for (const lineCount of [500, 10_000]) {
     page.on("pageerror", (error) => errors.push(error.message));
     await page.addInitScript(() => {
       if (window === window.top) localStorage.setItem("iris.language", "en");
+      const started = performance.now();
+      const recordFirstHighlight = () => {
+        if (window.firstHighlightMs !== undefined) return;
+        if (!document.querySelector('[data-editor-content-ready="true"]')) return;
+        window.firstHighlightMs = performance.now() - started;
+      };
+      window.firstHighlightMs = undefined;
+      new MutationObserver(recordFirstHighlight).observe(document, {
+        subtree: true,
+        attributes: true,
+        attributeFilter: ["data-editor-content-ready"],
+      });
     });
     await page.route(/\/src\/main\.tsx(?:\?.*)?$/, (route) =>
       route.fulfill({
@@ -68,6 +86,9 @@ for (const lineCount of [500, 10_000]) {
       const editor = page.locator(".cm-content");
       await expect(editor).toBeFocused();
       await expect(editor).toContainText("benchmark line 1");
+      await expect
+        .poll(() => page.evaluate(() => window.firstHighlightMs ?? -1))
+        .toBeGreaterThan(0);
       await expect(
         page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
       ).toBeVisible();
@@ -119,6 +140,7 @@ for (const lineCount of [500, 10_000]) {
           inputCount: latencies.length,
           inputFrameP50Ms: latencies[Math.floor(latencies.length * 0.5)],
           inputFrameP95Ms: latencies[Math.floor(latencies.length * 0.95)],
+          firstHighlightMs: window.firstHighlightMs ?? null,
           reactCommits: profile.commits.length,
           reactRenderTotalMs: profile.commits.reduce(
             (total, commit) => total + commit.actualDuration,
