@@ -1,9 +1,5 @@
 export const uxTranslations = {
   en: {
-    "editor.typesLoading": "Loading project types…",
-    "editor.typesUnavailable": "Project types unavailable",
-    "editor.languageLoading": "Loading language services…",
-    "editor.languageUnavailable": "Language services unavailable",
     "status.unsynced": "Unsynced changes",
     "status.unsyncedDescription":
       "The server has not acknowledged your changes. Keep this tab open to avoid losing them.",
@@ -23,10 +19,6 @@ export const uxTranslations = {
     "files.deleteFailed": "Unable to delete this item. It may have changed.",
   },
   "zh-CN": {
-    "editor.typesLoading": "正在加载项目类型…",
-    "editor.typesUnavailable": "项目类型暂不可用",
-    "editor.languageLoading": "正在加载语言服务…",
-    "editor.languageUnavailable": "语言服务暂不可用",
     "status.unsynced": "有未同步更改",
     "status.unsyncedDescription": "更改尚未确认同步，请保持此标签页打开，避免丢失。",
     "settings.sharing.device": "此设备",
@@ -44,10 +36,6 @@ export const uxTranslations = {
     "files.deleteFailed": "无法删除此项目，它可能已发生变化。",
   },
   "zh-TW": {
-    "editor.typesLoading": "正在載入專案型別…",
-    "editor.typesUnavailable": "專案型別暫不可用",
-    "editor.languageLoading": "正在載入語言服務…",
-    "editor.languageUnavailable": "語言服務暫不可用",
     "status.unsynced": "有未同步變更",
     "status.unsyncedDescription": "變更尚未確認同步，請保持此分頁開啟，避免遺失。",
     "settings.sharing.device": "此裝置",
@@ -65,10 +53,6 @@ export const uxTranslations = {
     "files.deleteFailed": "無法刪除此項目，它可能已發生變更。",
   },
   ja: {
-    "editor.typesLoading": "プロジェクトの型を読み込み中…",
-    "editor.typesUnavailable": "プロジェクトの型を利用できません",
-    "editor.languageLoading": "言語サービスを読み込み中…",
-    "editor.languageUnavailable": "言語サービスを利用できません",
     "status.unsynced": "未同期の変更あり",
     "status.unsyncedDescription":
       "サーバーから変更の確認が届いていません。失われないよう、このタブを開いたままにしてください。",

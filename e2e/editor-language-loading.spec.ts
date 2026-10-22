@@ -230,8 +230,10 @@ test("keeps editing, Vim and collaboration available after worker retries are ex
   await page.keyboard.press("i");
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText("const survives = 42;\nconsole.log(survives);");
+  await expect(page.locator('[data-typescript-service-state="unavailable"]')).toHaveCount(1, {
+    timeout: 15_000,
+  });
   await rightClickText(page, "console.log(survives)", "survives");
-  await expect(page.getByText("Language services unavailable", { exact: true })).toBeVisible();
   await expect(
     page.getByRole("menuitem", { name: "Go to definition", exact: true }),
   ).toBeDisabled();

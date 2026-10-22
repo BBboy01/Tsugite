@@ -173,13 +173,12 @@ self.onmessage = (event) => {
       const state = window as Window & { typeScriptWorkers?: Worker[] };
       state.typeScriptWorkers?.[1]?.postMessage({ kind: "test-crash" });
     });
-    await expect(page.locator('[data-typescript-status="unavailable"]')).toContainText(
-      "Language services unavailable",
-    );
+    await expect(page.locator('[data-typescript-service-state="unavailable"]')).toHaveCount(1, {
+      timeout: 15_000,
+    });
     await expect(content).toBeFocused();
     await page.keyboard.insertText(" marker");
     await expect(content).toContainText("latest. marker");
-    await expect(page.locator('[data-typescript-status="unavailable"]')).toBeVisible();
   } finally {
     releaseRetry.resolve();
     await page.unrouteAll({ behavior: "wait" });
