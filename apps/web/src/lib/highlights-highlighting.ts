@@ -12,6 +12,7 @@ import { HighlightsWorkerClient } from "./highlights-worker-client";
 import type { WorkspaceTheme } from "@iris/shared";
 
 const setHighlightsDecorations = StateEffect.define<DecorationSet>();
+export const setHighlightsTheme = StateEffect.define<WorkspaceTheme>();
 const highlighter = new HighlightsWorkerClient();
 
 export function highlightsHighlight(
@@ -24,6 +25,7 @@ export function highlightsHighlight(
       decorations: DecorationSet = Decoration.none;
       private requestId = 0;
       private ready = false;
+      private theme = theme;
 
       constructor(view: EditorView) {
         void this.highlight(view);
@@ -33,6 +35,11 @@ export function highlightsHighlight(
         if (update.docChanged) this.decorations = this.decorations.map(update.changes);
         for (const effect of update.transactions.flatMap((transaction) => transaction.effects)) {
           if (effect.is(setHighlightsDecorations)) this.decorations = effect.value;
+          if (effect.is(setHighlightsTheme)) {
+            this.theme = effect.value;
+            highlighter.cancelInFlight();
+            void this.highlight(update.view);
+          }
         }
         if (update.docChanged || update.viewportChanged) void this.highlight(update.view, update);
       }
@@ -49,7 +56,7 @@ export function highlightsHighlight(
           source: view.state.doc.toString(),
           edits: update?.docChanged ? getHighlightEdits(update) : [],
           language,
-          theme,
+          theme: this.theme,
           viewport: viewport.range,
           lineOffsets: viewport.offsets,
         });

@@ -28,7 +28,7 @@ test("discarded theme loading cannot overwrite the restored editor colors", asyn
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   const pendingTheme = Promise.withResolvers<void>();
   const themeRequested = Promise.withResolvers<void>();
-  await page.route("**/dracula*.js*", async (route) => {
+  await page.route("**/*dracula*.js*", async (route) => {
     themeRequested.resolve();
     await pendingTheme.promise;
     await route.continue();
