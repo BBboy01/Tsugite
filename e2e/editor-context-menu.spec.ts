@@ -128,7 +128,10 @@ test("definition navigation and Peek have different effects and references retai
 });
 
 test("TypeScript hover blends its wrapper into the editor surface", async ({ page }) => {
-  await replaceCode(page, "/** Answer documentation. */\nconst answer = 42;\nconsole.log(answer);");
+  await replaceCode(
+    page,
+    "/**\n * Answer documentation uses `const answer = 42`.\n *\n * ```ts\n * const nextAnswer = answer + 1;\n * ```\n */\nconst answer = 42;\nconsole.log(answer);",
+  );
   await rightClickText(page, "console.log(answer)", "answer");
   await expect(page.getByRole("menuitem", { name: "Go to definition", exact: true })).toBeEnabled();
   await page.keyboard.press("Escape");
@@ -148,6 +151,10 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
     const innerStyle = getComputedStyle(inner);
     const description = inner.querySelector(".iris-ts-hover-description");
     if (!description) throw new Error("Missing TypeScript hover documentation");
+    const inlineCode = description.querySelector("code");
+    if (!inlineCode) throw new Error("Missing Markdown inline code");
+    const codeBlock = description.querySelector("pre code");
+    if (!codeBlock) throw new Error("Missing Markdown code block");
     return {
       editorBackground: getComputedStyle(editor).backgroundColor,
       tooltipBackground: tooltipStyle.backgroundColor,
@@ -156,6 +163,8 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
       innerBorderRadius: innerStyle.borderRadius,
       descriptionColor: getComputedStyle(description).color,
       inkColor: getComputedStyle(editor).color,
+      inlineCodeText: inlineCode.textContent,
+      codeBlockText: codeBlock.textContent,
     };
   });
 
@@ -164,6 +173,14 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
   expect(styles.tooltipBorderStyle).toBe("none");
   expect(styles.innerBorderRadius).toBe("8px");
   expect(styles.descriptionColor).toBe(styles.inkColor);
+  expect(styles.inlineCodeText).toBe("const answer = 42");
+  expect(styles.codeBlockText).toContain("const nextAnswer = answer + 1;");
+  await expect.poll(() => tooltip.locator(".iris-ts-hover-code-token").count()).toBeGreaterThan(0);
+  const tokenColor = await tooltip
+    .locator(".iris-ts-hover-code-token")
+    .first()
+    .evaluate((element) => getComputedStyle(element).color);
+  expect(tokenColor).not.toBe(styles.descriptionColor);
 
   await page.mouse.move(0, 0);
   await replaceCode(
