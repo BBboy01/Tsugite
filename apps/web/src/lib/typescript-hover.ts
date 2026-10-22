@@ -168,6 +168,7 @@ export const renderTypeScriptHover = (
     signature.className = "iris-ts-hover-signature";
     signature.textContent = info.signature;
     dom.append(signature);
+    void highlightCode(signature, info.signature, "typescript", getTheme);
   }
   if (info.documentation) {
     const description = document.createElement("div");
