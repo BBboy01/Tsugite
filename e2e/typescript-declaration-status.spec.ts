@@ -76,7 +76,7 @@ test("paused preview loads declared package types into the editor worker", async
   await expect(
     page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator("[data-typescript-status]")).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, { timeout: 15_000 });
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText('import { answer } from "typed-pkg";\nanswer;');
   const token = page.locator(".cm-line").filter({ hasText: /^answer;$/ });
@@ -100,9 +100,7 @@ test("paused preview loads declared package types into the editor worker", async
   expect(errors).toEqual([]);
 });
 
-test("type scan errors show a local status and recover on restart without blocking edits", async ({
-  page,
-}) => {
+test("type scan errors do not block edits and recover on restart", async ({ page }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await controlledRuntime(page);
@@ -118,23 +116,14 @@ test("type scan errors show a local status and recover on restart without blocki
   await page.goto(`/room/types-failure-${crypto.randomUUID()}`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
-  await expect(page.locator('[data-typescript-status="unavailable"]')).toContainText(
-    "Project types unavailable",
-    { timeout: 15_000 },
-  );
-  await expect(page.locator('[data-typescript-status="unavailable"]')).toHaveAttribute(
-    "title",
-    "Types not installed",
-  );
+  await expect(page.locator('[data-typescript-declarations-state="unavailable"]')).toHaveCount(1, {
+    timeout: 15_000,
+  });
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText("const stillEditable = 1;");
   await expect(editor).toContainText("stillEditable");
   await page.setViewportSize({ width: 390, height: 844 });
   await expect(page.locator('[data-panel="preview"]')).toHaveCount(0);
-  await expect(page.locator('[data-typescript-status="unavailable"]')).toContainText(
-    "Project types unavailable",
-  );
-  await expect(page.locator('[data-typescript-status="unavailable"]')).toBeInViewport();
   await expect
     .poll(() =>
       page
@@ -147,7 +136,9 @@ test("type scan errors show a local status and recover on restart without blocki
   await expect(page.locator('[data-panel="preview"]')).toHaveCount(1);
   await page.evaluate(() => delete document.documentElement.dataset.failDeclarations);
   await page.getByRole("button", { name: "Run preview", exact: true }).click();
-  await expect(page.locator("[data-typescript-status]")).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator('[data-typescript-declarations-state="ready"]')).toHaveCount(1, {
+    timeout: 15_000,
+  });
   await expect(editor).toContainText("stillEditable");
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   expect(errors).toEqual([]);
@@ -160,8 +151,7 @@ test("refreshes active diagnostics when declarations change without editing the 
   await page.goto(`/room/types-refresh-${crypto.randomUUID()}`, { waitUntil: "domcontentloaded" });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
-  await expect(page.locator("[data-typescript-status]")).toHaveCount(0, { timeout: 15_000 });
-
+  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, { timeout: 15_000 });
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText(
     'import { answer } from "typed-pkg";\nconst count: number = answer;',

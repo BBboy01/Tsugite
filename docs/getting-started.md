@@ -108,7 +108,6 @@ A project without `package.json` uses the single-file Babel iframe fallback. It 
 | -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
 | Editor stays reconnecting        | Verify the room ID, server availability, and WebSocket connection. Both development processes must be running.                |
 | No second collaborator appears   | Use separate browser profiles; tabs in one profile share the same identity.                                                   |
-| Language services unavailable    | Editing still works. Check the reported Worker or workspace-limit error; reopen the room after fixing the cause.              |
 | Cross-origin isolation error     | Check `window.crossOriginIsolated` in browser DevTools. Preserve both headers above and use HTTPS for a remote deployment.    |
 | Storage partitioning error       | Check browser storage/privacy settings for the WebContainer preview.                                                          |
 | Dependency installation fails    | Read Output for registry or package errors. Installation has a two-minute deadline; try reinstall after correcting the cause. |

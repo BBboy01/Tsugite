@@ -249,7 +249,7 @@ CodeMirror keeps the editor instance stable while shared visual settings change.
 
 The base editor mounts synchronously with collaboration, undo, syntax parsing, and focus available independently of language-service startup.
 CodeMirror providers attach asynchronously and discard results for destroyed views or old documents.
-The room owns one bounded TypeScript Worker. It retries initialization once; if the Worker still fails, language services become visibly unavailable. Oversized or unsafe snapshots also become unavailable rather than bypassing resource limits. Editing, Vim, collaboration, and highlighting remain available independently of language services.
+The room owns one bounded TypeScript Worker. It retries initialization once; if the Worker still fails, language services become unavailable. Oversized or unsafe snapshots also become unavailable rather than bypassing resource limits. Editing, Vim, collaboration, and highlighting remain available independently of language services.
 Focus requests are consumed after effects settle, avoiding focus loss when StrictMode replaces the first editor instance.
 
 Vim cursor style and clipboard preferences reattach their integrations without

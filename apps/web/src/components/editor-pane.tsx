@@ -31,7 +31,6 @@ import { vimSearchExtension } from "../lib/vim-search";
 import { useSystemClipboard } from "../lib/use-system-clipboard";
 import { editorBasicSetup } from "../lib/editor-basic-setup";
 import { attachEditorTypeScriptServices } from "../lib/editor-typescript-services";
-import { EditorLanguageStatus } from "./editor-language-status";
 import { EditorStatusBar } from "./editor-status-bar";
 import { editorStatus, editorStatusAt } from "../lib/editor-status";
 import { attachVimStatusDetails, type VimStatusDetails } from "../lib/vim-status";
@@ -64,6 +63,11 @@ export const EditorPane = memo(function EditorPane({
     declarations.subscribeServiceStatus,
     declarations.getServiceStatus,
     declarations.getServiceStatus,
+  );
+  const declarationStatus = useSyncExternalStore(
+    declarations.subscribeDeclarations,
+    declarations.getDeclarationsStatus,
+    declarations.getDeclarationsStatus,
   );
   const [systemClipboard] = useSystemClipboard();
   const systemClipboardRef = useRef(systemClipboard);
@@ -98,6 +102,11 @@ export const EditorPane = memo(function EditorPane({
     path: string;
     intelligence: EditorIntelligence;
   } | null>(null);
+  const typeScriptReady =
+    declarationStatus.status === "ready" &&
+    serviceStatus.state === "ready" &&
+    typeScriptEnvironment?.fileId === file.id &&
+    typeScriptEnvironment.path === file.path;
   const tabViewModels = useMemo(
     () => buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
     [tabs, file.path, remoteMembers, currentUserId],
@@ -265,7 +274,6 @@ export const EditorPane = memo(function EditorPane({
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
       />
-      <EditorLanguageStatus declarations={declarations} />
       <EditorContextMenu
         languageAvailable={serviceStatus.state === "ready"}
         key={file.id + file.path}
@@ -286,6 +294,9 @@ export const EditorPane = memo(function EditorPane({
           className="flex min-h-0 min-w-0 flex-1 [&_.cm-editor]:h-full"
           ref={hostRef}
           data-editor-content-ready={highlightedFile === currentFileKey}
+          data-typescript-ready={typeScriptReady ? "true" : undefined}
+          data-typescript-service-state={serviceStatus.state}
+          data-typescript-declarations-state={declarationStatus.status}
         />
         {!vimMode && <EditorStatusBar status={statusDetails} />}
         {isFollowing && <EditorFollowingOutline />}
