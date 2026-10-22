@@ -192,6 +192,28 @@ test("TypeScript hover blends its wrapper into the editor surface", async ({ pag
   await expect(tooltip).toContainText('"updated"');
 });
 
+test("TypeScript hover tokenizes React hook signatures", async ({ page }) => {
+  await replaceCode(
+    page,
+    'import { useState } from "react";\n\nexport function Counter() {\n  const [count] = useState(0);\n  return count;\n}',
+  );
+  await hoverText(page, "const [count] = useState(0);", "useState");
+
+  const tooltip = page.locator(".cm-tooltip.cm-tooltip-hover");
+  await expect(tooltip).toBeVisible();
+  const signature = tooltip.locator(".iris-ts-hover-signature");
+  await expect(signature).toBeVisible();
+  await expect
+    .poll(() => signature.locator(".iris-ts-hover-code-token").count())
+    .toBeGreaterThan(0);
+  const tokenColors = await signature
+    .locator(".iris-ts-hover-code-token")
+    .evaluateAll((elements) => [
+      ...new Set(elements.map((element) => getComputedStyle(element).color)),
+    ]);
+  expect(tokenColors.length).toBeGreaterThan(1);
+});
+
 test("navigates to an unopened workspace file and exact target position", async ({ page }) => {
   await page.locator('[data-context-path="src"]').first().click({ button: "right" });
   await page.getByRole("menuitem", { name: "New file", exact: true }).click();
