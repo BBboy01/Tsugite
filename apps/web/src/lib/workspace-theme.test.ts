@@ -2,6 +2,7 @@ import { expect, test } from "bun:test";
 
 import {
   getRandomWorkspaceTheme,
+  getHighlightsTheme,
   getShikiTheme,
   isDarkWorkspaceTheme,
   readRoomTheme,
@@ -17,6 +18,31 @@ test("maps workspace themes to matching Shiki themes", () => {
   expect(getShikiTheme("ink")).toBe("vitesse-dark");
   expect(getShikiTheme("github-light")).toBe("github-light");
   expect(getShikiTheme("catppuccin-mocha")).toBe("catppuccin-mocha");
+});
+
+test("loads every workspace theme as a Highlights theme", async () => {
+  const expectedAppearance = new Map([
+    ["paper", "light"],
+    ["github-light", "light"],
+    ["solarized-light", "light"],
+    ["catppuccin-latte", "light"],
+    ["ink", "dark"],
+    ["github-dark", "dark"],
+    ["solarized-dark", "dark"],
+    ["tokyo-night", "dark"],
+    ["dracula", "dark"],
+    ["catppuccin-mocha", "dark"],
+    ["nord", "dark"],
+    ["gruvbox-dark-medium", "dark"],
+    ["one-dark-pro", "dark"],
+    ["rose-pine", "dark"],
+    ["everforest-dark", "dark"],
+    ["kanagawa-wave", "dark"],
+  ] as const);
+
+  for (const [theme, appearance] of expectedAppearance) {
+    expect((await getHighlightsTheme(theme)).appearance).toBe(appearance);
+  }
 });
 
 test("picks a different built-in theme", () => {
