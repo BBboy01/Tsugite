@@ -170,9 +170,8 @@ export function getHighlightsTheme(theme: WorkspaceTheme): Promise<Theme> {
     : "paper";
   const cached = highlightsThemeCache.get(validTheme);
   if (cached) return cached;
-  const loaded = HIGHLIGHTS_THEME_LOADERS[validTheme]().then(
-    ({ default: loadedTheme }) => loadedTheme,
-  );
+  const loader = HIGHLIGHTS_THEME_LOADERS[validTheme] ?? HIGHLIGHTS_THEME_LOADERS.paper;
+  const loaded = loader().then(({ default: loadedTheme }) => loadedTheme);
   highlightsThemeCache.set(validTheme, loaded);
   return loaded;
 }
