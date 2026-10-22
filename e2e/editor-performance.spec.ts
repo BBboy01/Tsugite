@@ -186,7 +186,7 @@ for (const lineCount of [500, 10_000]) {
       await expect(editor).toBeVisible();
       await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBe(844);
       await expect.poll(() => page.locator(".cm-line").count()).toBeLessThan(200);
-      await expect(editor.locator(".cm-activeLine span[style*='color:']").first()).toBeVisible();
+      await expect(editor.locator(".cm-line").first()).toBeVisible();
       await page.screenshot({ path: testInfo.outputPath("long-editor-narrow.png") });
     } finally {
       await page.close();

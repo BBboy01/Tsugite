@@ -114,6 +114,61 @@ test("forces a reset when a completed editor session is replaced", async () => {
   client.dispose();
 });
 
+test("reuses an idle tokenizer for a replacement scope with the same language and theme", async () => {
+  const fake = fakeWorker();
+  const client = new HighlightsWorkerClient(() => fake.worker);
+  const firstScope = client.createScope();
+  const first = client.highlight(input, firstScope);
+  fake.reply(fake.sent[0].id);
+  expect(await first).toEqual(spans);
+
+  const replacementScope = client.createScope();
+  const replacement = client.highlight(
+    { ...input, source: "const replacement = 1" },
+    replacementScope,
+  );
+  expect(fake.sent[1]).toMatchObject({
+    reset: false,
+    source: "const replacement = 1",
+    edits: [],
+  });
+  fake.reply(fake.sent[1].id);
+  expect(await replacement).toEqual(spans);
+  client.dispose();
+});
+
+test("an old scope cannot cancel a replacement scope", async () => {
+  const fake = fakeWorker();
+  const client = new HighlightsWorkerClient(() => fake.worker);
+  const firstScope = client.createScope();
+  const first = client.highlight(input, firstScope);
+  fake.reply(fake.sent[0].id);
+  expect(await first).toEqual(spans);
+
+  const replacementScope = client.createScope();
+  const replacement = client.highlight({ ...input, source: "const next = 1" }, replacementScope);
+  client.cancelInFlight(firstScope);
+  expect(fake.sent).toHaveLength(2);
+  fake.reply(fake.sent[1].id);
+  expect(await replacement).toEqual(spans);
+  client.dispose();
+});
+
+test("coalesces identical reset snapshots after an active request", async () => {
+  const fake = fakeWorker();
+  const client = new HighlightsWorkerClient(() => fake.worker);
+  const first = client.highlight(input);
+  const skipped = client.highlight({ ...input, source: input.source });
+  const newest = client.highlight({ ...input, source: input.source });
+  expect(await skipped).toBeUndefined();
+  fake.reply(fake.sent[0].id);
+  expect(await first).toBeUndefined();
+  expect(fake.sent[1]).toMatchObject({ reset: false, source: undefined, edits: [] });
+  fake.reply(fake.sent[1].id);
+  expect(await newest).toEqual(spans);
+  client.dispose();
+});
+
 test("falls back to native highlighting after a stalled worker", async () => {
   const fake = fakeWorker();
   const client = new HighlightsWorkerClient(() => fake.worker, 10);

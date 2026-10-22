@@ -38,8 +38,11 @@ export type HighlightsInput = {
 
 type Pending = {
   request: HighlightsRequest;
+  scopeId: number;
   resolve: (value: HighlightSpan[] | undefined) => void;
 };
+
+type SessionContext = Pick<HighlightsInput, "source" | "language" | "theme">;
 
 export class HighlightsWorkerClient {
   private worker: HighlightsWorker | undefined;
@@ -50,29 +53,63 @@ export class HighlightsWorkerClient {
   private disposed = false;
   private failed = false;
   private needsReset = true;
+  private nextScopeId = 0;
+  private activeScopeId = 0;
+  private lastRequestScopeId = 0;
+  private sessionContext: SessionContext | undefined;
 
   constructor(
     private readonly createWorker: () => HighlightsWorker = () =>
       new Worker(new URL("./highlights.worker.ts", import.meta.url), { type: "module" }),
-    private readonly timeoutMs = 2000,
+    private readonly timeoutMs = 3000,
   ) {}
 
-  highlight(input: HighlightsInput): Promise<HighlightSpan[] | undefined> {
+  createScope(): number {
+    if (this.active) {
+      this.stop();
+      this.active.resolve(undefined);
+      this.pending?.resolve(undefined);
+      this.active = this.pending = undefined;
+    }
+    this.activeScopeId = ++this.nextScopeId;
+    this.needsReset = true;
+    return this.activeScopeId;
+  }
+
+  highlight(input: HighlightsInput, scopeId?: number): Promise<HighlightSpan[] | undefined> {
     if (this.disposed) return Promise.resolve(undefined);
     if (this.failed) return Promise.resolve([]);
+    if (scopeId !== undefined && scopeId !== this.activeScopeId) return Promise.resolve(undefined);
     return new Promise((resolve) => {
+      const isNewScope = scopeId !== undefined && scopeId !== this.lastRequestScopeId;
+      const canReuseTokenizer =
+        isNewScope &&
+        Boolean(this.worker) &&
+        this.sessionContext?.language === input.language &&
+        this.sessionContext?.theme === input.theme;
+      const reset =
+        this.needsReset &&
+        !canReuseTokenizer &&
+        (!this.worker || !sameSessionContext(this.sessionContext, input));
+      const sendSnapshot = reset || canReuseTokenizer;
       const request: HighlightsRequest = {
         id: ++this.requestId,
-        reset: this.needsReset,
-        source: this.needsReset ? input.source : undefined,
-        edits: this.needsReset ? [] : input.edits,
+        reset,
+        source: sendSnapshot ? input.source : undefined,
+        edits: sendSnapshot ? [] : input.edits,
         language: input.language,
         theme: input.theme,
         viewport: input.viewport,
         lineOffsets: input.lineOffsets,
       };
       this.needsReset = false;
-      const next = { request, resolve };
+      if (scopeId !== undefined) this.lastRequestScopeId = scopeId;
+      this.sessionContext = {
+        source: input.source,
+        language: input.language,
+        theme: input.theme,
+      };
+      const next = { request, scopeId: scopeId ?? this.activeScopeId, resolve };
       if (this.active) {
         if (this.pending) {
           request.reset = true;
@@ -94,8 +131,16 @@ export class HighlightsWorkerClient {
     this.active = this.pending = undefined;
   }
 
-  cancelInFlight(): void {
+  cancelInFlight(scopeId?: number): void {
+    if (scopeId !== undefined && scopeId !== this.activeScopeId) return;
     this.needsReset = true;
+    if (scopeId !== undefined && this.active?.scopeId !== scopeId) {
+      if (this.pending?.scopeId === scopeId) {
+        this.pending.resolve(undefined);
+        this.pending = undefined;
+      }
+      return;
+    }
     if (!this.active && !this.pending) return;
     this.stop();
     this.active?.resolve(undefined);
@@ -110,13 +155,21 @@ export class HighlightsWorkerClient {
         this.worker = this.createWorker();
         this.worker.onmessage = ({ data }) => {
           if (data.id !== this.active?.request.id) return;
+          const activeRequest = this.active.request;
           clearTimeout(this.timeout);
           this.timeout = undefined;
           this.active.resolve(this.pending ? undefined : data.spans);
           this.active = undefined;
           const pending = this.pending;
           this.pending = undefined;
-          if (pending) this.send(pending);
+          if (pending) {
+            if (canReuseActiveSession(activeRequest, pending.request)) {
+              pending.request.reset = false;
+              pending.request.source = undefined;
+              pending.request.edits = [];
+            }
+            this.send(pending);
+          }
         };
         this.worker.onerror = this.worker.onmessageerror = (event: Event) => {
           event.preventDefault();
@@ -148,4 +201,22 @@ export class HighlightsWorkerClient {
     this.worker.terminate();
     this.worker = undefined;
   }
+}
+
+function canReuseActiveSession(active: HighlightsRequest, pending: HighlightsRequest): boolean {
+  return (
+    active.reset &&
+    pending.reset &&
+    active.source === pending.source &&
+    active.language === pending.language &&
+    active.theme === pending.theme
+  );
+}
+
+function sameSessionContext(previous: SessionContext | undefined, next: SessionContext): boolean {
+  return (
+    previous?.source === next.source &&
+    previous.language === next.language &&
+    previous.theme === next.theme
+  );
 }

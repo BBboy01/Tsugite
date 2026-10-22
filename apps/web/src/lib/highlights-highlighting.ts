@@ -26,6 +26,7 @@ export function highlightsHighlight(
       private requestId = 0;
       private ready = false;
       private theme = theme;
+      private readonly scopeId = highlighter.createScope();
 
       constructor(view: EditorView) {
         void this.highlight(view);
@@ -37,7 +38,7 @@ export function highlightsHighlight(
           if (effect.is(setHighlightsDecorations)) this.decorations = effect.value;
           if (effect.is(setHighlightsTheme)) {
             this.theme = effect.value;
-            highlighter.cancelInFlight();
+            highlighter.cancelInFlight(this.scopeId);
             void this.highlight(update.view);
           }
         }
@@ -46,20 +47,23 @@ export function highlightsHighlight(
 
       destroy() {
         this.requestId += 1;
-        highlighter.cancelInFlight();
+        highlighter.cancelInFlight(this.scopeId);
       }
 
       private async highlight(view: EditorView, update?: ViewUpdate) {
         const requestId = ++this.requestId;
         const viewport = getHighlightViewport(view);
-        const spans = await highlighter.highlight({
-          source: view.state.doc.toString(),
-          edits: update?.docChanged ? getHighlightEdits(update) : [],
-          language,
-          theme: this.theme,
-          viewport: viewport.range,
-          lineOffsets: viewport.offsets,
-        });
+        const spans = await highlighter.highlight(
+          {
+            source: view.state.doc.toString(),
+            edits: update?.docChanged ? getHighlightEdits(update) : [],
+            language,
+            theme: this.theme,
+            viewport: viewport.range,
+            lineOffsets: viewport.offsets,
+          },
+          this.scopeId,
+        );
         if (!spans || requestId !== this.requestId || !view.dom.isConnected) return;
 
         const builder = new RangeSetBuilder<Decoration>();
