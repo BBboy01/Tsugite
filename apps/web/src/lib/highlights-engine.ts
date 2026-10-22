@@ -82,6 +82,14 @@ export class HighlightsTokenizerSession {
     return this.tokenizer.getLineText(line);
   }
 
+  pause(): void {
+    this.tokenizer.pause();
+  }
+
+  resume(): void {
+    this.tokenizer.resume();
+  }
+
   dispose(): void {
     this.tokenizer.dispose();
   }
