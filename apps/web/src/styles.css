@@ -240,12 +240,43 @@
   }
 
   .iris-ts-hover-description {
+    display: grid;
+    gap: 7px;
     margin: 7px 0 0;
     padding-top: 7px;
     border-top: 1px solid var(--divider);
     color: var(--ink);
     font-family: inherit;
     white-space: pre-wrap;
+  }
+
+  .iris-ts-hover-description p {
+    margin: 0;
+  }
+
+  .iris-ts-hover-code {
+    color: var(--accent-deep);
+    font-family: var(--mono-font);
+  }
+
+  .iris-ts-hover-description p .iris-ts-hover-code {
+    padding: 1px 3px;
+    border-radius: 3px;
+    background: var(--editor-surface);
+  }
+
+  .iris-ts-hover-code-block {
+    max-width: 100%;
+    margin: 0;
+    overflow-x: auto;
+    padding: 8px 10px;
+    border: 1px solid var(--divider);
+    border-radius: 4px;
+    background: var(--editor-surface);
+  }
+
+  .iris-ts-hover-code-block .iris-ts-hover-code {
+    white-space: pre;
   }
 }
 

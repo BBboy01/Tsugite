@@ -5,11 +5,13 @@ import { typeScriptCompletion } from "./typescript-completion";
 import { typeScriptDiagnostics } from "./typescript-diagnostics";
 import { typeScriptSignatureHelp } from "./typescript-signature";
 import { editorWorkspaceRefresh } from "./editor-workspace-refresh";
+import type { WorkspaceTheme } from "@iris/shared";
 
 export function attachEditorTypeScriptServices(
   view: EditorView,
   path: string,
   intelligence: EditorIntelligence,
+  getTheme: () => WorkspaceTheme,
   onReady: (intelligence: EditorIntelligence) => void,
 ): () => void {
   let disposed = false;
@@ -25,7 +27,7 @@ export function attachEditorTypeScriptServices(
             if (update.docChanged)
               void activeIntelligence.updateFile({ path, text: update.state.doc.toString() });
           }),
-          typeScriptHover(activeIntelligence, path),
+          typeScriptHover(activeIntelligence, path, getTheme),
           typeScriptCompletion(activeIntelligence, path),
           typeScriptSignatureHelp(activeIntelligence, path),
           editorWorkspaceRefresh(activeIntelligence),

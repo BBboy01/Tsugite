@@ -205,12 +205,17 @@ export const EditorPane = memo(function EditorPane({
     }
 
     const detachTypeScript = supportsTypeScriptServices(language)
-      ? attachEditorTypeScriptServices(view, file.path, intelligence, (readyIntelligence) =>
-          setTypeScriptEnvironment({
-            fileId: file.id,
-            path: file.path,
-            intelligence: readyIntelligence,
-          }),
+      ? attachEditorTypeScriptServices(
+          view,
+          file.path,
+          intelligence,
+          () => settingsRef.current.theme,
+          (readyIntelligence) =>
+            setTypeScriptEnvironment({
+              fileId: file.id,
+              path: file.path,
+              intelligence: readyIntelligence,
+            }),
         )
       : undefined;
 
