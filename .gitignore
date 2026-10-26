@@ -14,3 +14,4 @@ data/
 *.sqlite-wal
 .DS_Store
 RELEASE_NOTES.md
+.agents/skills
