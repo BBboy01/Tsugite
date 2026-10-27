@@ -11,6 +11,7 @@ import {
   fuzzyMatchIndexes,
   getFileSearchResults,
 } from "../lib/file-fuzzy-search";
+import { keepSelectionVisible } from "../lib/selection-scroll";
 import { fileSearchOpenAtom } from "../lib/workspace-atoms";
 
 type Props = {
@@ -31,7 +32,9 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
   const selectedRef = useRef<HTMLButtonElement>(null);
+  const escapeHandledRef = useRef(false);
   const listId = useId();
   const searchResults = useMemo(
     () => (open ? getFileSearchResults(files, query) : { files: [], total: 0 }),
@@ -49,11 +52,12 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
     setSelected((value) => Math.min(value, Math.max(0, matches.length - 1)));
   }, [matches.length]);
   useLayoutEffect(() => {
-    selectedRef.current?.scrollIntoView({
-      block: "nearest",
-      inline: "nearest",
-      behavior: "instant",
-    });
+    keepSelectionVisible(
+      listRef.current,
+      selectedRef.current,
+      selected > 0,
+      selected < matches.length - 1,
+    );
   }, [matches, selected]);
   const moveSelection = (offset: number) => {
     if (!matches.length) return;
@@ -66,18 +70,23 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
       onOpenChange(false);
     }
   };
+  const handleEscape = (event: { preventDefault: () => void; stopPropagation?: () => void }) => {
+    if (escapeHandledRef.current) return;
+    escapeHandledRef.current = true;
+    queueMicrotask(() => {
+      escapeHandledRef.current = false;
+    });
+    event.preventDefault();
+    event.stopPropagation?.();
+    onOpenChange(false);
+  };
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
         <Dialog.Content
-          onEscapeKeyDown={(event) => event.preventDefault()}
-          onKeyDownCapture={(event) => {
-            if (event.key !== "Escape") return;
-            event.preventDefault();
-            event.stopPropagation();
-            onOpenChange(false);
-          }}
+          onEscapeKeyDown={handleEscape}
+          onKeyDownCapture={(event) => event.key === "Escape" && handleEscape(event)}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
           }}
@@ -121,6 +130,7 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
             />
           </div>
           <div
+            ref={listRef}
             id={listId}
             role="listbox"
             aria-label={t("files.searchTitle")}

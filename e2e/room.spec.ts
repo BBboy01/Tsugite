@@ -139,14 +139,92 @@ test("scrolls the keyboard-selected command into view", async ({ page }) => {
   const commandList = page.getByRole("dialog").locator("div.overflow-y-auto");
   const commands = commandList.getByRole("button");
   const count = await commands.count();
-  for (let index = 0; index < count - 1; index += 1) {
+  for (let index = 0; index < count - 2; index += 1) {
     await page.keyboard.press("Control+n");
   }
 
-  const selectedCommand = commands.last();
+  const selectedCommand = commands.nth(count - 2);
+  const followingCommand = commands.last();
   await expect(selectedCommand).toHaveClass(/text-iris-ink/);
   await expect.poll(() => commandList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
   await expect(selectedCommand).toBeInViewport();
+  await expect
+    .poll(async () => {
+      const listBox = await commandList.boundingBox();
+      const selectedBox = await selectedCommand.boundingBox();
+      const followingBox = await followingCommand.boundingBox();
+      if (!listBox || !selectedBox || !followingBox) return false;
+      return (
+        selectedBox.y + selectedBox.height <= listBox.y + listBox.height - followingBox.height + 1
+      );
+    })
+    .toBe(true);
+
+  for (let index = 0; index < count - 3; index += 1) {
+    await page.keyboard.press("ControlOrMeta+p");
+  }
+  const previousCommand = commands.first();
+  const selectedCommandAbove = commands.nth(1);
+  await expect(selectedCommandAbove).toHaveClass(/text-iris-ink/);
+  await expect
+    .poll(async () => {
+      const listBox = await commandList.boundingBox();
+      const previousBox = await previousCommand.boundingBox();
+      const selectedBox = await selectedCommandAbove.boundingBox();
+      if (!listBox || !previousBox || !selectedBox) return false;
+      return selectedBox.y >= listBox.y + previousBox.height - 1;
+    })
+    .toBe(true);
+});
+
+test("keeps a following file visible while moving through file search", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 400 });
+  await page.goto(`/room/e2e-file-search-scroll-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await page.locator(".cm-content").focus();
+  await page.keyboard.press("ControlOrMeta+P");
+
+  const fileList = page.getByRole("dialog").getByRole("listbox");
+  const files = fileList.getByRole("option");
+  const count = await files.count();
+  expect(count).toBeGreaterThan(2);
+  for (let index = 0; index < count - 2; index += 1) {
+    await page.keyboard.press("ArrowDown");
+  }
+
+  const selectedFile = files.nth(count - 2);
+  const followingFile = files.last();
+  await expect(selectedFile).toHaveAttribute("aria-selected", "true");
+  await expect.poll(() => fileList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(async () => {
+      const listBox = await fileList.boundingBox();
+      const selectedBox = await selectedFile.boundingBox();
+      const followingBox = await followingFile.boundingBox();
+      if (!listBox || !selectedBox || !followingBox) return false;
+      return (
+        selectedBox.y + selectedBox.height <= listBox.y + listBox.height - followingBox.height + 1
+      );
+    })
+    .toBe(true);
+
+  for (let index = 0; index < count - 3; index += 1) {
+    await page.keyboard.press("ArrowUp");
+  }
+  const previousFile = files.first();
+  const selectedFileAbove = files.nth(1);
+  await expect(selectedFileAbove).toHaveAttribute("aria-selected", "true");
+  await expect
+    .poll(async () => {
+      const listBox = await fileList.boundingBox();
+      const previousBox = await previousFile.boundingBox();
+      const selectedBox = await selectedFileAbove.boundingBox();
+      if (!listBox || !previousBox || !selectedBox) return false;
+      return selectedBox.y >= listBox.y + previousBox.height - 1;
+    })
+    .toBe(true);
 });
 
 test("uses the active workspace theme", async ({ page }) => {
