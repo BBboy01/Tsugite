@@ -277,6 +277,7 @@ export const CommandPalette = memo(function CommandPalette({
                 setSelectedIndex(0);
               }}
               onBack={submenu ? returnToRoot : undefined}
+              onEscape={handleEscape}
               onActivate={activate}
               onMoveSelection={moveSelection}
             />

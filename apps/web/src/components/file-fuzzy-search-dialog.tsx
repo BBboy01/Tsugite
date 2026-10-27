@@ -109,7 +109,10 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
                 setSelected(0);
               }}
               onKeyDown={(event) => {
-                if (event.key === "ArrowDown") {
+                if (event.key === "Escape") {
+                  event.preventDefault();
+                  handleEscape(event);
+                } else if (event.key === "ArrowDown") {
                   event.preventDefault();
                   moveSelection(1);
                 } else if (event.key === "ArrowUp") {
