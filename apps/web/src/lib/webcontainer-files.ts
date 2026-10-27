@@ -14,6 +14,10 @@ export type PreviewScriptResult =
 
 const BROKEN_ROLLDOWN_VERSION = "1.2.9";
 const WEBCONTAINER_ROLLDOWN_VERSION = "1.2.8";
+const VITE_8_MAJOR_VERSION = "8";
+const PLUGIN_REACT_6_MAJOR_VERSION = "6";
+const STARTER_VITE_VERSION = "7.3.7";
+const STARTER_PLUGIN_REACT_VERSION = "5.2.0";
 
 export function buildFileSystemTree(files: ProjectFile[], folders: string[]): FileSystemTree {
   const tree: FileSystemTree = {};
@@ -48,7 +52,9 @@ export function buildPreviewFileSystemTree(
   if (!packageFile) return tree;
 
   const packageJson = parsePackageJson(packageFile.text.toString());
-  if (!packageJson || !usesVite(packageJson) || managesRolldown(packageJson)) return tree;
+  if (!packageJson) return tree;
+  if (migrateStarterForPreview(tree, files, packageJson)) return tree;
+  if (!usesVite(packageJson) || managesRolldown(packageJson)) return tree;
 
   if (packageManager === "pnpm") {
     if (files.some((file) => file.path === "pnpm-workspace.yaml")) return tree;
@@ -179,6 +185,69 @@ function hasRolldownOverride(overrides: Record<string, unknown>): boolean {
   return Object.keys(overrides).some(
     (selector) => selector === "rolldown" || selector.startsWith("rolldown@"),
   );
+}
+
+function migrateStarterForPreview(
+  tree: FileSystemTree,
+  files: ProjectFile[],
+  packageJson: Record<string, unknown>,
+): boolean {
+  if (!isStarterPackage(packageJson)) return false;
+
+  const devDependencies = packageJson.devDependencies;
+  if (!isRecord(devDependencies)) return false;
+
+  const migratedDevDependencies = { ...devDependencies };
+  const migratedPackageJson: Record<string, unknown> = {
+    ...packageJson,
+    devDependencies: migratedDevDependencies,
+  };
+  migratedDevDependencies["@vitejs/plugin-react"] = STARTER_PLUGIN_REACT_VERSION;
+  migratedDevDependencies.vite = STARTER_VITE_VERSION;
+  for (const field of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+    "peerDependencies",
+  ]) {
+    const dependencies = migratedPackageJson[field];
+    if (!isRecord(dependencies)) continue;
+    for (const name of Object.keys(dependencies)) {
+      if (name === "rolldown" || name.startsWith("@rolldown/binding-")) delete dependencies[name];
+    }
+  }
+  delete migratedPackageJson.overrides;
+  delete migratedPackageJson.resolutions;
+  delete migratedPackageJson.pnpm;
+  tree["package.json"] = packageJsonFile(migratedPackageJson);
+
+  if (files.some((file) => file.path === "pnpm-workspace.yaml")) {
+    tree["pnpm-workspace.yaml"] = {
+      file: { contents: "packages:\n  - .\n" },
+    };
+  }
+
+  return true;
+}
+
+function isStarterPackage(packageJson: Record<string, unknown>): boolean {
+  if (packageJson.name !== "tsugite-room") return false;
+  const dependencies = packageJson.dependencies;
+  const devDependencies = packageJson.devDependencies;
+  if (!isRecord(dependencies) || !isRecord(devDependencies)) return false;
+
+  return (
+    majorVersion(dependencies.react) === "19" &&
+    majorVersion(dependencies["react-dom"]) === "19" &&
+    ["5", PLUGIN_REACT_6_MAJOR_VERSION].includes(
+      majorVersion(devDependencies["@vitejs/plugin-react"]) ?? "",
+    ) &&
+    ["7", VITE_8_MAJOR_VERSION].includes(majorVersion(devDependencies.vite) ?? "")
+  );
+}
+
+function majorVersion(value: unknown): string | undefined {
+  return typeof value === "string" ? value.split(".")[0] : undefined;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {

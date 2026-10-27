@@ -69,7 +69,7 @@ export class PreviewTypeScriptDeclarations {
       if (metadata) {
         const manifest = JSON.parse(metadata.text) as Record<string, unknown>;
         const paths = new Set(files.map(({ path }) => path));
-        for (const field of ["dependencies", "devDependencies"]) {
+        for (const field of ["dependencies"]) {
           const dependencies = manifest[field];
           if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies))
             continue;
