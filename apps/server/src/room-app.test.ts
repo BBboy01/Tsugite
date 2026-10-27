@@ -103,7 +103,7 @@ test("closes oversized frames before importing their contents", async () => {
   const before = rooms.getDocument("demo")!.toJSON();
   client.ws.send(new Uint8Array(257));
   await waitFor(() => client.ws.readyState === WebSocket.CLOSED);
-  expect((await client.closed).code).toBe(1006);
+  expect((await client.closed).code).toBe(1009);
   expect(rooms.getDocument("demo")!.toJSON()).toEqual(before);
 });
 
