@@ -28,6 +28,23 @@ for (const vimMode of [false, true]) {
   }
 }
 
+for (const [shortcut, placeholder] of [
+  ["ControlOrMeta+P", "Search files..."],
+  ["ControlOrMeta+K", "Search commands..."],
+]) {
+  test(`one immediate Escape closes ${placeholder} before focus settles`, async ({ page }) => {
+    await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+    await page.goto(`/room/e2e-immediate-dialog-escape-${crypto.randomUUID()}`);
+    const editor = page.locator(".cm-content");
+    await expect(editor).toBeFocused();
+    await page.keyboard.press(shortcut);
+    await page.keyboard.press("Escape");
+    await expect(page.getByPlaceholder(placeholder)).toHaveCount(0);
+    await expect(page.getByRole("dialog")).toBeHidden();
+    await expect(editor).toBeFocused();
+  });
+}
+
 for (const shortcut of ["Control+P", "ControlOrMeta+Shift+P"]) {
   test(`one immediate Escape dismisses custom shortcut ${shortcut}`, async ({ page }) => {
     await page.addInitScript(() => {

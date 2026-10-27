@@ -12,6 +12,7 @@ type CommandPaletteSearchProps = {
   selectedIndex: number;
   onQueryChange: (value: string) => void;
   onBack?: () => void;
+  onEscape: (event: KeyboardEvent<HTMLInputElement>) => void;
   onActivate: (command: PaletteCommand) => void;
   onMoveSelection: (offset: number) => void;
 };
@@ -25,10 +26,15 @@ export function CommandPaletteSearch({
   selectedIndex,
   onQueryChange,
   onBack,
+  onEscape,
   onActivate,
   onMoveSelection,
 }: CommandPaletteSearchProps) {
   const handleKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === "Escape") {
+      onEscape(event);
+      return;
+    }
     if (event.key === "Enter") {
       event.preventDefault();
       const command = commands[selectedIndex];

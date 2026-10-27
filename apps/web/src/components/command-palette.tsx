@@ -59,6 +59,7 @@ export const CommandPalette = memo(function CommandPalette({
   const [systemClipboard, setSystemClipboard] = useSystemClipboard();
   const inputRef = useRef<HTMLInputElement>(null);
   const shouldReturnFocusRef = useRef(true);
+  const escapeHandledRef = useRef(false);
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [submenu, setSubmenu] = useState<Submenu | null>(null);
@@ -128,6 +129,18 @@ export const CommandPalette = memo(function CommandPalette({
   };
 
   const closePalette = () => handleOpenChange(false);
+
+  const handleEscape = (event: { preventDefault: () => void; stopPropagation?: () => void }) => {
+    if (escapeHandledRef.current) return;
+    escapeHandledRef.current = true;
+    queueMicrotask(() => {
+      escapeHandledRef.current = false;
+    });
+    event.preventDefault();
+    event.stopPropagation?.();
+    if (submenu) returnToRoot();
+    else closePalette();
+  };
 
   const activate = (command: PaletteCommand) => {
     switch (command.scope) {
@@ -242,13 +255,9 @@ export const CommandPalette = memo(function CommandPalette({
             onCloseAutoFocus={(event) => {
               event.preventDefault();
             }}
-            onEscapeKeyDown={(event) => event.preventDefault()}
+            onEscapeKeyDown={handleEscape}
             onKeyDownCapture={(event) => {
-              if (event.key !== "Escape") return;
-              event.preventDefault();
-              event.stopPropagation();
-              if (submenu) returnToRoot();
-              else closePalette();
+              if (event.key === "Escape") handleEscape(event);
             }}
           >
             <Dialog.Title className="sr-only">{t("command.title")}</Dialog.Title>
@@ -268,6 +277,7 @@ export const CommandPalette = memo(function CommandPalette({
                 setSelectedIndex(0);
               }}
               onBack={submenu ? returnToRoot : undefined}
+              onEscape={handleEscape}
               onActivate={activate}
               onMoveSelection={moveSelection}
             />

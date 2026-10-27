@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 
 import type { PaletteCommand } from "@/lib/command-palette-model";
+import { keepSelectionVisible } from "@/lib/selection-scroll";
 
 export function useCommandPaletteSelectionScroll(
   commands: PaletteCommand[],
@@ -17,13 +18,12 @@ export function useCommandPaletteSelectionScroll(
       return;
     }
 
-    const listBounds = commandList.getBoundingClientRect();
-    const commandBounds = command.getBoundingClientRect();
-    if (commandBounds.top < listBounds.top) {
-      commandList.scrollTop -= listBounds.top - commandBounds.top;
-    } else if (commandBounds.bottom > listBounds.bottom) {
-      commandList.scrollTop += commandBounds.bottom - listBounds.bottom;
-    }
+    keepSelectionVisible(
+      commandList,
+      command,
+      selectedIndex > 0,
+      selectedIndex < commands.length - 1,
+    );
   }, [commands, selectedIndex]);
 
   return {
