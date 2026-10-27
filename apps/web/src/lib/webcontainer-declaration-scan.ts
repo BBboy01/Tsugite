@@ -306,12 +306,17 @@ async function walk(directory, virtual, names, seen) {
     }
   }
 }
+const toolingPackages = new Set(["@tailwindcss/vite", "@vitejs/plugin-react", "tailwindcss", "typescript", "vite"]);
+function isToolingPackage(name) { return toolingPackages.has(name); }
 async function main() {
   root = await fs.realpath(process.cwd()); modules = path.join(root, "node_modules");
   const metadata = await read(path.join(root, "package.json"), "package.json", root, true);
   for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
     if (metadata[field] && typeof metadata[field] === "object" && !Array.isArray(metadata[field])) {
-      for (const name of Object.keys(metadata[field])) request(name, undefined);
+      for (const name of Object.keys(metadata[field])) {
+        if (field === "devDependencies" && isToolingPackage(name)) continue;
+        request(name, undefined);
+      }
     }
   }
   const sourceArgument = process.argv[1];
@@ -325,7 +330,11 @@ async function main() {
       const size = Buffer.byteLength(source.text);
       sourceBytes += size;
       if (size > 1048576 || sourceBytes > 16777216) throw new Error("Declaration source request limit exceeded");
-      for (const name of references(source.text, sourceImports)) request(name, undefined);
+      const imports = references(source.text, source.path === "vite.config.ts" ? undefined : sourceImports);
+      for (const name of imports) {
+        if (source.path === "vite.config.ts" && isToolingPackage(name)) continue;
+        request(name, undefined);
+      }
     }
   }
   for (let index = 0; index < queue.length; index++) {

@@ -157,6 +157,21 @@ test("missing required packages do not appear as successfully loaded declaration
   expect(sink.current()).toEqual({ state: "unavailable", files: [] });
 });
 
+test("does not require unscanned development tooling metadata", async () => {
+  const sink = target();
+  const sync = new PreviewTypeScriptDeclarations(sink);
+  const files = [
+    {
+      path: "package.json",
+      text: '{"dependencies":{"pkg":"1"},"devDependencies":{"vite":"1"}}',
+    },
+    { path: "node_modules/pkg/package.json", text: "{}" },
+    ...declarations,
+  ];
+  await sync.onRuntimeState("paused", { readTypeScriptDeclarations: async () => files });
+  expect(sink.current()).toEqual({ state: "ready", files });
+});
+
 test("missing optional packages do not block available project types", async () => {
   const sink = target();
   const sync = new PreviewTypeScriptDeclarations(sink);

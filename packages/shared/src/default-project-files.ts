@@ -17,35 +17,24 @@ export const DEFAULT_FILES: Array<{
     "dev": "vite --host 0.0.0.0"
   },
   "dependencies": {
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@tailwindcss/vite": "4.3.3",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
-    "@vitejs/plugin-react": "6.1.1",
+    "@vitejs/plugin-react": "5.2.0",
     "tailwindcss": "4.3.3",
     "typescript": "7.0.2",
-    "vite": "8.3.0"
-  },
-  "overrides": {
-    "rolldown": "1.2.8"
-  },
-  "resolutions": {
-    "rolldown": "1.2.8"
-  },
-  "pnpm": {
-    "overrides": {
-      "rolldown": "1.2.8"
-    }
+    "vite": "7.3.7"
   }
 }`,
   },
   {
     path: "pnpm-workspace.yaml",
     language: "javascript",
-    source: "packages:\n  - .\noverrides:\n  rolldown: 1.2.8\n",
+    source: "packages:\n  - .\n",
   },
   {
     path: "index.html",

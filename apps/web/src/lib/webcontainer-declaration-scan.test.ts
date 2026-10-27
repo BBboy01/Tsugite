@@ -181,16 +181,21 @@ test("reports an imported JavaScript package without declarations as unavailable
   );
 });
 
-test("reports absent imported packages but does not require types for unimported tooling", async () => {
+test("does not scan default tooling but keeps ambient development packages", async () => {
   await fixture(
     {
-      "package.json": '{"devDependencies":{"tool":"1"},"optionalDependencies":{"missing":"1"}}',
+      "package.json":
+        '{"devDependencies":{"tool":"1","vite":"1"},"optionalDependencies":{"missing":"1"}}',
       "node_modules/tool/package.json": '{"main":"index.js"}',
+      "node_modules/vite/package.json": '{"types":"index.d.ts"}',
+      "node_modules/vite/index.d.ts": "export {};",
     },
     async (root) => {
-      expect((await scan(root)).map((file) => file.path)).toContain(
-        "node_modules/tool/package.json",
-      );
+      const paths = (
+        await scan(root, [{ path: "vite.config.ts", text: 'import { defineConfig } from "vite";' }])
+      ).map((file) => file.path);
+      expect(paths).toContain("node_modules/tool/package.json");
+      expect(paths).not.toContain("node_modules/vite/index.d.ts");
       await expect(scan(root, [{ path: "app.ts", text: 'import "missing";' }])).rejects.toThrow(
         "TypeScript declarations missing: missing",
       );

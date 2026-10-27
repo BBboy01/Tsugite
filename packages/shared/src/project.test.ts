@@ -34,12 +34,20 @@ test("bootstraps the shared project with files and settings", () => {
   const manifest = JSON.parse(getFileByPath(doc, "package.json")!.text.toString());
   expect(manifest.name).toBe("tsugite-room");
   expect(manifest.scripts.dev).toBe("vite --host 0.0.0.0");
+  expect(manifest.dependencies.react).toBe("19.3.1");
+  expect(manifest.dependencies["react-dom"]).toBe("19.3.1");
+  expect(manifest.devDependencies["@vitejs/plugin-react"]).toBe("5.2.0");
+  expect(manifest.devDependencies.vite).toBe("7.3.7");
+  expect(manifest).not.toHaveProperty("overrides");
+  expect(manifest).not.toHaveProperty("resolutions");
+  expect(manifest).not.toHaveProperty("pnpm");
   for (const version of Object.values({ ...manifest.dependencies, ...manifest.devDependencies })) {
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   }
   expect(getFileByPath(doc, "index.html")?.text.toString()).toContain(
     "<title>Tsugite React workspace</title>",
   );
+  expect(getFileByPath(doc, "pnpm-workspace.yaml")?.text.toString()).toBe("packages:\n  - .\n");
   expect(getFileByPath(doc, "index.html")?.text.toString()).toContain("/src/main.tsx");
   expect(getFileByPath(doc, "src/App.tsx")?.text.toString()).toContain("Tsugite workspace");
   expect(getFileByPath(doc, "src/main.tsx")?.text.toString()).toContain("<App />");
