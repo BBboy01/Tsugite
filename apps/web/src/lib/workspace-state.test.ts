@@ -42,6 +42,109 @@ test("closing the active tab picks the right neighbor and exits follow mode", ()
   expect(next.followingUserId).toBeNull();
 });
 
+test("reordering tabs preserves the active file and follow mode", () => {
+  const state = {
+    ...initial,
+    selectedPath: "b.ts",
+    openTabPaths: ["a.ts", "b.ts", "c.ts"],
+  };
+  const next = reduceWorkspaceState(state, {
+    type: "reorder-tabs",
+    paths: ["c.ts", "a.ts", "b.ts"],
+  });
+
+  expect(next).toEqual({ ...state, openTabPaths: ["c.ts", "a.ts", "b.ts"] });
+  expect(state.openTabPaths).toEqual(["a.ts", "b.ts", "c.ts"]);
+});
+
+test.each([
+  ["missing a newly opened tab", ["b.ts", "a.ts"]],
+  ["including a deleted tab", ["d.ts", "a.ts", "b.ts"]],
+  ["duplicating a tab", ["b.ts", "a.ts", "a.ts"]],
+  ["leaving the order unchanged", ["a.ts", "b.ts", "c.ts"]],
+] satisfies [string, string[]][])("ignores a tab reorder %s", (_, paths) => {
+  const state = { ...initial, selectedPath: "b.ts", openTabPaths: ["a.ts", "b.ts", "c.ts"] };
+  expect(reduceWorkspaceState(state, { type: "reorder-tabs", paths })).toBe(state);
+});
+
+test("closing other tabs uses the target tab and exits follow mode", () => {
+  const state = {
+    ...initial,
+    selectedPath: "b.ts",
+    openTabPaths: ["a.ts", "b.ts", "c.ts"],
+  };
+  const next = reduceWorkspaceState(state, {
+    type: "close-tabs",
+    path: "c.ts",
+    mode: "others",
+  });
+
+  expect(next).toEqual({
+    ...state,
+    openTabPaths: ["c.ts"],
+    selectedPath: "c.ts",
+    followingUserId: null,
+  });
+});
+
+test("closing tabs to the right follows the visual order and preserves a surviving active file", () => {
+  const state = {
+    ...initial,
+    selectedPath: "c.ts",
+    openTabPaths: ["c.ts", "a.ts", "b.ts"],
+  };
+  const next = reduceWorkspaceState(state, {
+    type: "close-tabs",
+    path: "a.ts",
+    mode: "right",
+  });
+
+  expect(next).toEqual({
+    ...state,
+    openTabPaths: ["c.ts", "a.ts"],
+    followingUserId: null,
+  });
+});
+
+test.each([
+  ["others", "a.ts", "c.ts", ["a.ts"], "a.ts"],
+  ["others", "c.ts", "a.ts", ["c.ts"], "c.ts"],
+  ["others", "b.ts", "b.ts", ["b.ts"], "b.ts"],
+  ["right", "a.ts", "c.ts", ["a.ts"], "a.ts"],
+  ["right", "b.ts", "c.ts", ["a.ts", "b.ts"], "b.ts"],
+  ["right", "c.ts", "b.ts", ["a.ts", "b.ts", "c.ts"], "b.ts"],
+] satisfies ["others" | "right", string, string, string[], string][])(
+  "closing %s from %s while editing %s selects a surviving neighbor",
+  (mode, path, selectedPath, expectedPaths, expectedSelection) => {
+    const state = { ...initial, selectedPath, openTabPaths: ["a.ts", "b.ts", "c.ts"] };
+    const next = reduceWorkspaceState(state, { type: "close-tabs", path, mode });
+
+    expect(next.openTabPaths).toEqual(expectedPaths);
+    expect(next.selectedPath).toBe(expectedSelection);
+  },
+);
+
+test("closing all tabs clears the active file even when the target has disappeared", () => {
+  const next = reduceWorkspaceState(initial, {
+    type: "close-tabs",
+    path: "missing.ts",
+    mode: "all",
+  });
+
+  expect(next).toEqual({
+    ...initial,
+    openTabPaths: [],
+    selectedPath: "",
+    followingUserId: null,
+  });
+});
+
+test.each(["others", "right"] as const)("ignores closing %s from a missing target", (mode) => {
+  expect(reduceWorkspaceState(initial, { type: "close-tabs", path: "missing.ts", mode })).toBe(
+    initial,
+  );
+});
+
 test("updates selected file and open tabs as one navigation transition", () => {
   const next = reduceWorkspaceState(initial, {
     type: "set-navigation",

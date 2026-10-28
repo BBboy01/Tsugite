@@ -3,6 +3,7 @@ import type { LoroDoc } from "loro-crdt";
 import type { EditorLocation } from "../lib/editor-navigation";
 import type { EditorIntelligence } from "../lib/editor-intelligence";
 import type { ProjectDeclarations } from "../lib/room-typescript-intelligence";
+import type { EditorTabCloseMode } from "../lib/editor-tabs";
 
 export type EditorPaneProps = {
   doc: LoroDoc;
@@ -15,6 +16,8 @@ export type EditorPaneProps = {
   vimMode: boolean;
   onSelectTab: (path: string) => void;
   onCloseTab: (path: string) => void;
+  onCloseTabs: (path: string, mode: EditorTabCloseMode) => void;
+  onReorderTabs: (paths: string[]) => void;
   onCursorChange: (cursor: { anchor: number; head: number }) => void;
   onLocalInteraction: () => void;
   followedSelection: { anchor: number; head: number } | null;

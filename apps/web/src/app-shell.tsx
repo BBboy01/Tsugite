@@ -78,6 +78,8 @@ function AppShellContent({ roomId }: { roomId: string }) {
     handleDisplayNameChange,
     handleColorChange,
     handleCloseTab,
+    handleCloseTabs,
+    handleReorderTabs,
     handleCursorChange,
     handleEditorFocusReady,
   } = useWorkspaceController(roomId);
@@ -265,6 +267,8 @@ function AppShellContent({ roomId }: { roomId: string }) {
                   vimMode={vimMode}
                   onSelectTab={activateFile}
                   onCloseTab={handleCloseTab}
+                  onCloseTabs={handleCloseTabs}
+                  onReorderTabs={handleReorderTabs}
                   onCursorChange={handleCursorChange}
                   onLocalInteraction={handleEditorLocalInteraction}
                   followedSelection={followedSelection}

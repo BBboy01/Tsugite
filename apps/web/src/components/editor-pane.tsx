@@ -48,6 +48,8 @@ export const EditorPane = memo(function EditorPane({
   vimMode,
   onSelectTab,
   onCloseTab,
+  onCloseTabs,
+  onReorderTabs,
   onCursorChange,
   onLocalInteraction,
   followedSelection,
@@ -276,8 +278,11 @@ export const EditorPane = memo(function EditorPane({
     >
       <EditorFileTabs
         tabViewModels={tabViewModels}
+        theme={settings.theme}
         onSelectTab={onSelectTab}
         onCloseTab={onCloseTab}
+        onCloseTabs={onCloseTabs}
+        onReorderTabs={onReorderTabs}
       />
       <EditorContextMenu
         languageAvailable={serviceStatus.state === "ready"}

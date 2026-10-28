@@ -97,15 +97,25 @@ export function useWorkspaceController(roomId: string) {
     };
   }, [clearPresenceTimer, client, selectedPath]);
 
-  const { openFiles, selectedFile, previewFile, selectFile, activateFile, handleCloseTab } =
-    useWorkspaceNavigation({
-      files,
-      selectedPath,
-      openTabPaths,
-      dispatchWorkspace,
-      requestSelectionFocus,
-      beforeSelect: clearPresenceTimer,
-    });
+  const {
+    openFiles,
+    selectedFile,
+    previewFile,
+    selectFile,
+    activateFile,
+    handleCloseTab,
+    handleCloseTabs,
+    handleReorderTabs,
+  } = useWorkspaceNavigation({
+    files,
+    selectedPath,
+    openTabPaths,
+    dispatchWorkspace,
+    requestSelectionFocus,
+    beforeSelect: clearPresenceTimer,
+    roomId,
+    hasReceivedSnapshot,
+  });
 
   const { followedSelection, handleFollowMember } = useWorkspaceFollow({
     currentUserId: client.identity.userId,
@@ -222,6 +232,8 @@ export function useWorkspaceController(roomId: string) {
     handleDisplayNameChange,
     handleColorChange,
     handleCloseTab,
+    handleCloseTabs,
+    handleReorderTabs,
     handleCursorChange,
     handleEditorFocusReady,
   };
