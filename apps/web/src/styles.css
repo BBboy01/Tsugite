@@ -86,10 +86,6 @@
     white-space: nowrap;
   }
 
-  [data-editor-content-ready="false"] .cm-scroller {
-    opacity: 0;
-  }
-
   .iris-editor-status-group {
     align-items: center;
     display: flex;
