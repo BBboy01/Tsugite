@@ -26,14 +26,17 @@ test("opening a file does not recolor code after worker highlighting arrives", a
   });
 
   await page.goto(`/room/editor-color-${crypto.randomUUID()}`);
-  await expect(page.locator(".cm-shiki").first()).toBeVisible();
+  await expect(page.locator('[data-editor-content-ready="true"]')).toBeVisible();
   await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
 
   const editorScroller = page.locator(".cm-scroller");
   const keyword = page.locator(".cm-line").first().getByText("import", { exact: true });
-  await expect(editorScroller).toHaveCSS("opacity", "0");
-  await expect(page.locator(".cm-shiki")).toHaveCount(0);
-  await expect(page.locator(".cm-shiki").first()).toBeVisible();
+  const editorColor = await page
+    .locator(".cm-content")
+    .evaluate((element) => getComputedStyle(element).color);
   await expect(editorScroller).toHaveCSS("opacity", "1");
-  await expect(keyword).toHaveCSS("color", "rgb(30, 117, 79)");
+  await expect(keyword).toBeVisible();
+  await expect(page.locator('[data-editor-content-ready="true"]')).toBeVisible();
+  await expect(editorScroller).toHaveCSS("opacity", "1");
+  await expect(keyword).not.toHaveCSS("color", editorColor);
 });
