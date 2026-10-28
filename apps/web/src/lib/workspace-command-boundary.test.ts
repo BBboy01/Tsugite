@@ -13,6 +13,13 @@ const invalidCommands: [string, unknown, WorkspaceDialog?][] = [
   ["missing activation path", { type: "activate-file" }],
   ["non-string selection", { type: "select-file", path: 42 }],
   ["non-string closed path", { type: "close-tab", path: null }],
+  ["missing reordered tabs", { type: "reorder-tabs" }],
+  ["invalid reordered tab", { type: "reorder-tabs", paths: [42] }],
+  ["sparse reordered tabs", { type: "reorder-tabs", paths: Array(1) }],
+  ["missing bulk close target", { type: "close-tabs", mode: "all" }],
+  ["invalid bulk close target", { type: "close-tabs", path: null, mode: "others" }],
+  ["missing bulk close mode", { type: "close-tabs", path: "src/App.tsx" }],
+  ["unknown bulk close mode", { type: "close-tabs", path: "src/App.tsx", mode: "left" }],
   ["missing selected path", { type: "set-navigation", openTabPaths: [] }],
   ["missing tabs", { type: "set-navigation", selectedPath: "" }],
   ["invalid tab", { type: "set-navigation", selectedPath: "", openTabPaths: [42] }],
@@ -77,6 +84,14 @@ const validCommands = {
     command: { type: "close-tab", path: "src/App.tsx" },
     expected: { selectedPath: "", openTabPaths: [] },
   },
+  "reorder-tabs": {
+    command: { type: "reorder-tabs", paths: ["src/App.tsx"] },
+    expected: { selectedPath: "src/App.tsx", openTabPaths: ["src/App.tsx"] },
+  },
+  "close-tabs": {
+    command: { type: "close-tabs", path: "src/App.tsx", mode: "all" },
+    expected: { selectedPath: "", openTabPaths: [] },
+  },
   "set-navigation": {
     command: { type: "set-navigation", selectedPath: "", openTabPaths: [] },
     expected: { selectedPath: "", openTabPaths: [] },
@@ -122,6 +137,23 @@ test.each(Object.entries(validCommands))("accepts the %s command", (_, { command
   const store = createStore();
   store.set(workspaceCommandAtom, command);
   expect(store.get(workspaceStateAtom)).toMatchObject(expected);
+});
+
+test("publishes a valid tab reorder while preserving selection and follow mode", () => {
+  const store = createStore();
+  store.set(workspaceCommandAtom, {
+    type: "set-navigation",
+    selectedPath: "b.ts",
+    openTabPaths: ["a.ts", "b.ts", "c.ts"],
+  });
+  store.set(workspaceCommandAtom, { type: "set-following", userId: "remote" });
+  store.set(workspaceCommandAtom, { type: "reorder-tabs", paths: ["c.ts", "a.ts", "b.ts"] });
+
+  expect(store.get(workspaceStateAtom)).toMatchObject({
+    selectedPath: "b.ts",
+    openTabPaths: ["c.ts", "a.ts", "b.ts"],
+    followingUserId: "remote",
+  });
 });
 
 test("accepts explicit false and null values when clearing workspace UI", () => {

@@ -1,10 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { ProjectFile } from "@iris/shared";
 
 import type { WorkspaceCommand } from "./workspace-state";
-import { reconcileWorkspaceNavigation } from "./workspace-navigation";
+import { closeEditorTabs, type EditorTabCloseMode } from "./editor-tabs";
+import { EditorTabSession } from "./editor-tab-session";
 
 type WorkspaceNavigationOptions = {
+  roomId: string;
+  hasReceivedSnapshot: boolean;
   files: readonly ProjectFile[];
   selectedPath: string;
   openTabPaths: readonly string[];
@@ -14,6 +17,8 @@ type WorkspaceNavigationOptions = {
 };
 
 export function useWorkspaceNavigation({
+  roomId,
+  hasReceivedSnapshot,
   files,
   selectedPath,
   openTabPaths,
@@ -21,7 +26,7 @@ export function useWorkspaceNavigation({
   requestSelectionFocus,
   beforeSelect,
 }: WorkspaceNavigationOptions) {
-  const previousFilePathsRef = useRef(new Map<string, string>());
+  const tabSession = useMemo(() => new EditorTabSession(roomId), [roomId]);
   const filesByPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
   const selectedFile = useMemo(() => filesByPath.get(selectedPath), [filesByPath, selectedPath]);
   const previewFile =
@@ -32,26 +37,20 @@ export function useWorkspaceNavigation({
   );
 
   useEffect(() => {
-    if (files.length === 0 && previousFilePathsRef.current.size === 0) return;
-    const next = reconcileWorkspaceNavigation(
+    const next = tabSession.synchronize({
       files,
       openTabPaths,
       selectedPath,
-      previousFilePathsRef.current,
-    );
-    previousFilePathsRef.current = next.currentFilePaths;
-
-    const tabsChanged =
-      next.openTabPaths.length !== openTabPaths.length ||
-      next.openTabPaths.some((path, index) => path !== openTabPaths[index]);
-    if (tabsChanged || next.selectedPath !== selectedPath) {
+      hasReceivedSnapshot,
+    });
+    if (next) {
       dispatchWorkspace({
         type: "set-navigation",
         selectedPath: next.selectedPath,
         openTabPaths: next.openTabPaths,
       });
     }
-  }, [dispatchWorkspace, files, openTabPaths, selectedPath]);
+  }, [dispatchWorkspace, files, hasReceivedSnapshot, openTabPaths, selectedPath, tabSession]);
 
   const selectFile = useCallback(
     (path: string) => {
@@ -80,5 +79,30 @@ export function useWorkspaceNavigation({
     [beforeSelect, dispatchWorkspace, requestSelectionFocus, selectedPath],
   );
 
-  return { openFiles, selectedFile, previewFile, selectFile, activateFile, handleCloseTab };
+  const handleCloseTabs = useCallback(
+    (path: string, mode: EditorTabCloseMode) => {
+      const result = closeEditorTabs([...openTabPaths], path, selectedPath, mode);
+      const selectionChanged = result.nextPath !== selectedPath;
+      if (selectionChanged) beforeSelect?.();
+      dispatchWorkspace({ type: "close-tabs", path, mode });
+      if (selectionChanged) requestSelectionFocus();
+    },
+    [beforeSelect, dispatchWorkspace, openTabPaths, requestSelectionFocus, selectedPath],
+  );
+
+  const handleReorderTabs = useCallback(
+    (paths: string[]) => dispatchWorkspace({ type: "reorder-tabs", paths }),
+    [dispatchWorkspace],
+  );
+
+  return {
+    openFiles,
+    selectedFile,
+    previewFile,
+    selectFile,
+    activateFile,
+    handleCloseTab,
+    handleCloseTabs,
+    handleReorderTabs,
+  };
 }

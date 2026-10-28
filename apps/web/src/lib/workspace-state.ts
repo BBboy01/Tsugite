@@ -1,4 +1,10 @@
-import { closeEditorTab, openEditorTab } from "./editor-tabs";
+import {
+  closeEditorTab,
+  closeEditorTabs,
+  openEditorTab,
+  reorderEditorTabs,
+  type EditorTabCloseMode,
+} from "./editor-tabs";
 import { toggleMobileWorkspacePanel, type MobileWorkspacePanel } from "./workspace-layout-model";
 
 export type WorkspaceDialog = "settings" | "fileSearch" | "commandPalette";
@@ -16,6 +22,8 @@ export type WorkspaceCommand =
   | { type: "activate-file"; path: string }
   | { type: "select-file"; path: string }
   | { type: "close-tab"; path: string }
+  | { type: "reorder-tabs"; paths: string[] }
+  | { type: "close-tabs"; path: string; mode: EditorTabCloseMode }
   | { type: "set-navigation"; selectedPath: string; openTabPaths: string[] }
   | { type: "set-following"; userId: string | null }
   | { type: "set-mobile-panel"; panel: MobileWorkspacePanel }
@@ -34,6 +42,17 @@ export function isWorkspaceCommand(value: unknown): value is WorkspaceCommand {
     case "select-file":
     case "close-tab":
       return typeof command.path === "string";
+    case "reorder-tabs":
+      if (!Array.isArray(command.paths)) return false;
+      for (const path of command.paths) {
+        if (typeof path !== "string") return false;
+      }
+      return true;
+    case "close-tabs":
+      return (
+        typeof command.path === "string" &&
+        (command.mode === "others" || command.mode === "right" || command.mode === "all")
+      );
     case "set-navigation":
       if (typeof command.selectedPath !== "string" || !Array.isArray(command.openTabPaths)) {
         return false;
@@ -84,6 +103,25 @@ export function reduceWorkspaceState(
       };
     case "close-tab": {
       const result = closeEditorTab(state.openTabPaths, command.path, state.selectedPath);
+      return {
+        ...state,
+        selectedPath: result.nextPath,
+        openTabPaths: result.paths,
+        followingUserId: null,
+      };
+    }
+    case "reorder-tabs": {
+      const paths = reorderEditorTabs(state.openTabPaths, command.paths);
+      return paths === state.openTabPaths ? state : { ...state, openTabPaths: paths };
+    }
+    case "close-tabs": {
+      if (command.mode !== "all" && !state.openTabPaths.includes(command.path)) return state;
+      const result = closeEditorTabs(
+        state.openTabPaths,
+        command.path,
+        state.selectedPath,
+        command.mode,
+      );
       return {
         ...state,
         selectedPath: result.nextPath,

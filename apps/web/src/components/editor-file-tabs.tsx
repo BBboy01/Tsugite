@@ -1,91 +1,93 @@
-import { X } from "lucide-react";
+import { Reorder } from "motion/react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import type { WorkspaceTheme } from "@iris/shared";
 import type { buildEditorTabViewModels } from "../lib/editor-tab-model";
-import { FileTypeIcon } from "../lib/file-icon";
+import type { EditorTabCloseMode } from "../lib/editor-tabs";
 import { EditorTabs } from "./editor-tabs";
+import { EditorFileTab } from "./editor-file-tab";
+
+export type EditorFileTabsProps = {
+  tabViewModels: ReturnType<typeof buildEditorTabViewModels>;
+  theme: WorkspaceTheme;
+  onSelectTab: (path: string) => void;
+  onCloseTab: (path: string) => void;
+  onCloseTabs: (path: string, mode: EditorTabCloseMode) => void;
+  onReorderTabs: (paths: string[]) => void;
+};
 
 export function EditorFileTabs({
   tabViewModels,
+  theme,
   onSelectTab,
   onCloseTab,
-}: {
-  tabViewModels: ReturnType<typeof buildEditorTabViewModels>;
-  onSelectTab: (path: string) => void;
-  onCloseTab: (path: string) => void;
-}) {
+  onCloseTabs,
+  onReorderTabs,
+}: EditorFileTabsProps) {
   const { t } = useTranslation();
   const activePath = tabViewModels.find((tab) => tab.active)?.file.path;
   const [focusedPath, setFocusedPath] = useState<string>();
-  const tabStopPath = tabViewModels.some((tab) => tab.file.path === focusedPath)
-    ? focusedPath
-    : activePath;
+  const [copyError, setCopyError] = useState(false);
+  const paths = tabViewModels.map((tab) => tab.file.path);
+  const tabStopPath = paths.includes(focusedPath ?? "") ? focusedPath : activePath;
+  const copyPath = async (path: string) => {
+    setCopyError(false);
+    try {
+      await navigator.clipboard.writeText(path);
+    } catch {
+      setCopyError(true);
+    }
+  };
+
   return (
-    <EditorTabs label={t("editor.openFiles")} activeValue={activePath}>
-      {tabViewModels.map(({ file: tab, label, active, collaboratorCount }) => {
-        return (
-          <div
-            className={`group flex h-[30px] shrink-0 items-center rounded-lg font-iris-mono text-[10px] leading-none transition-[background-color] duration-150 ease-out ${
-              active
-                ? "bg-[color-mix(in_srgb,var(--accent)_18%,var(--editor-surface))] text-iris-ink shadow-[0_1px_2px_rgba(75,67,45,0.06)]"
-                : "text-[var(--text-dimmed)] hover:bg-[color-mix(in_srgb,var(--accent)_14%,var(--editor-surface))] hover:text-iris-ink"
-            }`}
-            key={tab.id}
-          >
-            <button
-              className="flex h-full min-w-0 max-w-[min(32vw,220px)] items-center gap-2 overflow-hidden rounded-l-lg border-0 bg-transparent px-2.5 text-left text-inherit transition-none focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--focus-ring)] max-[760px]:max-w-[180px] max-[760px]:px-2"
-              type="button"
-              role="tab"
-              aria-selected={active}
-              tabIndex={tab.path === tabStopPath ? 0 : -1}
-              onFocus={() => setFocusedPath(tab.path)}
+    <div>
+      <EditorTabs label={t("editor.openFiles")} activeValue={activePath}>
+        <Reorder.Group
+          as="div"
+          axis="x"
+          values={paths}
+          onReorder={onReorderTabs}
+          className="flex min-w-max items-center gap-1"
+        >
+          {tabViewModels.map((tab, index) => (
+            <EditorFileTab
+              key={tab.file.id}
+              tab={tab}
+              theme={theme}
+              tabStop={tab.file.path === tabStopPath}
+              canCloseOthers={paths.length > 1}
+              canCloseRight={index < paths.length - 1}
+              onFocus={() => setFocusedPath(tab.file.path)}
               onBlur={(event) => {
-                if (
-                  !event.currentTarget.closest('[role="tablist"]')?.contains(event.relatedTarget)
-                ) {
+                if (!event.currentTarget.closest('[role="tablist"]')?.contains(event.relatedTarget))
                   setFocusedPath(undefined);
-                }
               }}
-              aria-label={
-                collaboratorCount > 0
-                  ? `${tab.path}, ${t("editor.collaboratorsInFile", { count: collaboratorCount })}`
-                  : tab.path
-              }
-              title={tab.path}
-              onClick={() => onSelectTab(tab.path)}
-            >
-              <FileTypeIcon
-                path={tab.path}
-                className="shrink-0 text-[var(--accent)]"
-                width="12"
-                height="12"
-              />
-              <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>
-                {label}
-              </span>
-              {collaboratorCount > 0 && (
-                <span
-                  className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] px-1 font-iris-mono text-[9px] leading-none text-[var(--accent-deep)]"
-                  data-collaborator-badge={tab.path}
-                  title={t("editor.collaboratorsInFile", { count: collaboratorCount })}
-                  aria-hidden="true"
-                >
-                  +{collaboratorCount}
-                </span>
-              )}
-            </button>
-            <button
-              className="mr-1 grid h-[22px] w-[22px] shrink-0 place-items-center rounded-md border-0 bg-transparent text-[var(--text-dimmed)] opacity-0 transition-none group-hover:opacity-100 focus-visible:opacity-100 hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-[var(--focus-ring-subtle)]"
-              type="button"
-              aria-label={t("editor.closeFile", { path: tab.path })}
-              title={t("editor.closeFile", { path: tab.path })}
-              onClick={() => onCloseTab(tab.path)}
-            >
-              <X width="13" height="13" />
-            </button>
-          </div>
-        );
-      })}
-    </EditorTabs>
+              onSelect={() => onSelectTab(tab.file.path)}
+              onClose={() => onCloseTab(tab.file.path)}
+              onCloseTabs={(mode) => onCloseTabs(tab.file.path, mode)}
+              onCopyPath={() => void copyPath(tab.file.path)}
+              onMove={(direction) => {
+                const nextIndex = index + direction;
+                if (nextIndex < 0 || nextIndex >= paths.length) return;
+                const next = [...paths];
+                [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+                onReorderTabs(next);
+              }}
+            />
+          ))}
+        </Reorder.Group>
+      </EditorTabs>
+      {copyError && (
+        <p
+          role="alert"
+          className="m-0 flex items-center justify-between gap-2 border-t border-iris-divider px-3 py-1 font-iris-mono text-xs text-iris-ink"
+        >
+          {t("editor.tabs.copyFailed")}
+          <button type="button" onClick={() => setCopyError(false)}>
+            {t("editor.context.dismiss")}
+          </button>
+        </p>
+      )}
+    </div>
   );
 }

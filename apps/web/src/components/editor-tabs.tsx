@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef, type ReactNode } from "react";
+import { motion } from "motion/react";
 
 type EditorTabsProps = {
   label: string;
@@ -19,7 +20,8 @@ export function EditorTabs({ label, activeValue, children }: EditorTabsProps) {
   }, [activeValue]);
   return (
     <div className="editor-toolbar glass-toolbar flex h-12 min-w-0 flex-none items-center px-4 max-[760px]:h-11 max-[760px]:px-3">
-      <div
+      <motion.div
+        layoutScroll
         ref={listRef}
         className="min-w-0 flex-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         role="tablist"
@@ -45,8 +47,8 @@ export function EditorTabs({ label, activeValue, children }: EditorTabsProps) {
           });
         }}
       >
-        <div className="flex min-w-max items-center gap-1">{children}</div>
-      </div>
+        {children}
+      </motion.div>
     </div>
   );
 }
