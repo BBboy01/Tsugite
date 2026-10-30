@@ -25,6 +25,7 @@
 }
 
 :root {
+  --files-panel-transition: 260ms cubic-bezier(0.4, 0, 1, 1);
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
   color: #343438;
@@ -306,6 +307,83 @@
 .glass-header {
   background-color: var(--editor-surface) !important;
   box-shadow: none;
+}
+
+.workspace-layout-grid {
+  transition: grid-template-columns var(--files-panel-transition);
+}
+
+.workspace-files-content {
+  transition: transform var(--files-panel-transition);
+}
+
+[data-panel="files"][data-files-collapsed="true"] .workspace-files-content {
+  transform: translateX(-100%);
+}
+
+.workspace-layout[data-resizing="true"] .workspace-layout-grid,
+.workspace-layout-grid:has([data-resize-side]:focus) {
+  transition: none;
+}
+
+.workspace-layout[data-resizing="true"] .workspace-files-content {
+  transition: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .workspace-layout-grid {
+    transition: none;
+  }
+
+  .workspace-files-content {
+    transition: none;
+  }
+}
+
+[data-header-files-region] {
+  background-color: var(--editor-surface);
+}
+
+[data-header-files-region]::before {
+  position: absolute;
+  z-index: -1;
+  background-color: var(--rail-surface);
+  background-image: linear-gradient(var(--glass-surface), var(--glass-surface));
+  border-inline-end: 1px solid var(--divider);
+  opacity: 1;
+  transform: scaleX(1);
+  transform-origin: left center;
+  content: "";
+  inset: 0;
+  inset-inline-end: -1px;
+  pointer-events: none;
+  transition: transform var(--files-panel-transition);
+}
+
+[data-header-files-region][data-files-collapsed="true"]::before {
+  transform: scaleX(0);
+}
+
+@media (max-width: 760px) {
+  [data-header-files-region]::before {
+    transform: scaleX(0);
+  }
+}
+
+[data-header-files-region] button[aria-expanded="true"] {
+  background-color: color-mix(in srgb, var(--accent) 14%, var(--canvas));
+  color: var(--ink-strong);
+}
+
+[data-header-files-region] button[aria-expanded="true"]:is(:hover, :focus-visible) {
+  background-color: color-mix(in srgb, var(--accent) 22%, var(--canvas));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-header-files-region],
+  [data-header-files-region]::before {
+    transition: none;
+  }
 }
 
 .preview-panel.glass-panel {

@@ -31,6 +31,9 @@ type FileTreeNodesProps = {
   onInlineCancel: () => void;
   onDeleteConfirm: () => void;
   onDeleteCancel: () => void;
+  isVisible: boolean;
+  preservedScrollTop: number;
+  onScrollTopChange?: (scrollTop: number) => void;
 };
 
 export function FileTreeNodes({
@@ -49,8 +52,14 @@ export function FileTreeNodes({
   onInlineCancel,
   onDeleteConfirm,
   onDeleteCancel,
+  isVisible,
+  preservedScrollTop,
+  onScrollTopChange,
 }: FileTreeNodesProps) {
   const scrollRef = useRef<HTMLDivElement>(null);
+  const wasVisible = useRef(isVisible);
+  const visibilityRef = useRef(isVisible);
+  visibilityRef.current = isVisible;
   const pendingFocusKey = useRef<string | null>(null);
   const typeahead = useRef({ value: "", timer: 0 });
   const [focusedKey, setFocusedKey] = useState<string | null>(null);
@@ -76,6 +85,7 @@ export function FileTreeNodes({
         : (rows.find((row) => row.kind !== "create")?.key ?? "");
   useEffect(() => () => window.clearTimeout(typeahead.current.timer), []);
   const virtualizer = useVirtualizer({
+    enabled: isVisible,
     count: rows.length,
     getScrollElement: () => scrollRef.current,
     estimateSize: (index) => (rows[index]?.kind === "file" ? 30 : 32),
@@ -114,6 +124,19 @@ export function FileTreeNodes({
     },
   });
   const virtualItems = virtualizer.getVirtualItems();
+
+  useEffect(() => {
+    if (!isVisible) {
+      wasVisible.current = false;
+      return;
+    }
+    if (wasVisible.current) return;
+    const timer = window.setTimeout(() => {
+      if (scrollRef.current) scrollRef.current.scrollTop = preservedScrollTop;
+    }, 0);
+    wasVisible.current = true;
+    return () => window.clearTimeout(timer);
+  }, [isVisible, preservedScrollTop]);
 
   useLayoutEffect(() => {
     const key = pendingFocusKey.current;
@@ -265,6 +288,9 @@ export function FileTreeNodes({
       aria-label={label}
       data-total-rows={rows.length}
       className="min-h-0 flex-1 overflow-auto px-2.5 pb-5 pt-1"
+      onScroll={(event) => {
+        if (visibilityRef.current) onScrollTopChange?.(event.currentTarget.scrollTop);
+      }}
       onKeyDown={handleKeyDown}
       onBlurCapture={(event) => {
         if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setFocusedKey(null);

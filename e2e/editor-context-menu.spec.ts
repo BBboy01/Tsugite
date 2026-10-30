@@ -391,7 +391,7 @@ test("renders themed menus and Peek within desktop and narrow viewports", async 
   await page.screenshot({ path: "/tmp/tsugite-editor-peek-desktop.png" });
   await page.keyboard.press("Escape");
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.getByRole("button", { name: "Toggle files panel" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Open files panel" })).toBeVisible();
   await expect(page.locator(".cm-line").filter({ hasText: "console.log" })).toBeVisible();
   await page.locator(".cm-content").click();
   await page.keyboard.press("Shift+F10");

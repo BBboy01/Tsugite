@@ -41,6 +41,9 @@ type FileTreeProps = {
   keymap: KeyBinding[];
   onKeymapChange: (bindings: KeyBinding[]) => void;
   onLanguageChange: (language: LanguageCode) => void;
+  isVisible?: boolean;
+  preservedScrollTop?: number;
+  onScrollTopChange?: (scrollTop: number) => void;
 };
 
 export const FileTree = memo(function FileTree({
@@ -64,6 +67,9 @@ export const FileTree = memo(function FileTree({
   keymap,
   onKeymapChange,
   onLanguageChange,
+  isVisible = true,
+  preservedScrollTop = 0,
+  onScrollTopChange,
 }: FileTreeProps) {
   const { t } = useTranslation();
   const [contextTarget, setContextTarget] = useState<FileTreeTarget>(null);
@@ -211,6 +217,9 @@ export const FileTree = memo(function FileTree({
                 setDeleteTarget(null);
               }}
               onDeleteCancel={() => setDeleteTarget(null)}
+              isVisible={isVisible}
+              preservedScrollTop={preservedScrollTop}
+              onScrollTopChange={onScrollTopChange}
             />
 
             <div className="flex items-center gap-2 px-2.5 pb-2.5 pt-2">
