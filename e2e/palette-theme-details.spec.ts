@@ -86,7 +86,7 @@ test("mobile panel controls use themed hover and keyboard focus surfaces", async
   await page.setViewportSize({ width: 390, height: 800 });
   await openThemedRoom(page, "Dracula");
   const main = page.locator("main");
-  for (const name of ["Toggle files panel", "Toggle preview panel"]) {
+  for (const name of ["Open files panel", "Toggle preview panel"]) {
     const control = page.getByRole("button", { name, exact: true });
     await control.hover();
     await expect(control).toHaveCSS(

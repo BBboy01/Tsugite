@@ -136,8 +136,8 @@ for (const { width, height, fileName, keyboard } of [
     page,
   }) => {
     await page.setViewportSize({ width, height });
-    if (width < 760)
-      await page.getByRole("button", { name: "Toggle files panel", exact: true }).click();
+    if (width <= 760)
+      await page.getByRole("button", { name: "Open files panel", exact: true }).click();
     const sidebar = page.getByRole("complementary", { name: "Project files" });
     await sidebar.getByRole("treeitem", { name: fileName, exact: true }).click({ button: "right" });
     const deleteItem = page.getByRole("menuitem", { name: "Delete", exact: true });
@@ -279,4 +279,81 @@ test("command palette has opaque backgrounds in light and dark themes", async ({
   await page.getByRole("button", { name: "Dracula", exact: true }).hover();
   await expect(dialog).toHaveCSS("background-color", "rgb(40, 42, 54)");
   await page.screenshot({ path: "/tmp/iris-palette-dark-fixed.png" });
+});
+
+test("Header file control keeps the existing narrow-screen drawer behavior", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 844 });
+  await page.getByRole("button", { name: "Collapse files panel", exact: true }).click();
+  await expect(page.getByRole("button", { name: "Expand files panel", exact: true })).toBeFocused();
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  const toggle = page.getByRole("button", { name: "Open files panel", exact: true });
+  const filesPanel = page.locator("#workspace-files-panel");
+
+  await expect(page.locator('button[aria-controls="workspace-files-panel"]')).toHaveCount(1);
+  await expect(toggle).toBeVisible();
+  await expect(toggle).toHaveAttribute("aria-expanded", "false");
+  const region = page.locator("[data-header-files-region]");
+  const mobileRegionBox = await region.boundingBox();
+  const mobileToggleBox = await toggle.boundingBox();
+  const mobileRightInset = await region.evaluate((element) => {
+    const regionStyle = getComputedStyle(element);
+    const button = element.querySelector("button[aria-controls='workspace-files-panel']");
+    if (!button) return Number.POSITIVE_INFINITY;
+    const buttonStyle = getComputedStyle(button);
+    return (
+      Number.parseFloat(regionStyle.paddingRight) +
+      Number.parseFloat(regionStyle.borderRightWidth) +
+      Number.parseFloat(buttonStyle.marginRight)
+    );
+  });
+  expect(mobileRegionBox).not.toBeNull();
+  expect(mobileToggleBox).not.toBeNull();
+  expect(
+    (await page.getByRole("heading", { name: "Tsugite", exact: true }).boundingBox())!.x,
+  ).toBeLessThan(mobileToggleBox!.x);
+  expect(
+    Math.abs(
+      mobileToggleBox!.x +
+        mobileToggleBox!.width -
+        (mobileRegionBox!.x + mobileRegionBox!.width - mobileRightInset),
+    ),
+  ).toBeLessThan(1);
+  await toggle.click();
+  await expect(
+    page.getByRole("button", { name: "Close files panel", exact: true }),
+  ).toHaveAttribute("aria-expanded", "true");
+  await expect(page.getByRole("tree", { name: "Project files" })).toBeVisible();
+  await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
+  await expect(filesPanel).toBeHidden();
+  await expect(page.getByRole("tab", { name: "src/main.tsx", exact: true })).toHaveAttribute(
+    "aria-selected",
+    "true",
+  );
+});
+
+test("Header transitions respect reduced motion", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const region = document.querySelector<HTMLElement>("[data-header-files-region]");
+        const grid = document.querySelector<HTMLElement>(".workspace-layout-grid");
+        const filesContent = document.querySelector<HTMLElement>(".workspace-files-content");
+        if (!region || !grid || !filesContent) return null;
+        return {
+          background: getComputedStyle(region).transitionDuration === "0s",
+          glass: getComputedStyle(region, "::before").transitionDuration === "0s",
+          grid: getComputedStyle(grid).transitionDuration === "0s",
+          filesContent: getComputedStyle(filesContent).transitionDuration === "0s",
+        };
+      }),
+    )
+    .toEqual({
+      background: true,
+      glass: true,
+      grid: true,
+      filesContent: true,
+    });
 });

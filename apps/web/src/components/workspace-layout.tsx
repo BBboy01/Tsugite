@@ -1,7 +1,7 @@
-import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -19,31 +19,37 @@ import {
   type WorkspacePanelWidths,
   type WorkspaceResizeSide,
 } from "../lib/workspace-layout-model";
-import { CollapsedFilesButton, WorkspacePanelFrame } from "./workspace-panel-frame";
+import { WorkspacePanelFrame } from "./workspace-panel-frame";
 
 type WorkspaceLayoutProps = {
   files: ReactNode;
   editor: ReactNode;
   preview: ReactNode;
+  filesCollapsed: boolean;
+  onFilesWidthChange: (width: number) => void;
 };
 
 const STORAGE_KEY = "iris.workspace-panels.v2";
 const LEGACY_STORAGE_KEY = "iris.workspace-layout.v1";
 const KEYBOARD_RESIZE_STEP = 16;
 
-export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps) {
+export function WorkspaceLayout({
+  files,
+  editor,
+  preview,
+  filesCollapsed,
+  onFilesWidthChange,
+}: WorkspaceLayoutProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [containerWidth, setContainerWidth] = useState(1280);
-  const [filesCollapsed, setFilesCollapsed] = useState(false);
   const [preferredWidths, setPreferredWidths] = useState<WorkspacePanelWidths>(readStoredWidths);
   const panelNodes = useMemo(
     () => ({ files, editor, preview }) satisfies Record<WorkspacePanelId, ReactNode>,
     [editor, files, preview],
   );
-  const desktop = containerWidth >= 760;
-  const showCollapsedFilesButton = desktop && filesCollapsed;
+  const desktop = containerWidth > 760;
   const filesShown = !filesCollapsed;
   const resizableWidth = containerWidth;
   const visibleSides = {
@@ -74,6 +80,10 @@ export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps
     window.localStorage.removeItem(LEGACY_STORAGE_KEY);
   }, []);
 
+  useLayoutEffect(() => {
+    onFilesWidthChange(panelWidths.files);
+  }, [onFilesWidthChange, panelWidths.files]);
+
   const updateWidth = (side: WorkspaceResizeSide, nextValue: number) => {
     const nextWidths = constrainWorkspacePanelWidths(
       { ...panelWidths, [side]: nextValue },
@@ -82,12 +92,15 @@ export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps
       side,
     );
     setPreferredWidths(nextWidths);
+    if (side === "files") onFilesWidthChange(nextWidths.files);
   };
 
   const startResize = (side: WorkspaceResizeSide, event: ReactPointerEvent<HTMLDivElement>) => {
     if (event.button !== 0) return;
     event.preventDefault();
     resizeCleanupRef.current?.();
+    const container = containerRef.current;
+    container?.setAttribute("data-resizing", "true");
     const startX = event.clientX;
     const startWidths = panelWidths;
 
@@ -101,6 +114,7 @@ export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps
       window.removeEventListener("pointerup", cleanup);
       window.removeEventListener("pointercancel", cleanup);
       window.removeEventListener("blur", cleanup);
+      container?.removeAttribute("data-resizing");
       resizeCleanupRef.current = null;
     };
 
@@ -122,46 +136,34 @@ export function WorkspaceLayout({ files, editor, preview }: WorkspaceLayoutProps
     updateWidth(side, panelWidths[side] + delta * KEYBOARD_RESIZE_STEP);
   };
 
-  const renderPanel = (panel: WorkspacePanelId, collapsible = false) => (
-    <WorkspacePanelFrame
-      panel={panel}
-      onCollapse={collapsible ? () => setFilesCollapsed(true) : undefined}
-      collapseLabel={t("panel.collapseFiles")}
-    >
-      {panelNodes[panel]}
-    </WorkspacePanelFrame>
+  const renderPanel = (panel: WorkspacePanelId) => (
+    <WorkspacePanelFrame panel={panel}>{panelNodes[panel]}</WorkspacePanelFrame>
   );
 
   return (
     <div ref={containerRef} className="workspace-layout h-full min-h-0 min-w-0 overflow-hidden">
       {desktop ? (
         <div
-          className="relative grid h-full min-h-0 min-w-0 overflow-hidden"
+          className="workspace-layout-grid relative grid h-full min-h-0 min-w-0 overflow-hidden"
+          data-files-collapsed={!filesShown}
           style={{ gridTemplateColumns: desktopColumns }}
         >
-          <AnimatePresence initial={false} mode="popLayout">
-            {filesShown ? (
-              <motion.div
-                key="files"
-                initial={{ opacity: 0, x: -12 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -12 }}
-                transition={{ duration: 0.16, ease: "easeOut" }}
-                data-panel="files"
-                className="min-h-0 min-w-0 overflow-hidden"
-              >
-                {renderPanel("files", true)}
-              </motion.div>
-            ) : null}
-          </AnimatePresence>
+          <div
+            data-panel="files"
+            data-files-collapsed={!filesShown}
+            aria-hidden={!filesShown}
+            inert={!filesShown}
+            className="relative z-10 min-h-0 min-w-0 overflow-visible bg-iris-editor"
+          >
+            <div
+              className="workspace-files-content h-full min-h-0"
+              style={{ width: panelWidths.files }}
+            >
+              {renderPanel("files")}
+            </div>
+          </div>
           <div data-panel="editor" className="relative min-h-0 min-w-0 overflow-hidden">
             {renderPanel("editor")}
-            {showCollapsedFilesButton ? (
-              <CollapsedFilesButton
-                label={t("panel.expandFiles")}
-                onExpand={() => setFilesCollapsed(false)}
-              />
-            ) : null}
           </div>
           <div data-panel="preview" className="min-h-0 min-w-0 overflow-hidden">
             {renderPanel("preview")}
@@ -208,10 +210,7 @@ type DesktopColumnsOptions = {
 };
 
 function buildDesktopColumns({ filesShown, widths }: DesktopColumnsOptions): string {
-  const columns: string[] = [];
-  if (filesShown) columns.push(`${widths.files}px`);
-  columns.push("minmax(0, 1fr)", `${widths.preview}px`);
-  return columns.join(" ");
+  return `${filesShown ? widths.files : 0}px minmax(0, 1fr) ${widths.preview}px`;
 }
 
 type ResizeHandleProps = {

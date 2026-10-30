@@ -14,7 +14,7 @@ test("deletion recovery controls stay inside a narrow viewport", async ({ page }
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/recovery-narrow-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-content")).toBeVisible();
-  await page.getByRole("button", { name: "Toggle files panel", exact: true }).click();
+  await page.getByRole("button", { name: "Open files panel", exact: true }).click();
   await deleteFile(page, "index.css");
   const filesPanel = page.getByRole("complementary", { name: "Project files" });
   await expect(filesPanel).toBeVisible();

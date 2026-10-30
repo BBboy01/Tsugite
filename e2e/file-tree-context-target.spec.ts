@@ -15,7 +15,7 @@ for (const width of [1280, 390]) {
     }, testInfo) => {
       await page.setViewportSize({ width, height: 720 });
       if (width < 760) {
-        await page.getByRole("button", { name: "Toggle files panel", exact: true }).click();
+        await page.getByRole("button", { name: "Open files panel", exact: true }).click();
       }
       const tree = page.getByRole("tree", { name: "Project files" });
       const name = kind === "file" ? "index.css" : "src folder";

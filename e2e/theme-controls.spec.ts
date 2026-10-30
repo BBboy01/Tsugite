@@ -81,7 +81,7 @@ for (const theme of themes) {
     const dialog = await openThemedSettings(page, theme);
     await dialog.getByRole("button", { name: "Close settings" }).click();
     const hoverSurface = await themeColor(page.locator("main"), "--hover-surface");
-    for (const name of ["Toggle files panel", "Toggle preview panel"]) {
+    for (const name of ["Open files panel", "Toggle preview panel"]) {
       const button = page.getByRole("button", { name, exact: true });
       await button.hover();
       await expect.soft(button).toHaveCSS("background-color", hoverSurface);

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { Theme } from "@radix-ui/themes";
 import { Provider } from "jotai";
 import { motion } from "motion/react";
@@ -18,7 +18,9 @@ import { useWorkspaceController } from "./lib/use-workspace-controller";
 import type { EditorLocation } from "./lib/editor-navigation";
 import { useRoomDrafts } from "./lib/use-room-drafts";
 import { RoomDraftRecovery } from "./components/room-draft-recovery";
+import { DEFAULT_WORKSPACE_PANEL_WIDTHS } from "./lib/workspace-layout-model";
 import type { FileDeletionRecovery } from "./lib/file-deletion-recovery";
+import { useFilesBreakpoint } from "./lib/use-files-breakpoint";
 import type { ProjectSettings, WorkspaceTheme } from "@iris/shared";
 
 export function AppShell({ roomId }: { roomId: string }) {
@@ -31,8 +33,12 @@ export function AppShell({ roomId }: { roomId: string }) {
 
 function AppShellContent({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
+  const isNarrowScreen = useFilesBreakpoint();
   const [requestedLocation, setRequestedLocation] = useState<EditorLocation>();
   const [deletionRecovery, setDeletionRecovery] = useState<FileDeletionRecovery>();
+  const [filesCollapsed, setFilesCollapsed] = useState(false);
+  const [filesWidth, setFilesWidth] = useState(DEFAULT_WORKSPACE_PANEL_WIDTHS.files);
+  const filesScrollTopRef = useRef(0);
   const {
     client,
     typeScript,
@@ -110,7 +116,11 @@ function AppShellContent({ roomId }: { roomId: string }) {
     },
     [updateSharedSetting],
   );
-  const openFilesPanel = useCallback(() => toggleMobilePanel("files"), [toggleMobilePanel]);
+  const toggleDesktopFilesPanel = useCallback(
+    () => setFilesCollapsed((collapsed) => !collapsed),
+    [],
+  );
+  const toggleMobileFilesPanel = useCallback(() => toggleMobilePanel("files"), [toggleMobilePanel]);
   const openPreviewPanel = useCallback(() => toggleMobilePanel("preview"), [toggleMobilePanel]);
   const handleDraftClose = useCallback(() => editorFocusRef.current?.(), [editorFocusRef]);
   const handleCommandPaletteCloseAutoFocus = useCallback(
@@ -187,8 +197,12 @@ function AppShellContent({ roomId }: { roomId: string }) {
           hasPendingChanges={hasPendingChanges}
           draftBackup={draftState.backup}
           followingUserId={followingUserId}
+          filesCollapsed={filesCollapsed}
+          filesWidth={filesWidth}
+          mobileFilesOpen={mobilePanel === "files"}
           onFollowMember={handleFollowMember}
-          onOpenFiles={openFilesPanel}
+          onToggleDesktopFiles={toggleDesktopFilesPanel}
+          onToggleMobileFiles={toggleMobileFilesPanel}
           onOpenPreview={openPreviewPanel}
         />
         <RoomDraftRecovery
@@ -219,8 +233,11 @@ function AppShellContent({ roomId }: { roomId: string }) {
         />
 
         <WorkspaceLayout
+          filesCollapsed={filesCollapsed}
+          onFilesWidthChange={setFilesWidth}
           files={
             <div
+              id="workspace-files-panel"
               className={`min-h-0 h-full overflow-hidden border-r border-iris-divider max-[760px]:fixed max-[760px]:left-0 max-[760px]:top-11 max-[760px]:bottom-0 max-[760px]:z-10 max-[760px]:h-auto max-[760px]:min-h-0 ${mobilePanel === "files" ? "max-[760px]:block" : "max-[760px]:hidden"}`}
             >
               <FileTree
@@ -244,6 +261,15 @@ function AppShellContent({ roomId }: { roomId: string }) {
                 keymap={keymap}
                 onKeymapChange={updateKeymap}
                 onLanguageChange={updateLanguage}
+                isVisible={
+                  isNarrowScreen
+                    ? mobilePanel === "files" || (!filesCollapsed && mobilePanel !== "preview")
+                    : true
+                }
+                preservedScrollTop={filesScrollTopRef.current}
+                onScrollTopChange={(scrollTop) => {
+                  filesScrollTopRef.current = scrollTop;
+                }}
               />
               <FileFuzzySearchDialog
                 files={files}
