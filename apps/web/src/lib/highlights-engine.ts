@@ -62,6 +62,7 @@ export class HighlightsTokenizerSession {
 
   highlight(viewport: HighlightViewport, lineOffsets: readonly number[]): HighlightSpan[] {
     this.tokenizer.applyEdits([], { renderRange: viewport });
+    this.tokenizer.flush(viewport[1]);
     return this.serialize(viewport, lineOffsets);
   }
 
@@ -71,6 +72,7 @@ export class HighlightsTokenizerSession {
     lineOffsets: readonly number[],
   ): HighlightSpan[] {
     this.tokenizer.applyEdits(edits, { renderRange: viewport });
+    this.tokenizer.flush(viewport[1]);
     return this.serialize(viewport, lineOffsets);
   }
 
