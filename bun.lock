@@ -30,7 +30,7 @@
         "@tanstack/react-virtual": "3.14.21",
         "@webcontainer/api": "^1.6.4",
         "class-variance-authority": "^0.7.1",
-        "cn": "0.5.0",
+        "cn": "0.5.1",
         "drizzle-orm": "1.0.0-rc.5-ab785fc",
         "elysia": "1.4.30",
         "i18next": "^26.5.2",
@@ -816,7 +816,7 @@
 
     "clsx": ["clsx@2.1.1", "https://registry.npmmirror.com/clsx/-/clsx-2.1.1.tgz", {}, "sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA=="],
 
-    "cn": ["cn@0.5.0", "https://registry.npmmirror.com/cn/-/cn-0.5.0.tgz", { "bin": { "cn": "bin/cn.mjs" } }, "sha512-JGEixZEpfFXm1P5uXwvEobOFLlHwIWi5v4tjd1ZwfiYmcEilkuD2l+054rvJcYCR1B+uVThHeUbgmNz1FwuxuA=="],
+    "cn": ["cn@0.5.1", "", { "bin": { "cn": "bin/cn.mjs" } }, "sha512-SA06SpzSWXRNrt/EQWnRpck9jEVDfVJonw8ZewiNR6pOC4U0SQ81tWaQ9/PKNPh/lWvjuY4CMlxpc8tJViiX6Q=="],
 
     "code-block-writer": ["code-block-writer@13.0.3", "https://registry.npmmirror.com/code-block-writer/-/code-block-writer-13.0.3.tgz", {}, "sha512-Oofo0pq3IKnsFtuHqSF7TqBfr71aeyZDVJ0HpmqB7FBM2qEigL0iPONSCZSO9pE9dZTAxANe5XHG9Uy0YMv8cg=="],
 
