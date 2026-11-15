@@ -21,7 +21,7 @@
         "@faker-js/faker": "^10.6.0",
         "@iris/shared": "workspace:*",
         "@lezer/highlight": "^1.2.5",
-        "@pierre/highlights": "0.5.0",
+        "@pierre/highlights": "0.5.1",
         "@radix-ui/react-context-menu": "^2.4.1",
         "@radix-ui/react-dialog": "^1.3.1",
         "@radix-ui/themes": "^3.3.0",
@@ -474,7 +474,7 @@
 
     "@oxlint/binding-win32-x64-msvc": ["@oxlint/binding-win32-x64-msvc@1.92.0", "", { "os": "win32", "cpu": "x64" }, "sha512-0AyhqX0ciFuEnHIL+B4PIMMX3s/IpGHNEbbUqwsNhSrzWUSlEOPw/q7qFnRsEJfiKedcqVfUE/aXYuSMtpiFyw=="],
 
-    "@pierre/highlights": ["@pierre/highlights@0.5.0", "", {}, "sha512-G8gscrHrik3YjKd+tPTcmivJ/W0zRrtg4adVxnfX7+415+0Qplo6qUWuEX5R0UkA1fMhmE2sOSuLBMNGDtLhIw=="],
+    "@pierre/highlights": ["@pierre/highlights@0.5.1", "", {}, "sha512-c2WF6sgwgKdxXU6FpWDLWUYHRca/cJy+3QJkWAqYqEAFxqlPf8eSH0ehHcFFjKBmT+9KBl9H7q6z7HMRU7+m6g=="],
 
     "@radix-ui/colors": ["@radix-ui/colors@3.0.0", "", {}, "sha512-FUOsGBkHrYJwCSEtWRCIfQbZG7q1e6DgxCIOe1SUQzDe/7rXXeA47s8yCn6fuTNQAj1Zq4oTFi9Yjp3wzElcxg=="],
 
