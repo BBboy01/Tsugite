@@ -23,6 +23,7 @@ export const simplifiedChineseTranslations = {
   "files.rename": "重命名",
   "files.copy": "复制",
   "files.delete": "删除",
+  "files.treeSearchPlaceholder": "搜索文件和文件夹",
   "files.editing": "正在编辑 {{path}}",
   "files.file": "文件",
   "files.folder": "文件夹",

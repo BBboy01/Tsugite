@@ -23,6 +23,7 @@ export const traditionalChineseTranslations = {
   "files.rename": "重新命名",
   "files.copy": "複製",
   "files.delete": "刪除",
+  "files.treeSearchPlaceholder": "搜尋檔案和資料夾",
   "files.editing": "正在編輯 {{path}}",
   "files.file": "檔案",
   "files.folder": "資料夾",

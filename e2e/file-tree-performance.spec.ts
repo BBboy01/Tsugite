@@ -47,38 +47,41 @@ test("records file tree mount cost for a large room snapshot", async ({ page }, 
       waitUntil: "domcontentloaded",
     });
     const tree = page.locator('aside[aria-label="Project files"]');
-    const scroller = tree.locator("[data-total-rows]");
-    const files = tree.locator('[data-context-kind="file"]');
-    const renderedRows = tree.locator('[data-context-kind="file"], [data-context-kind="folder"]');
-    await expect(scroller).toHaveAttribute("data-total-rows", /\d+/, { timeout: 30_000 });
+    const scroller = tree.locator("[data-file-tree-virtualized-scroll]");
+    const virtualizedList = tree.locator("[data-file-tree-virtualized-list]");
+    const files = tree.locator('[role="treeitem"][data-item-type="file"]');
+    const folders = tree.locator('[role="treeitem"][data-item-type="folder"]');
+    const renderedRows = tree.locator('[role="treeitem"][data-item-type]');
+    await expect(virtualizedList).toBeVisible({ timeout: 30_000 });
     await expect(files.first()).toBeVisible();
     if (index === 1) {
       await expect
-        .poll(async () => Number(await scroller.getAttribute("data-total-rows")))
-        .toBeGreaterThan(GENERATED_FILE_COUNT);
+        .poll(async () =>
+          Number(
+            (await virtualizedList.getAttribute("style"))?.match(/height:\s*([\d.]+)px/)?.[1] ?? 0,
+          ),
+        )
+        .toBeGreaterThan(GENERATED_FILE_COUNT * 20);
       await expect.poll(() => renderedRows.count()).toBeLessThan(MAX_RENDERED_ROWS);
     }
-    const metrics = await page.evaluate(() => ({
-      startupMs:
-        performance.now() - performance.getEntriesByName("file-tree-benchmark-start")[0].startTime,
-      fileNodes: document.querySelectorAll(
-        'aside[aria-label="Project files"] [data-context-kind="file"]',
-      ).length,
-      folderNodes: document.querySelectorAll(
-        'aside[aria-label="Project files"] [data-context-kind="folder"]',
-      ).length,
-      totalRows: Number(
-        document.querySelector("[data-total-rows]")?.getAttribute("data-total-rows"),
+    const metrics = {
+      startupMs: await page.evaluate(
+        () =>
+          performance.now() -
+          performance.getEntriesByName("file-tree-benchmark-start")[0].startTime,
       ),
-    }));
+      fileNodes: await files.count(),
+      folderNodes: await folders.count(),
+      totalRows: Number(
+        (await virtualizedList.getAttribute("style"))?.match(/height:\s*([\d.]+)px/)?.[1] ?? 0,
+      ),
+    };
     measurements.push({ generatedFiles: index === 0 ? 0 : GENERATED_FILE_COUNT, ...metrics });
     if (index === 1) {
       await scroller.evaluate((element) => {
         element.scrollTop = element.scrollHeight;
       });
-      await expect(
-        tree.locator('[data-context-path="src/generated/file-999.tsx"]'),
-      ).toBeInViewport();
+      await expect(tree.locator('[data-item-path="src/generated/file-4999.tsx"]')).toBeInViewport();
       await expect.poll(() => renderedRows.count()).toBeLessThan(MAX_RENDERED_ROWS);
     }
   }

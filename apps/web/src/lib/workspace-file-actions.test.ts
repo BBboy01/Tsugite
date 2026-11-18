@@ -72,6 +72,64 @@ test("file rename emits one plain-data navigation update", () => {
   ]);
 });
 
+test("moving a file keeps its Loro identity and updates selected and open paths", () => {
+  const doc = new LoroDoc();
+  const file = createFile(doc, "src/App.tsx", "typescript", "export {};");
+  createFile(doc, "src/ui/App.tsx", "typescript");
+  const updates: Array<{ selectedPath: string; openTabPaths: string[] }> = [];
+  const fileActions = createWorkspaceFileActions({
+    doc,
+    selectedPath: file.path,
+    openTabPaths: [file.path],
+    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    activateFile: () => {},
+    stopFollowing: () => {},
+  });
+
+  expect(fileActions.handleMove([file.path], "src/ui")).toBeUndefined();
+  expect(listFiles(doc).find((candidate) => candidate.id === file.id)?.path).toBe(
+    "src/ui/App 2.tsx",
+  );
+  expect(updates).toEqual([
+    { selectedPath: "src/ui/App 2.tsx", openTabPaths: ["src/ui/App 2.tsx"] },
+  ]);
+});
+
+test("moving package.json is rejected", () => {
+  const doc = new LoroDoc();
+  const file = createFile(doc, "package.json", "typescript");
+  expect(actions(doc).handleMove([file.path], "src")).toBe("This item cannot be moved");
+  expect(listFiles(doc)[0]?.path).toBe("package.json");
+});
+
+test("moving multiple selected files preserves identities and updates navigation", () => {
+  const doc = new LoroDoc();
+  const first = createFile(doc, "src/first.ts", "typescript");
+  const second = createFile(doc, "src/second.ts", "typescript");
+  createFolder(doc, "destination");
+  const updates: Array<{ selectedPath: string; openTabPaths: string[] }> = [];
+  const fileActions = createWorkspaceFileActions({
+    doc,
+    selectedPath: first.path,
+    openTabPaths: [first.path, second.path],
+    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    activateFile: () => {},
+    stopFollowing: () => {},
+  });
+
+  expect(fileActions.handleMove([first.path, second.path], "destination")).toBeUndefined();
+  expect(listFiles(doc).map(({ id, path }) => ({ id, path }))).toEqual([
+    { id: first.id, path: "destination/first.ts" },
+    { id: second.id, path: "destination/second.ts" },
+  ]);
+  expect(updates).toEqual([
+    {
+      selectedPath: "destination/first.ts",
+      openTabPaths: ["destination/first.ts", "destination/second.ts"],
+    },
+  ]);
+});
+
 test("renaming an unopened inactive file does not dispatch navigation state", () => {
   const doc = new LoroDoc();
   const file = createFile(doc, "src/notes.ts", "typescript");

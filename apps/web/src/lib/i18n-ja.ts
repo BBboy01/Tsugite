@@ -23,6 +23,7 @@ export const japaneseTranslations = {
   "files.rename": "名前を変更",
   "files.copy": "コピー",
   "files.delete": "削除",
+  "files.treeSearchPlaceholder": "ファイルとフォルダーを検索",
   "files.editing": "編集中: {{path}}",
   "files.file": "ファイル",
   "files.folder": "フォルダー",
