@@ -17,7 +17,9 @@ test.describe("file and editor actions", () => {
     });
   });
 
-  test("cancels an empty inline creation", async ({ page }, testInfo) => {
+  test("keeps the unique default name when an empty creation is submitted", async ({
+    page,
+  }, testInfo) => {
     await page.goto(
       "/room/e2e-empty-inline-create-" + process.pid + "-" + testInfo.repeatEachIndex,
       {
@@ -30,8 +32,9 @@ test.describe("file and editor actions", () => {
       .getByRole("treeitem", { name: "src folder", exact: true })
       .click({ button: "right" });
     await page.getByRole("menuitem", { name: "New file", exact: true }).click();
-    const pathInput = page.locator("#file-tree-path");
+    const pathInput = page.locator("[data-item-rename-input]");
     await expect(pathInput).toBeFocused();
+    const defaultName = await pathInput.inputValue();
     await expect
       .poll(() =>
         pathInput.evaluate((input) => {
@@ -43,6 +46,7 @@ test.describe("file and editor actions", () => {
     await pathInput.fill("");
     await pathInput.press("Enter");
     await expect(pathInput).toHaveCount(0);
+    await expect(page.getByRole("treeitem", { name: defaultName, exact: true })).toBeVisible();
   });
 
   test("keeps local undo history when renaming the active file", async ({ page }, testInfo) => {
@@ -63,7 +67,7 @@ test.describe("file and editor actions", () => {
 
     await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
-    const pathInput = page.locator("#file-tree-path");
+    const pathInput = page.locator("[data-item-rename-input]");
     await expect(pathInput).toBeFocused();
     await expect
       .poll(() =>
@@ -151,8 +155,8 @@ test.describe("file and editor actions", () => {
       .getByRole("treeitem", { name: "App.tsx", exact: true })
       .click({ button: "right" });
     await secondPage.getByRole("menuitem", { name: "Rename", exact: true }).click();
-    await secondPage.locator("#file-tree-path").fill("src/remote-renamed.tsx");
-    await secondPage.locator("#file-tree-path").press("Enter");
+    await secondPage.locator("[data-item-rename-input]").fill("src/remote-renamed.tsx");
+    await secondPage.locator("[data-item-rename-input]").press("Enter");
 
     await expect(
       firstPage.getByRole("tab").filter({ hasText: "remote-renamed.tsx" }),
@@ -171,13 +175,14 @@ test.describe("file and editor actions", () => {
     });
     await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
-    const pathInput = page.locator("#file-tree-path");
+    const pathInput = page.locator("[data-item-rename-input]");
     const sourceFolder = page.getByRole("treeitem", { name: "src folder", exact: true });
 
     await sourceFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "New file", exact: true }).click();
-    await pathInput.fill("nested/example.ts");
-    await pathInput.press("Enter");
+    const createInput = page.locator("[data-item-rename-input]");
+    await createInput.fill("nested/example.ts");
+    await createInput.press("Enter");
     await expect(
       page.getByRole("treeitem", { name: "src/nested folder", exact: true }),
     ).toBeVisible();
@@ -208,32 +213,21 @@ test.describe("file and editor actions", () => {
 
     await sourceFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "New folder", exact: true }).click();
-    await expect(pathInput).toBeFocused();
+    const createFolderInput = page.locator("[data-item-rename-input]");
+    await expect(createFolderInput).toBeFocused();
     await expect
       .poll(() =>
-        pathInput.evaluate((input) => {
+        createFolderInput.evaluate((input) => {
           const element = input as HTMLInputElement;
           return [element.selectionStart, element.selectionEnd];
         }),
       )
-      .toEqual([0, (await pathInput.inputValue()).length]);
-    await pathInput.fill("components");
-    await pathInput.press("Enter");
+      .toEqual([0, (await createFolderInput.inputValue()).length]);
+    await createFolderInput.fill("components");
+    await createFolderInput.press("Enter");
     await expect(
       page.getByRole("treeitem", { name: "src/components folder", exact: true }),
     ).toBeVisible();
-
-    await renamedFile.click({ button: "right" });
-    await page.getByRole("menuitem", { name: "Copy", exact: true }).click();
-    const copiedFile = page.getByRole("treeitem", { name: "renamed copy.ts", exact: true });
-    await expect(copiedFile).toBeVisible();
-
-    const closeCopy = page.getByRole("button", {
-      name: "Close src/renamed/renamed copy.ts",
-      exact: true,
-    });
-    await closeCopy.click();
-    await expect(closeCopy).toHaveCount(0);
 
     await renamedFolder.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();

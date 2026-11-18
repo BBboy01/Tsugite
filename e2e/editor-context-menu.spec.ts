@@ -215,9 +215,9 @@ test("TypeScript hover tokenizes React hook signatures", async ({ page }) => {
 });
 
 test("navigates to an unopened workspace file and exact target position", async ({ page }) => {
-  await page.locator('[data-context-path="src"]').first().click({ button: "right" });
+  await page.getByRole("treeitem", { name: "src folder", exact: true }).click({ button: "right" });
   await page.getByRole("menuitem", { name: "New file", exact: true }).click();
-  const pathInput = page.getByLabel("Path", { exact: true });
+  const pathInput = page.locator("[data-item-rename-input]");
   await pathInput.fill("src/value.ts");
   await pathInput.press("Enter");
   await replaceCode(page, "// definition\n\nexport const answer = 42;");

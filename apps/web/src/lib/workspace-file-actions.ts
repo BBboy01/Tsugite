@@ -5,12 +5,15 @@ import {
   createFolder,
   deleteFile,
   deleteFolder,
+  listFiles,
+  listFolders,
   renameFolder,
   renameFile,
   type ProjectFile,
 } from "@iris/shared";
 import type { FileTreeTarget } from "./file-tree-model";
 import { closeEditorTab } from "./editor-tabs";
+import { resolveMovePath } from "./file-tree-move";
 import { WORKSPACE_CHANGE_ORIGIN } from "./editor-undo";
 import {
   captureDeletedItem,
@@ -110,6 +113,74 @@ export function createWorkspaceFileActions({
     }
   };
 
+  const handleMove = (
+    sourcePaths: readonly string[],
+    requestedDestination: string,
+  ): string | undefined => {
+    const destinationDirectory = requestedDestination.replace(/\/+$/, "");
+    const filesBeforeMove = listFiles(doc);
+    const foldersBeforeMove = listFolders(doc);
+    const requestedSources = [...new Set(sourcePaths.map((path) => path.replace(/\/+$/, "")))];
+    const selectedFolders = requestedSources.filter((path) => foldersBeforeMove.includes(path));
+    const sources = requestedSources.filter(
+      (path) => !selectedFolders.some((folder) => path.startsWith(`${folder}/`)),
+    );
+
+    if (sources.includes("package.json")) return "This item cannot be moved";
+    if (destinationDirectory && !foldersBeforeMove.includes(destinationDirectory)) {
+      return "Destination folder does not exist";
+    }
+    for (const sourcePath of sources) {
+      const isFolder = foldersBeforeMove.includes(sourcePath);
+      if (!isFolder && !filesBeforeMove.some((file) => file.path === sourcePath)) {
+        return "The item no longer exists";
+      }
+      if (isFolder && destinationDirectory.startsWith(`${sourcePath}/`)) {
+        return "A folder cannot be moved inside itself";
+      }
+    }
+
+    let nextSelectedPath = selectedPath;
+    let nextOpenTabPaths = openTabPaths;
+    let moved = false;
+    try {
+      for (const sourcePath of sources) {
+        const files = listFiles(doc);
+        const file = files.find((candidate) => candidate.path === sourcePath);
+        const isFolder = listFolders(doc).includes(sourcePath);
+        if (!file && !isFolder) return "The item no longer exists";
+        const sourceParent = sourcePath.split("/").slice(0, -1).join("/");
+        if (destinationDirectory === sourceParent) continue;
+        const nextPath = resolveMovePath(
+          sourcePath,
+          destinationDirectory,
+          files.map((candidate) => candidate.path),
+          listFolders(doc),
+        );
+        if (nextPath === sourcePath) continue;
+
+        if (!moved) stopFollowing();
+        if (file) renameFile(doc, file.id, nextPath);
+        else renameFolder(doc, sourcePath, nextPath);
+        const updatePath = (path: string) =>
+          path === sourcePath
+            ? nextPath
+            : isFolder && path.startsWith(`${sourcePath}/`)
+              ? `${nextPath}${path.slice(sourcePath.length)}`
+              : path;
+        nextSelectedPath = updatePath(nextSelectedPath);
+        nextOpenTabPaths = nextOpenTabPaths.map(updatePath);
+        moved = true;
+      }
+      if (!moved) return undefined;
+      commitNavigation(nextSelectedPath, nextOpenTabPaths);
+      doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
+      return undefined;
+    } catch (error) {
+      return error instanceof Error ? error.message : "Unable to move item";
+    }
+  };
+
   const handleDelete = (
     target: Exclude<FileTreeTarget, null>,
   ): FileDeletionRecovery | undefined => {
@@ -153,5 +224,5 @@ export function createWorkspaceFileActions({
     };
   };
 
-  return { handleAddFile, handleAddFolder, handleRename, handleCopy, handleDelete };
+  return { handleAddFile, handleAddFolder, handleRename, handleMove, handleCopy, handleDelete };
 }

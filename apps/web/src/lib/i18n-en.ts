@@ -23,6 +23,7 @@ export const englishTranslations = {
   "files.rename": "Rename",
   "files.copy": "Copy",
   "files.delete": "Delete",
+  "files.treeSearchPlaceholder": "Search files and folders",
   "files.editing": "Editing {{path}}",
   "files.file": "file",
   "files.folder": "folder",

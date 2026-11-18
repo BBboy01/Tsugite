@@ -62,6 +62,7 @@ export function DeletePopover({
   isFolder,
   onConfirm,
   onCancel,
+  error,
 }: {
   theme: ProjectSettings["theme"];
   anchorRect: DOMRect;
@@ -70,6 +71,7 @@ export function DeletePopover({
   isFolder: boolean;
   onConfirm: () => void;
   onCancel: () => void;
+  error?: string;
 }) {
   const { t } = useTranslation();
   const anchorRef = useMemo(
@@ -113,6 +115,14 @@ export function DeletePopover({
             count,
           })}
         </p>
+        {error && (
+          <p
+            role="alert"
+            className="mt-2 mb-0 break-words font-iris-mono text-[10px] leading-tight text-[#b7645f]"
+          >
+            {error}
+          </p>
+        )}
         <div className="mt-2 flex justify-end gap-1.5">
           <button
             ref={cancelRef}

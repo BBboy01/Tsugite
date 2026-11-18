@@ -144,18 +144,19 @@ export function useWorkspaceController(roomId: string) {
   });
 
   const stopFollowing = useCallback(() => setFollowingUserId(null), [setFollowingUserId]);
-  const { handleAddFile, handleAddFolder, handleRename, handleCopy, handleDelete } = useMemo(
-    () =>
-      createWorkspaceFileActions({
-        doc: client.doc,
-        selectedPath,
-        openTabPaths,
-        setNavigation: updateNavigation,
-        activateFile,
-        stopFollowing,
-      }),
-    [activateFile, client.doc, openTabPaths, selectedPath, updateNavigation, stopFollowing],
-  );
+  const { handleAddFile, handleAddFolder, handleRename, handleMove, handleCopy, handleDelete } =
+    useMemo(
+      () =>
+        createWorkspaceFileActions({
+          doc: client.doc,
+          selectedPath,
+          openTabPaths,
+          setNavigation: updateNavigation,
+          activateFile,
+          stopFollowing,
+        }),
+      [activateFile, client.doc, openTabPaths, selectedPath, updateNavigation, stopFollowing],
+    );
 
   const handleCursorChange = useCallback(
     (cursor: { anchor: number; head: number }) => {
@@ -227,6 +228,7 @@ export function useWorkspaceController(roomId: string) {
     handleAddFile,
     handleAddFolder,
     handleRename,
+    handleMove,
     handleCopy,
     handleDelete,
     handleDisplayNameChange,

@@ -196,7 +196,7 @@ for (const vimMode of [true, false]) {
     await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
     const path = "src/feature notes/nested components/a very long workspace component.tsx";
-    const pathInput = page.locator("#file-tree-path");
+    const pathInput = page.locator("[data-item-rename-input]");
     await pathInput.fill(path);
     await pathInput.press("Enter");
     await expect(statusline.locator("[data-status-path]")).toHaveText(path);
