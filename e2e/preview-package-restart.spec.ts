@@ -46,14 +46,25 @@ async function startControlledPreview(page: Page) {
   await expect(preview.getByText("paused", { exact: true })).toBeVisible();
   await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
   await page.getByRole("treeitem", { name: "package.json", exact: true }).click();
+  await page.clock.runFor(100);
+  await expect(
+    page.getByRole("region", { name: "Editing package.json", exact: true }),
+  ).toBeVisible();
   const editor = page.locator(".cm-content");
   await editor.focus();
+  const manifest = await editor.textContent();
   await page.keyboard.press("ControlOrMeta+End");
   await page.keyboard.insertText(" ");
+  await expect.poll(() => editor.textContent()).toBe(`${manifest} `);
   await page.clock.runFor(400);
   await expect.poll(() => page.evaluate(() => Boolean(window.releasePackageSync))).toBe(true);
   await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
+  await page.clock.runFor(100);
+  await expect(
+    page.getByRole("region", { name: "Editing src/App.tsx", exact: true }),
+  ).toBeVisible();
   await editor.focus();
+  await expect(editor).toBeFocused();
   await page.keyboard.press("ControlOrMeta+A");
   return { editor, preview };
 }

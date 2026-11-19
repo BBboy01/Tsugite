@@ -39,12 +39,11 @@ export function useEditorFocus() {
         if (!focus || editorFocusRef.current !== focus) return;
         focusEditorIfRequested();
         if (focusEditorAfterSelectionRef.current) {
-          focusEditorAfterSelectionRef.current = false;
-          focus();
+          requestSelectionFocus();
         }
       });
     },
-    [focusEditorIfRequested],
+    [focusEditorIfRequested, requestSelectionFocus],
   );
 
   useEffect(() => {
