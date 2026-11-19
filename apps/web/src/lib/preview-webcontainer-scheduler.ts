@@ -170,10 +170,11 @@ export class PreviewWebContainerScheduler {
         this.options.createRuntime ??
         (async () => {
           const { WebContainerRuntime } = await import("./webcontainer-runtime");
-          return new WebContainerRuntime();
+          return generation === this.sessionGeneration ? new WebContainerRuntime() : undefined;
         });
       const pending = create()
         .then((runtime) => {
+          if (!runtime) return undefined;
           if (generation !== this.sessionGeneration) {
             runtime.dispose();
             return undefined;

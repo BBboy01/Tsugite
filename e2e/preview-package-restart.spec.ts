@@ -63,6 +63,7 @@ test("a delayed package sync preserves newer syntax errors and restarts after co
 }, testInfo) => {
   const { editor, preview } = await startControlledPreview(page);
   await page.keyboard.insertText("export const broken = ;");
+  await expect(editor).toHaveText("export const broken = ;");
   await page.clock.runFor(400);
   const error = preview.getByRole("alert");
   await expect(error).toContainText("Unexpected token");
@@ -76,6 +77,7 @@ test("a delayed package sync preserves newer syntax errors and restarts after co
   await editor.focus();
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText("export const repaired = 42;");
+  await expect(editor).toHaveText("export const repaired = 42;");
   await page.clock.runFor(400);
   await expect
     .poll(() => page.evaluate(() => window.restartedSources))
@@ -87,8 +89,9 @@ test("a delayed package sync preserves newer syntax errors and restarts after co
 test("a delayed package sync still restarts after switching to a valid source", async ({
   page,
 }) => {
-  const { preview } = await startControlledPreview(page);
+  const { editor, preview } = await startControlledPreview(page);
   await page.keyboard.insertText("export const current = 42;");
+  await expect(editor).toHaveText("export const current = 42;");
   await page.clock.runFor(400);
   await page.evaluate(() => window.releasePackageSync!());
   await page.clock.runFor(400);
