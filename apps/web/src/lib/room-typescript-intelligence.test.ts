@@ -1,6 +1,7 @@
 import { expect, spyOn, test } from "bun:test";
 import { createFile, createProjectDoc, deleteFile, getFileByPath, renameFile } from "@iris/shared";
 import { RoomTypeScriptIntelligence } from "./room-typescript-intelligence";
+import { createRoomTypeScriptSource } from "./room-typescript-source";
 import { TypeScriptWorkerSession } from "./typescript-worker-session";
 import { createTypeScriptIntelligence } from "./typescript-intelligence";
 import { standardLibraries } from "./typescript-test-libraries";
@@ -11,7 +12,7 @@ import { transport } from "./typescript-worker-test-helpers";
 
 test("language ownership does not create containers in an empty room", () => {
   const doc = new LoroDoc();
-  const owner = new RoomTypeScriptIntelligence({ doc });
+  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc));
   expect(doc.toJSON()).toEqual({});
   owner.prepareDeclarations();
   expect(doc.toJSON()).toEqual({});
@@ -20,7 +21,7 @@ test("language ownership does not create containers in an empty room", () => {
 
 test("room owner defers its default worker until language services are needed", () => {
   const doc = createProjectDoc();
-  const owner = new RoomTypeScriptIntelligence({ doc });
+  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc));
   expect(owner.intelligence).toBeInstanceOf(TypeScriptWorkerClient);
   expect((owner.intelligence as TypeScriptWorkerClient).getMetricsSnapshot()).toMatchObject({
     workerStarts: 0,
@@ -33,19 +34,16 @@ test("rejected Loro edits recover only with the current complete source snapshot
   createFile(doc, "src/large.ts", "typescript", "const large = true;");
   doc.commit();
   const workers: ReturnType<typeof transport>[] = [];
-  const owner = new RoomTypeScriptIntelligence(
-    { doc },
-    {
-      createIntelligence: (files) =>
-        new TypeScriptWorkerClient(files, {
-          createWorker: () => {
-            const fake = transport();
-            workers.push(fake);
-            return fake.worker;
-          },
-        }),
-    },
-  );
+  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc), {
+    createIntelligence: (files) =>
+      new TypeScriptWorkerClient(files, {
+        createWorker: () => {
+          const fake = transport();
+          workers.push(fake);
+          return fake.worker;
+        },
+      }),
+  });
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   const fullSnapshotReads = spyOn(doc, "getByPath");
   const countFullSnapshotReads = () =>
@@ -108,13 +106,10 @@ function createOwner() {
     },
     terminate: () => session.dispose(),
   };
-  const owner = new RoomTypeScriptIntelligence(
-    { doc },
-    {
-      createIntelligence: (files) =>
-        new TypeScriptWorkerClient(files, { createWorker: () => worker }),
-    },
-  );
+  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc), {
+    createIntelligence: (files) =>
+      new TypeScriptWorkerClient(files, { createWorker: () => worker }),
+  });
   return { doc, owner };
 }
 

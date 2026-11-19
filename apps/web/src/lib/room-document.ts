@@ -24,27 +24,32 @@ export class RoomDocument {
   private receivedSnapshotForConnection = false;
   private hasReceivedSnapshotValue = false;
   private syncErrorValue: string | undefined;
+  private readonly subscriptions: (() => void)[] = [];
 
   constructor(private readonly onLocalUpdate: (bytes: Uint8Array) => void) {
-    this.doc.subscribe((batch) => {
-      const changes: DocumentChangeFlags = { workspace: false, settings: false, content: false };
-      for (const event of batch.events) {
-        const root = event.path[0];
-        if (typeof root === "string" && root.startsWith("file:")) changes.content = true;
-        else if (root === "settings") changes.settings = true;
-        else if (root === "files" || root === "filePaths" || root === "folders")
-          changes.workspace = true;
-        else changes.workspace = changes.settings = changes.content = true;
-      }
-      if (batch.events.length > 0) this.emit({ type: "document", changes });
-    });
-    this.doc.subscribeLocalUpdates((bytes) => {
-      if (bytes.byteLength > MAX_ROOM_UPDATE_BYTES) {
-        this.syncErrorValue = LOCAL_UPDATE_ERROR;
-        this.emit({ type: "oversized", message: LOCAL_UPDATE_ERROR });
-      }
-      this.onLocalUpdate(bytes);
-    });
+    this.subscriptions.push(
+      this.doc.subscribe((batch) => {
+        const changes: DocumentChangeFlags = { workspace: false, settings: false, content: false };
+        for (const event of batch.events) {
+          const root = event.path[0];
+          if (typeof root === "string" && root.startsWith("file:")) changes.content = true;
+          else if (root === "settings") changes.settings = true;
+          else if (root === "files" || root === "filePaths" || root === "folders")
+            changes.workspace = true;
+          else changes.workspace = changes.settings = changes.content = true;
+        }
+        if (batch.events.length > 0) this.emit({ type: "document", changes });
+      }),
+    );
+    this.subscriptions.push(
+      this.doc.subscribeLocalUpdates((bytes) => {
+        if (bytes.byteLength > MAX_ROOM_UPDATE_BYTES) {
+          this.syncErrorValue = LOCAL_UPDATE_ERROR;
+          this.emit({ type: "oversized", message: LOCAL_UPDATE_ERROR });
+        }
+        this.onLocalUpdate(bytes);
+      }),
+    );
   }
 
   get hasReceivedSnapshot(): boolean {
@@ -103,6 +108,11 @@ export class RoomDocument {
   subscribe(listener: (event: RoomDocumentEvent) => void): () => void {
     this.listeners.add(listener);
     return () => this.listeners.delete(listener);
+  }
+
+  dispose(): void {
+    this.subscriptions.splice(0).forEach((unsubscribe) => unsubscribe());
+    this.listeners.clear();
   }
 
   private emit(event: RoomDocumentEvent): void {

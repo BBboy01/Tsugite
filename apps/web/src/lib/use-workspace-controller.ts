@@ -22,6 +22,7 @@ import { useWorkspaceShortcuts } from "./use-workspace-shortcuts";
 export function useWorkspaceController(roomId: string) {
   const {
     client,
+    typeScript,
     files,
     folders,
     settings,
@@ -190,7 +191,7 @@ export function useWorkspaceController(roomId: string) {
 
   return {
     client,
-    typeScript: client.typeScript,
+    typeScript,
     settings,
     files,
     folders,

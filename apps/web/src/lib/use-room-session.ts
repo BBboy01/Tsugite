@@ -1,17 +1,19 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useEffect, useMemo, useState, useSyncExternalStore } from "react";
 
 import { readSettings, readWorkspaceSnapshot } from "@iris/shared";
 
-import { getIdentity, RoomClient } from "./room-client";
+import { getIdentity } from "./room-client";
+import { RoomSession } from "./room-session";
 
 export function useRoomSession(roomId: string) {
-  const [client] = useState(
+  const [session] = useState(
     () =>
-      new RoomClient({
+      new RoomSession({
         roomId,
         identity: getIdentity(),
       }),
   );
+  const { client, typeScript } = session;
   const [workspaceRevision, setWorkspaceRevision] = useState(0);
   const [settingsRevision, setSettingsRevision] = useState(0);
   const status = useSyncExternalStore(
@@ -34,7 +36,6 @@ export function useRoomSession(roomId: string) {
     client.getSnapshotReceived,
     client.getSnapshotReceived,
   );
-  const disconnectTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     const preventPendingUnload = (event: BeforeUnloadEvent) => {
@@ -56,27 +57,14 @@ export function useRoomSession(roomId: string) {
     };
   }, [client]);
 
-  useEffect(() => {
-    if (disconnectTimer.current) {
-      clearTimeout(disconnectTimer.current);
-      disconnectTimer.current = null;
-    }
-    const unsubscribe = client.subscribe((event) => {
-      if (event.type === "document") {
-        if (event.changes.workspace) setWorkspaceRevision((value) => value + 1);
-        if (event.changes.settings) setSettingsRevision((value) => value + 1);
-      }
-    });
-    client.connect();
-    return () => {
-      unsubscribe();
-      disconnectTimer.current = setTimeout(() => {
-        client.disconnect();
-        client.typeScript.dispose();
-        disconnectTimer.current = null;
-      }, 0);
-    };
-  }, [client]);
+  useEffect(
+    () =>
+      session.mount((changes) => {
+        if (changes.workspace) setWorkspaceRevision((value) => value + 1);
+        if (changes.settings) setSettingsRevision((value) => value + 1);
+      }),
+    [session],
+  );
 
   const { files, folders } = useMemo(
     () => readWorkspaceSnapshot(client.doc),
@@ -85,7 +73,7 @@ export function useRoomSession(roomId: string) {
   const settings = useMemo(() => readSettings(client.doc), [client, settingsRevision]);
   return {
     client,
-    typeScript: client.typeScript,
+    typeScript,
     files,
     folders,
     settings,
