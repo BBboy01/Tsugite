@@ -13,7 +13,9 @@
     "workarounds:all"
   ],
   "automerge": false,
-  "dependencyDashboard": true,
+  "dependencyDashboard": {
+    "enabled": true
+  },
   "ignoreDeps": [],
   "labels": ["dependencies", "renovate"],
   "prConcurrentLimit": 5,
