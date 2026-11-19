@@ -5,8 +5,15 @@ import type { ContextMenuOpenContext } from "@pierre/trees";
 import { useTranslation } from "react-i18next";
 import { folderAncestors, type FileTreeTarget } from "../lib/file-tree-model";
 import { toPierreTreePaths } from "../lib/pierre-tree-paths";
-import { uniqueDraftName } from "./pierre-file-tree-context-actions";
-import { usePierreFileTreeDom } from "./use-pierre-file-tree-dom";
+import {
+  canMovePierrePaths,
+  createPierreDraft,
+  getPierreExpandedPaths,
+  getPierreTarget,
+  resolvePierreDraftEdit,
+  type PierreDraft,
+} from "../lib/pierre-file-tree-actions";
+import { pierreFileTreeCSS, usePierreFileTreeDom } from "./use-pierre-file-tree-dom";
 
 export type PierreFileTreeProps = {
   files: ProjectFile[];
@@ -52,7 +59,6 @@ export function usePierreFileTreeController({
   const foldersSignature = folders.join("\0");
   const lastTreeSelectionPathRef = useRef<string | null>(null);
   const startingRenameRef = useRef(false);
-  const pendingSearchRestoreRef = useRef<string | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
   const callbacks = useRef({
     onSelect,
@@ -76,7 +82,7 @@ export function usePierreFileTreeController({
     onCopy,
     onDelete,
   };
-  const drafts = useRef(new Map<string, { kind: "file" | "folder"; defaultName: string }>());
+  const drafts = useRef(new Map<string, PierreDraft>());
   const [deletePrompt, setDeletePrompt] = useState<{
     target: Exclude<FileTreeTarget, null>;
     anchorRect: DOMRect;
@@ -86,20 +92,11 @@ export function usePierreFileTreeController({
   const [rootContext, setRootContext] = useState<ContextMenuOpenContext | null>(null);
   const modelRef = useRef<ReturnType<typeof useFileTree>["model"] | null>(null);
   const resetTreePaths = (nextPaths: string[]) => {
-    const currentPaths = pathsRef.current;
-    const currentDirectories = currentPaths.filter((path) => path.endsWith("/"));
-    const expandedPaths = currentDirectories.filter((path) => {
-      const item = modelRef.current?.getItem(path);
-      return item && "isExpanded" in item && item.isExpanded();
-    });
-    const newDirectories = nextPaths.filter(
-      (path) => path.endsWith("/") && !currentPaths.includes(path),
-    );
     modelRef.current?.resetPaths(nextPaths, {
-      initialExpandedPaths: [
-        ...expandedPaths.filter((path) => nextPaths.includes(path)),
-        ...newDirectories,
-      ],
+      initialExpandedPaths: getPierreExpandedPaths(pathsRef.current, nextPaths, (path) => {
+        const item = modelRef.current?.getItem(path);
+        return Boolean(item && "isExpanded" in item && item.isExpanded());
+      }),
     });
   };
   const { model } = useFileTree({
@@ -114,13 +111,7 @@ export function usePierreFileTreeController({
       searchPlaceholder: "Search...",
     },
     onSearchChange: (value) => setSearchOpen(value !== null),
-    unsafeCSS: `
-      [data-file-tree-search-container][data-open="false"] { display: none; }
-      [data-file-tree-search-container] { block-size: 26px; flex-shrink: 0; margin-bottom: 8px; }
-      [data-file-tree-search-input] { box-sizing: border-box; height: 26px; line-height: 24px; font-size: 11px; }
-      [role="tree"]:has([data-file-tree-search-input]:focus:placeholder-shown)
-        [data-item-focused="true"]:not(:focus-visible)::before { outline: none; }
-    `,
+    unsafeCSS: pierreFileTreeCSS,
     search: true,
     fileTreeSearchMode: "hide-non-matches",
     onSelectionChange: (selected) => {
@@ -145,17 +136,7 @@ export function usePierreFileTreeController({
     },
     dragAndDrop: {
       canDrag: (items) => !items.includes("package.json"),
-      canDrop: ({ draggedPaths, target }) => {
-        const destination = target.directoryPath?.replace(/\/$/, "") ?? "";
-        return draggedPaths.every((path) => {
-          const source = path.replace(/\/$/, "");
-          return (
-            source !== "package.json" &&
-            source !== destination &&
-            !destination.startsWith(`${source}/`)
-          );
-        });
-      },
+      canDrop: ({ draggedPaths, target }) => canMovePierrePaths(draggedPaths, target.directoryPath),
       onDropComplete: ({ draggedPaths, target }) => {
         const error = callbacks.current.onMove(draggedPaths, target.directoryPath ?? "");
         if (error) {
@@ -172,13 +153,7 @@ export function usePierreFileTreeController({
     renaming: {
       canRename: ({ path }) => path !== "package.json",
       onRename: ({ sourcePath, destinationPath, isFolder }) => {
-        const source = sourcePath.replace(/\/$/, "");
-        const target: FileTreeTarget = isFolder
-          ? { type: "folder", path: source }
-          : (() => {
-              const file = callbacks.current.files.find((candidate) => candidate.path === source);
-              return file ? { type: "file", file } : null;
-            })();
+        const target = getPierreTarget(sourcePath, callbacks.current.files, isFolder);
         const draft = drafts.current.get(sourcePath) ?? drafts.current.get(`${sourcePath}/`);
         const error =
           draft?.kind === "file"
@@ -212,40 +187,6 @@ export function usePierreFileTreeController({
   }, [foldersSignature, model, pathsSignature]);
 
   useEffect(() => {
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const openRootMenu = (event: MouseEvent) => {
-      if (event.button !== 2) return;
-      const path = event.composedPath();
-      const treeHost = model.getFileTreeContainer();
-      if (!treeHost || !path.includes(treeHost)) return;
-      if (path.some((target) => target instanceof Element && target.closest('[role="treeitem"]')))
-        return;
-      if (path.some((target) => target instanceof Element && target.closest('[role="search"]')))
-        return;
-      event.preventDefault();
-      event.stopImmediatePropagation();
-      setRootContext({
-        anchorElement: wrapper,
-        anchorRect: {
-          left: event.clientX,
-          top: event.clientY,
-          right: event.clientX,
-          bottom: event.clientY,
-          width: 0,
-          height: 0,
-          x: event.clientX,
-          y: event.clientY,
-        },
-        close: () => setRootContext(null),
-        restoreFocus: () => wrapper.focus(),
-      });
-    };
-    wrapper.addEventListener("contextmenu", openRootMenu, true);
-    return () => wrapper.removeEventListener("contextmenu", openRootMenu, true);
-  }, [model]);
-
-  useEffect(() => {
     for (const path of folderAncestors(selectedPath)) {
       const directory = model.getItem(`${path}/`);
       if (directory && "expand" in directory && !directory.isExpanded()) directory.expand();
@@ -265,23 +206,12 @@ export function usePierreFileTreeController({
     if (selectedPath) model.getItem(selectedPath)?.select();
   }, [model, pathsSignature, selectedPath]);
 
-  const commitDraftEdit = (input: HTMLInputElement | null, sourcePath: string) => {
-    const normalizedSourcePath = sourcePath.replace(/\/$/, "");
-    const draftKey = drafts.current.has(sourcePath)
-      ? sourcePath
-      : drafts.current.has(normalizedSourcePath)
-        ? normalizedSourcePath
-        : `${normalizedSourcePath}/`;
-    const draft = drafts.current.get(draftKey);
-    if (!draft) return false;
-    const source = sourcePath.replace(/\/$/, "");
-    const parent = source.split("/").slice(0, -1).join("/");
-    const value = (input?.value.trim() || draft.defaultName).replace(/^\/+|\/+$/g, "");
-    if (!value) return false;
-    const destinationPath =
-      parent && !value.startsWith(`${parent}/`) ? `${parent}/${value}` : value;
+  const commitDraftEdit = (value: string | null, sourcePath: string) => {
+    const edit = resolvePierreDraftEdit(drafts.current, sourcePath, value);
+    if (!edit) return false;
+    const { kind, destinationPath, draftKey } = edit;
     const error =
-      draft.kind === "file"
+      kind === "file"
         ? callbacks.current.onCreateFile(null, destinationPath)
         : callbacks.current.onCreateFolder(null, destinationPath);
     if (error) {
@@ -289,19 +219,14 @@ export function usePierreFileTreeController({
       return false;
     }
     drafts.current.delete(draftKey);
-    model.remove(draftKey, draft.kind === "folder" ? { recursive: true } : undefined);
+    model.remove(draftKey, kind === "folder" ? { recursive: true } : undefined);
     return true;
   };
 
-  const commitPathRename = (input: HTMLInputElement, sourcePath: string) => {
+  const commitPathRename = (value: string, sourcePath: string) => {
     const source = sourcePath.replace(/\/$/, "");
-    const file = callbacks.current.files.find((candidate) => candidate.path === source);
-    const target: FileTreeTarget = sourcePath.endsWith("/")
-      ? { type: "folder", path: source }
-      : file
-        ? { type: "file", file }
-        : null;
-    const destination = input.value.trim();
+    const target = getPierreTarget(sourcePath, callbacks.current.files);
+    const destination = value.trim();
     if (!target || source === destination) return;
     const error = callbacks.current.onRename(target, destination);
     if (error) {
@@ -311,60 +236,27 @@ export function usePierreFileTreeController({
     model.remove(sourcePath, target.type === "folder" ? { recursive: true } : undefined);
   };
 
-  const findInlineRenameInput = () => {
-    const visit = (root: Document | ShadowRoot | Element): HTMLInputElement | null => {
-      const input = root.querySelector<HTMLInputElement>("[data-item-rename-input]");
-      if (input) return input;
-      for (const element of root.querySelectorAll<HTMLElement>("*")) {
-        if (element.shadowRoot) {
-          const nestedInput = visit(element.shadowRoot);
-          if (nestedInput) return nestedInput;
-        }
-      }
-      return null;
-    };
-    const container = model.getFileTreeContainer();
-    return container ? visit(container) : null;
-  };
-
-  const finishActiveEdit = () => {
-    const input = findInlineRenameInput();
-    const path =
-      input?.closest<HTMLElement>("[data-item-path]")?.dataset.itemPath ??
-      [...drafts.current.keys()][0];
-    if (path && drafts.current.has(path) && commitDraftEdit(input, path)) return true;
-    input?.blur();
-    return true;
-  };
+  const { finishActiveEdit } = usePierreFileTreeDom({
+    wrapperRef,
+    model,
+    label,
+    t,
+    drafts,
+    commitDraftEdit,
+    commitPathRename,
+    onRootContext: setRootContext,
+  });
 
   const startDraftCreation = (action: "new-file" | "new-folder", parent: string) => {
     const pendingPaths = [...drafts.current.keys()];
     if (!finishActiveEdit()) return false;
-    const existingPaths = [...paths, ...pendingPaths];
-    let base = uniqueDraftName(
-      action === "new-file" ? "untitled" : "new-folder",
-      "",
+    const { path: draftPath, ...draft } = createPierreDraft(
+      action,
       parent,
-      existingPaths,
+      [...paths, ...pendingPaths],
+      (path) => Boolean(model.getItem(path)),
     );
-    while (
-      model.getItem(`${parent ? `${parent}/` : ""}${base}${action === "new-folder" ? "/" : ""}`)
-    ) {
-      existingPaths.push(
-        `${parent ? `${parent}/` : ""}${base}${action === "new-folder" ? "/" : ""}`,
-      );
-      base = uniqueDraftName(
-        action === "new-file" ? "untitled" : "new-folder",
-        "",
-        parent,
-        existingPaths,
-      );
-    }
-    const draftPath = `${parent ? `${parent}/` : ""}${base}${action === "new-folder" ? "/" : ""}`;
-    drafts.current.set(draftPath, {
-      kind: action === "new-file" ? "file" : "folder",
-      defaultName: base,
-    });
+    drafts.current.set(draftPath, draft);
     model.add(draftPath);
     const started = model.startRenaming(draftPath);
     if (!started) {
@@ -375,17 +267,6 @@ export function usePierreFileTreeController({
     }
     return true;
   };
-
-  usePierreFileTreeDom({
-    wrapperRef,
-    model,
-    label,
-    t,
-    drafts,
-    commitDraftEdit,
-    commitPathRename,
-    pendingSearchRestoreRef,
-  });
 
   const deletePath = deletePrompt
     ? deletePrompt.target.type === "file"

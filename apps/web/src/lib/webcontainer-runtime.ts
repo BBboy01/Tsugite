@@ -6,6 +6,7 @@ import { selectPreviewScript } from "./webcontainer-files";
 import { WebContainerFileSync } from "./webcontainer-file-sync";
 import type { IntelligenceFile } from "./editor-intelligence";
 import { scanWebContainerDeclarations } from "./webcontainer-declaration-scan";
+import { DECLARATION_SCAN_LIMITS } from "./declaration-scan-limits";
 import {
   getRuntimeError,
   isStoragePartitioningErrorUrl,
@@ -81,7 +82,7 @@ export class WebContainerRuntime {
     this.boot = options.boot ?? defaultBoot;
     this.installTimeoutMs = options.installTimeoutMs ?? 120_000;
     this.spawnTimeoutMs = options.spawnTimeoutMs ?? 15_000;
-    this.declarationTimeoutMs = options.declarationTimeoutMs ?? 2000;
+    this.declarationTimeoutMs = options.declarationTimeoutMs ?? DECLARATION_SCAN_LIMITS.deadlineMs;
   }
 
   async readTypeScriptDeclarations(

@@ -1,15 +1,25 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
+import type { ContextMenuOpenContext } from "@pierre/trees";
 import type { useFileTree } from "@pierre/trees/react";
+import type { PierreDraft } from "../lib/pierre-file-tree-actions";
+
+export const pierreFileTreeCSS = `
+  [data-file-tree-search-container][data-open="false"] { display: none; }
+  [data-file-tree-search-container] { block-size: 26px; flex-shrink: 0; margin-bottom: 8px; }
+  [data-file-tree-search-input] { box-sizing: border-box; height: 26px; line-height: 24px; font-size: 11px; }
+  [role="tree"]:has([data-file-tree-search-input]:focus:placeholder-shown)
+    [data-item-focused="true"]:not(:focus-visible)::before { outline: none; }
+`;
 
 type Props = {
   wrapperRef: RefObject<HTMLDivElement | null>;
   model: ReturnType<typeof useFileTree>["model"];
   label: string;
   t: (key: string) => string;
-  drafts: RefObject<Map<string, { kind: "file" | "folder"; defaultName: string }>>;
-  commitDraftEdit: (input: HTMLInputElement | null, path: string) => boolean;
-  commitPathRename: (input: HTMLInputElement, path: string) => void;
-  pendingSearchRestoreRef: RefObject<string | null>;
+  drafts: RefObject<Map<string, PierreDraft>>;
+  commitDraftEdit: (value: string | null, path: string) => boolean;
+  commitPathRename: (value: string, path: string) => void;
+  onRootContext: (context: ContextMenuOpenContext | null) => void;
 };
 
 export function usePierreFileTreeDom({
@@ -20,8 +30,44 @@ export function usePierreFileTreeDom({
   drafts,
   commitDraftEdit,
   commitPathRename,
-  pendingSearchRestoreRef,
+  onRootContext,
 }: Props) {
+  const pendingSearchRestoreRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const openRootMenu = (event: MouseEvent) => {
+      if (event.button !== 2) return;
+      const path = event.composedPath();
+      const treeHost = model.getFileTreeContainer();
+      if (!treeHost || !path.includes(treeHost)) return;
+      if (path.some((target) => target instanceof Element && target.closest('[role="treeitem"]')))
+        return;
+      if (path.some((target) => target instanceof Element && target.closest('[role="search"]')))
+        return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      onRootContext({
+        anchorElement: wrapper,
+        anchorRect: {
+          left: event.clientX,
+          top: event.clientY,
+          right: event.clientX,
+          bottom: event.clientY,
+          width: 0,
+          height: 0,
+          x: event.clientX,
+          y: event.clientY,
+        },
+        close: () => onRootContext(null),
+        restoreFocus: () => wrapper.focus(),
+      });
+    };
+    wrapper.addEventListener("contextmenu", openRootMenu, true);
+    return () => wrapper.removeEventListener("contextmenu", openRootMenu, true);
+  }, [model]);
+
   useEffect(() => {
     const observedRoots = new WeakSet<ShadowRoot>();
     const shadowObservers: MutationObserver[] = [];
@@ -35,12 +81,12 @@ export function usePierreFileTreeDom({
       if (!drafts.current.has(path)) {
         if (input.value.includes("/")) {
           event.stopImmediatePropagation();
-          commitPathRename(input, path);
+          commitPathRename(input.value, path);
         }
         return;
       }
       event.stopImmediatePropagation();
-      if (!commitDraftEdit(input, path)) queueMicrotask(() => input.focus());
+      if (!commitDraftEdit(input.value, path)) queueMicrotask(() => input.focus());
     };
     const applyLabel = () => {
       const wrapper = wrapperRef.current;
@@ -94,11 +140,11 @@ export function usePierreFileTreeDom({
       if (!draft && event.key === "Enter" && input.value.includes("/")) {
         event.preventDefault();
         event.stopImmediatePropagation();
-        commitPathRename(input, path);
+        commitPathRename(input.value, path);
         return;
       }
       if (!draft) return;
-      if (event.key === "Enter" && commitDraftEdit(input, path)) {
+      if (event.key === "Enter" && commitDraftEdit(input.value, path)) {
         event.preventDefault();
         event.stopImmediatePropagation();
         return;
@@ -108,7 +154,7 @@ export function usePierreFileTreeDom({
         event.stopImmediatePropagation();
         input.value = draft.defaultName;
         input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
-        commitDraftEdit(input, path);
+        commitDraftEdit(input.value, path);
       } else if (event.key === "Enter" && !input.value.trim()) {
         input.value = draft.defaultName;
         input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
@@ -156,4 +202,29 @@ export function usePierreFileTreeDom({
       eventTarget.removeEventListener("click", onClick, true);
     };
   }, [model]);
+
+  const finishActiveEdit = () => {
+    const container = model.getFileTreeContainer();
+    const input = container ? findInlineRenameInput(container) : null;
+    const path =
+      input?.closest<HTMLElement>("[data-item-path]")?.dataset.itemPath ??
+      [...drafts.current.keys()][0];
+    if (path && drafts.current.has(path) && commitDraftEdit(input?.value ?? null, path))
+      return true;
+    input?.blur();
+    return true;
+  };
+
+  return { finishActiveEdit };
+}
+
+function findInlineRenameInput(root: Document | ShadowRoot | Element): HTMLInputElement | null {
+  const input = root.querySelector<HTMLInputElement>("[data-item-rename-input]");
+  if (input) return input;
+  for (const element of root.querySelectorAll<HTMLElement>("*")) {
+    if (!element.shadowRoot) continue;
+    const nestedInput = findInlineRenameInput(element.shadowRoot);
+    if (nestedInput) return nestedInput;
+  }
+  return null;
 }

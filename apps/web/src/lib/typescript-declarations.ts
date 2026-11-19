@@ -1,14 +1,9 @@
 import type { IntelligenceFile } from "./editor-intelligence";
+import { DECLARATION_SCAN_LIMITS } from "./declaration-scan-limits";
 
-export const DECLARATION_LIMITS = {
-  files: 1024,
-  fileBytes: 1024 * 1024,
-  totalBytes: 8 * 1024 * 1024,
-  metadataBytes: 64 * 1024,
-  entries: 8192,
-} as const;
+export const DECLARATION_LIMITS = DECLARATION_SCAN_LIMITS;
 
-export const DECLARATION_SCAN_OUTPUT_BYTES = 16 * 1024 * 1024;
+export const DECLARATION_SCAN_OUTPUT_BYTES = DECLARATION_SCAN_LIMITS.outputBytes;
 
 export type DeclarationScanResult =
   | { status: "ok"; files: IntelligenceFile[] }
@@ -17,7 +12,7 @@ export type DeclarationScanResult =
 const encoder = new TextEncoder();
 
 function isDeclarationPath(path: string): boolean {
-  if (!path || path.length > 1024 || /[\\:?#]/.test(path)) return false;
+  if (!path || path.length > DECLARATION_LIMITS.pathLength || /[\\:?#]/.test(path)) return false;
   if (
     [...path].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
   ) {
@@ -89,7 +84,7 @@ export function parseDeclarationScan(output: string): IntelligenceFile[] {
     throw new Error("Invalid declaration scan result");
   }
   if (result.status === "disabled" && "reason" in result && typeof result.reason === "string") {
-    if (!result.reason || result.reason.length > 1024) {
+    if (!result.reason || result.reason.length > DECLARATION_LIMITS.reasonLength) {
       throw new Error("Invalid declaration scan result");
     }
     throw new Error(`TypeScript declaration scan disabled: ${result.reason}`);

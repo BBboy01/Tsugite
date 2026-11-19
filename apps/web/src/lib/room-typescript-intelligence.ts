@@ -1,6 +1,5 @@
-import { getFileById, listFiles } from "@iris/shared";
 import type { EditorIntelligence, IntelligenceFile } from "./editor-intelligence";
-import type { RoomClient } from "./room-client";
+import type { RoomTypeScriptSource } from "./room-typescript-source";
 import { validateDeclarationFiles } from "./typescript-declarations";
 import { TypeScriptWorkerClient } from "./typescript-worker-client";
 
@@ -23,6 +22,7 @@ export type ProjectDeclarations = Pick<
 
 export type RoomTypeScriptIntelligenceOptions = {
   createIntelligence?: (files: readonly IntelligenceFile[]) => EditorIntelligence;
+  deferSourceSubscription?: boolean;
 };
 
 export type EditorIntelligenceServiceStatus = Readonly<{
@@ -42,7 +42,7 @@ function createWorkerIntelligence(files: readonly IntelligenceFile[]): EditorInt
 export class RoomTypeScriptIntelligence {
   readonly intelligence: EditorIntelligence;
   private declarations = new Map<string, IntelligenceFile>();
-  private unsubscribe: () => void;
+  private unsubscribe?: () => void;
   private disposed = false;
   private snapshotRevision = 0;
   private sources = new Map<string, IntelligenceFile>();
@@ -55,7 +55,7 @@ export class RoomTypeScriptIntelligence {
   private snapshotRecoveryTimer?: ReturnType<typeof setTimeout>;
   private unsubscribeServiceStatus?: () => void;
   constructor(
-    private readonly client: Pick<RoomClient, "doc">,
+    private readonly source: RoomTypeScriptSource,
     options: RoomTypeScriptIntelligenceOptions = {},
   ) {
     const initial = this.readSources();
@@ -70,26 +70,22 @@ export class RoomTypeScriptIntelligence {
         this.serviceListeners.forEach((listener) => listener());
       });
     }
-    this.unsubscribe = client.doc.subscribe((batch) => {
-      const roots = batch.events
-        .map((event) => event.path[0])
-        .filter((root): root is string => typeof root === "string");
-      if (
-        !roots.some((root) => root.startsWith("file:") || root === "files" || root === "filePaths")
-      )
-        return;
+    if (!options.deferSourceSubscription) this.start();
+  }
+  start(): void {
+    if (this.disposed || this.unsubscribe) return;
+    this.unsubscribe = this.source.subscribe((change) => {
       this.snapshotRevision++;
-      if (roots.some((root) => root === "files" || root === "filePaths")) {
+      if (change.workspace) {
         const next = this.readSources();
         this.sources = new Map(next.map((file) => [file.path, file]));
         void this.intelligence.syncWorkspace(next);
         return;
       }
-      for (const root of new Set(roots.filter((path) => path.startsWith("file:")))) {
-        const fileId = root.slice("file:".length);
+      for (const fileId of change.fileIds) {
         const previousPath = this.fileIds.get(fileId);
         const previous = previousPath ? this.sources.get(previousPath) : undefined;
-        const current = getFileById(client.doc, fileId);
+        const current = this.source.readFile(fileId);
         if (previousPath && current?.path !== previousPath) this.sources.delete(previousPath);
         if (!current) {
           if (previousPath) {
@@ -98,7 +94,7 @@ export class RoomTypeScriptIntelligence {
           }
           continue;
         }
-        const file = { path: current.path, text: current.text.toString() };
+        const file = { path: current.path, text: current.text };
         this.fileIds.set(fileId, current.path);
         this.sources.set(current.path, file);
         if (this.serviceStatus.state === "unavailable") {
@@ -113,6 +109,15 @@ export class RoomTypeScriptIntelligence {
         void this.intelligence.updateFile(file);
       }
     });
+    const current = this.readSources();
+    if (
+      current.length !== this.sources.size ||
+      current.some((file) => this.sources.get(file.path)?.text !== file.text)
+    ) {
+      this.snapshotRevision++;
+      this.sources = new Map(current.map((file) => [file.path, file]));
+      void this.intelligence.syncWorkspace(current);
+    }
   }
   async syncDeclarations(files: readonly IntelligenceFile[]): Promise<void> {
     if (this.disposed) return;
@@ -215,9 +220,9 @@ export class RoomTypeScriptIntelligence {
     return [...this.declarations.values()];
   }
   private readSources(): IntelligenceFile[] {
-    const files = this.client.doc.getByPath("files") ? listFiles(this.client.doc) : [];
+    const files = this.source.readFiles();
     this.fileIds = new Map(files.map((file) => [file.id, file.path]));
-    const source = files.map((file) => ({ path: file.path, text: file.text.toString() }));
+    const source = files.map((file) => ({ path: file.path, text: file.text }));
     const sourcePaths = new Set(source.map((file) => file.path));
     return [
       ...source,
@@ -252,7 +257,7 @@ export class RoomTypeScriptIntelligence {
     this.serviceStatus = { state: "disposed" };
     this.serviceListeners.forEach((listener) => listener());
     this.cancelSnapshotRecovery();
-    this.unsubscribe();
+    this.unsubscribe?.();
     this.unsubscribeServiceStatus?.();
     this.intelligence.dispose();
     this.declarations.clear();

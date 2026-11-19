@@ -74,6 +74,40 @@ test("reopening offers a saved draft without importing it until restore", async 
   await next.drafts.dispose();
 });
 
+test("a disposed room retains its document and pending updates for the final draft checkpoint", async () => {
+  const store = new MemoryStore();
+  const { client, drafts } = setup(store);
+  await drafts.start();
+  client.doc.getText("text").insert(0, "last offline edit");
+  client.doc.commit();
+  client.dispose();
+  await drafts.dispose();
+  const saved = [...store.records.values()][0];
+  expect(saved.updates).toHaveLength(1);
+  const restored = new LoroDoc();
+  restored.import(saved.snapshot);
+  expect(restored.getText("text").toString()).toBe("last offline edit");
+  restored.free();
+});
+
+test("restoring after room disposal retains the original recovery record", async () => {
+  const store = new MemoryStore();
+  const first = setup(store);
+  await first.drafts.start();
+  first.client.doc.getText("text").insert(0, "recover later");
+  first.client.doc.commit();
+  await first.drafts.dispose();
+  const savedId = [...store.records.keys()][0];
+  const next = setup(store);
+  await next.drafts.start();
+  next.client.dispose();
+  await next.drafts.restore();
+  expect(store.records.has(savedId)).toBe(true);
+  expect(next.drafts.state.available).toHaveLength(1);
+  expect(next.drafts.state.applied).toBe(false);
+  await next.drafts.dispose();
+});
+
 test("restoration merges remote edits and acknowledgements clear the local backup", async () => {
   const store = new MemoryStore();
   const first = setup(store);

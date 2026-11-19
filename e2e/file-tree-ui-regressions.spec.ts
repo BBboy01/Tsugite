@@ -318,6 +318,7 @@ test("failed F2 rename restores the latest shared tree", async ({ page }) => {
   await expect(
     page.getByRole("region", { name: "Editing src/index.css", exact: true }),
   ).toBeVisible();
+  await page.locator(".cm-content").focus();
   await expect(page.locator(".cm-content")).toBeFocused();
   await original.focus();
   await page.keyboard.press("F2");

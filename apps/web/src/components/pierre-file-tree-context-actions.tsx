@@ -104,22 +104,3 @@ export function PierreFileTreeContextActions({
 
 const contextMenuItemClass =
   "relative flex cursor-default select-none items-center rounded-md px-3 py-1.5 text-sm leading-5 outline-none focus:bg-[var(--selection-surface)] focus:text-iris-strong data-[disabled]:pointer-events-none data-[disabled]:opacity-50";
-
-export function uniqueDraftName(
-  stem: string,
-  extension: string,
-  directory: string,
-  paths: readonly string[],
-): string {
-  const prefix = directory ? `${directory}/` : "";
-  const taken = new Set(
-    paths
-      .filter((path) => path.startsWith(prefix))
-      .map((path) => path.slice(prefix.length).replace(/\/$/, "").split("/")[0]),
-  );
-  if (!taken.has(`${stem}${extension}`)) return `${stem}${extension}`;
-  for (let suffix = 2; ; suffix += 1) {
-    const candidate = `${stem} ${suffix}${extension}`;
-    if (!taken.has(candidate)) return candidate;
-  }
-}
