@@ -1,6 +1,6 @@
 import { FileTree as PierreFileTree } from "@pierre/trees/react";
 import type { CSSProperties } from "react";
-import type { FileTreeTarget } from "../lib/file-tree-model";
+import { getPierreCreationDirectory, getPierreTarget } from "../lib/pierre-file-tree-actions";
 import { DeletePopover } from "./file-tree-inline-controls";
 import { PierreFileTreeContextActions } from "./pierre-file-tree-context-actions";
 import { PierreFileTreeToolbar } from "./pierre-file-tree-toolbar";
@@ -56,20 +56,11 @@ export function PierreFileTreeView(props: PierreFileTreeProps) {
                 delete: t("files.delete"),
               }}
               onAction={(action, actionAnchorRect) => {
-                const path = item?.path.replace(/\/$/, "") ?? "";
-                const isFile = item?.kind === "file";
-                const file = callbacks.current.files.find((candidate) => candidate.path === path);
-                const target: FileTreeTarget = isFile
-                  ? file
-                    ? { type: "file", file }
-                    : null
-                  : { type: "folder", path };
+                const target = item
+                  ? getPierreTarget(item.path, callbacks.current.files, item.kind !== "file")
+                  : null;
                 if (action === "new-file" || action === "new-folder") {
-                  const parent = !item
-                    ? ""
-                    : item.kind === "directory"
-                      ? path
-                      : path.split("/").slice(0, -1).join("/");
+                  const parent = getPierreCreationDirectory(item);
                   context.close({ restoreFocus: false });
                   setTimeout(() => startDraftCreation(action, parent), 0);
                 } else if (action === "rename" && target) {
