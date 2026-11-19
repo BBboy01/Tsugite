@@ -22,11 +22,13 @@ Useful checks:
 - `bun run build` creates the production web bundle.
 - `bun run test:e2e` runs Playwright UI and preview workflows.
 
-Browser E2E is release/manual-only in CI. Run affected Playwright tests locally for UI or preview changes; ordinary PR CI does not validate browser interactions.
+Browser CI runs a smoke suite on `main` and the full suite for release candidates, version tags, and manual runs. Run affected Playwright tests locally for UI or preview changes; ordinary PR CI does not validate browser interactions. See `docs/testing.md` for project selection and evidence boundaries.
 
 ## Style and Tests
 
 Use two-space indentation and the existing TypeScript and React patterns. Name React components in PascalCase and hooks as `useXxx` (for example, `useWorkspaceController`); keep module filenames in kebab-case. Put unit tests beside their modules as `*.test.ts(x)` and browser tests in `e2e/*.spec.ts`. Format with Oxfmt and lint with Oxlint; while iterating, scope checks to changed files. Add regression tests for bug fixes and exercise keyboard/focus behavior for editor UI changes. CI uploads LCOV coverage to Codecov; no percentage threshold is configured.
+
+For documentation changes, check the modified Markdown files explicitly with Oxfmt; the root formatting script and staged-file hooks do not include Markdown. Keep commands, links, resource limits, and CI descriptions aligned with their source files.
 
 ## Database Changes
 

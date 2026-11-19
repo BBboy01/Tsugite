@@ -47,35 +47,23 @@ The server never runs a user's project commands. Dependency installation and pre
 
 ### Source map
 
-| Responsibility                              | Entry point                                                                                                                                                                                                                                        |
-| ------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| UI composition                              | [app-shell.tsx](../apps/web/src/app-shell.tsx)                                                                                                                                                                                                     |
-| Room composition and subscriptions          | [room-session.ts](../apps/web/src/lib/room-session.ts), [use-room-session.ts](../apps/web/src/lib/use-room-session.ts)                                                                                                                             |
-| Workspace state and commands                | [workspace-state.ts](../apps/web/src/lib/workspace-state.ts), [workspace-atoms.ts](../apps/web/src/lib/workspace-atoms.ts)                                                                                                                         |
-| Tabs, follow state, file actions            | [use-workspace-controller.ts](../apps/web/src/lib/use-workspace-controller.ts)                                                                                                                                                                     |
-| Pierre file tree and inline actions         | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [pierre-file-tree-view.tsx](../apps/web/src/components/pierre-file-tree-view.tsx), [file-tree-inline-controls.tsx](../apps/web/src/components/file-tree-inline-controls.tsx)            |
-| File and command search                     | [file-fuzzy-search.ts](../apps/web/src/lib/file-fuzzy-search.ts), [command-palette-model.ts](../apps/web/src/lib/command-palette-model.ts), [settings-registry.ts](../apps/web/src/lib/settings-registry.ts)                                       |
-| Focus and shortcuts                         | [use-editor-focus.ts](../apps/web/src/lib/use-editor-focus.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                       |
-| Workspace shortcut model                    | [keymap.ts](../apps/web/src/lib/keymap.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                                           |
-| Navigation reconciliation                   | [use-workspace-navigation.ts](../apps/web/src/lib/use-workspace-navigation.ts), [workspace-navigation.ts](../apps/web/src/lib/workspace-navigation.ts)                                                                                             |
-| Follow projection                           | [use-workspace-follow.ts](../apps/web/src/lib/use-workspace-follow.ts), [workspace-follow.ts](../apps/web/src/lib/workspace-follow.ts)                                                                                                             |
-| Local editor preferences                    | [workspace-preferences.ts](../apps/web/src/lib/workspace-preferences.ts)                                                                                                                                                                           |
-| Localization resources and initialization   | [i18n.ts](../apps/web/src/lib/i18n.ts), [i18n-en.ts](../apps/web/src/lib/i18n-en.ts), [i18n-zh-cn.ts](../apps/web/src/lib/i18n-zh-cn.ts), [i18n-zh-tw.ts](../apps/web/src/lib/i18n-zh-tw.ts), [i18n-ja.ts](../apps/web/src/lib/i18n-ja.ts)         |
-| Editor lifecycle and visual reconfiguration | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx); CodeMirror compartments keep theme, wrapping, and Highlights updates in one editor instance                                                                                         |
-| Incremental visual settings                 | [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts)                                                                                                                                                               |
-| Vim integration lifecycle                   | [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                                                                                                                                                               |
-| Editor status and command line              | [editor-status-bar.tsx](../apps/web/src/components/editor-status-bar.tsx), [editor-status.ts](../apps/web/src/lib/editor-status.ts), [vim-status.ts](../apps/web/src/lib/vim-status.ts)                                                            |
-| Optional TypeScript services                | [editor-typescript-services.ts](../apps/web/src/lib/editor-typescript-services.ts)                                                                                                                                                                 |
-| Room language-service source and RPC        | [room-typescript-source.ts](../apps/web/src/lib/room-typescript-source.ts), [room-typescript-intelligence.ts](../apps/web/src/lib/room-typescript-intelligence.ts), [typescript-worker-client.ts](../apps/web/src/lib/typescript-worker-client.ts) |
-| Worker engine and declaration loading       | [typescript.worker.ts](../apps/web/src/lib/typescript.worker.ts), [typescript-standard-library.ts](../apps/web/src/lib/typescript-standard-library.ts), [webcontainer-declaration-scan.ts](../apps/web/src/lib/webcontainer-declaration-scan.ts)   |
-| Session, transport and replay               | [room-client.ts](../apps/web/src/lib/room-client.ts), [room-transport.ts](../apps/web/src/lib/room-transport.ts), [room-outbox.ts](../apps/web/src/lib/room-outbox.ts)                                                                             |
-| Document and presence boundaries            | [room-document.ts](../apps/web/src/lib/room-document.ts), [room-presence.ts](../apps/web/src/lib/room-presence.ts)                                                                                                                                 |
-| Preview mode composition and iframe events  | [use-preview-runtime.ts](../apps/web/src/lib/use-preview-runtime.ts)                                                                                                                                                                               |
-| Standalone preview compilation lifecycle    | [use-preview-standalone.ts](../apps/web/src/lib/use-preview-standalone.ts)                                                                                                                                                                         |
-| WebContainer scheduling and React lifecycle | [preview-webcontainer-scheduler.ts](../apps/web/src/lib/preview-webcontainer-scheduler.ts), [use-preview-webcontainer.ts](../apps/web/src/lib/use-preview-webcontainer.ts), [webcontainer-runtime.ts](../apps/web/src/lib/webcontainer-runtime.ts) |
-| WebSocket admission and messages            | [room-app.ts](../apps/server/src/room-app.ts)                                                                                                                                                                                                      |
-| Room lifetime and persistence scheduling    | [room-service.ts](../apps/server/src/rooms/room-service.ts), [room-persistence.ts](../apps/server/src/rooms/room-persistence.ts)                                                                                                                   |
-| SQLite initialization and storage           | [database.ts](../apps/server/src/db/database.ts), [room-repository.ts](../apps/server/src/rooms/room-repository.ts)                                                                                                                                |
+| Responsibility                                       | Entry points                                                                                                                                                                                                                                             |
+| ---------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| UI composition and room lifecycle                    | [app-shell.tsx](../apps/web/src/app-shell.tsx), [room-session.ts](../apps/web/src/lib/room-session.ts), [use-room-session.ts](../apps/web/src/lib/use-room-session.ts)                                                                                   |
+| Workspace commands and selectors                     | [workspace-state.ts](../apps/web/src/lib/workspace-state.ts), [workspace-atoms.ts](../apps/web/src/lib/workspace-atoms.ts)                                                                                                                               |
+| Navigation, tab persistence, follow, and preferences | [use-workspace-controller.ts](../apps/web/src/lib/use-workspace-controller.ts), [editor-tab-session.ts](../apps/web/src/lib/editor-tab-session.ts), [workspace-preferences.ts](../apps/web/src/lib/workspace-preferences.ts)                             |
+| File tree and inline actions                         | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [pierre-file-tree-actions.ts](../apps/web/src/lib/pierre-file-tree-actions.ts), [use-pierre-file-tree-dom.ts](../apps/web/src/components/use-pierre-file-tree-dom.ts)                         |
+| Search, commands, settings, and shortcuts            | [file-fuzzy-search.ts](../apps/web/src/lib/file-fuzzy-search.ts), [command-palette-model.ts](../apps/web/src/lib/command-palette-model.ts), [settings-registry.ts](../apps/web/src/lib/settings-registry.ts), [keymap.ts](../apps/web/src/lib/keymap.ts) |
+| Localization                                         | [i18n.ts](../apps/web/src/lib/i18n.ts), [i18n-config.ts](../apps/web/src/lib/i18n-config.ts); locale modules sit beside them                                                                                                                             |
+| Editor lifecycle, visual settings, and Vim           | [editor-pane.tsx](../apps/web/src/components/editor-pane.tsx), [editor-visual-configuration.ts](../apps/web/src/lib/editor-visual-configuration.ts), [editor-vim-bindings.ts](../apps/web/src/lib/editor-vim-bindings.ts)                                |
+| Language-service ownership and RPC                   | [room-typescript-intelligence.ts](../apps/web/src/lib/room-typescript-intelligence.ts), [typescript-worker-client.ts](../apps/web/src/lib/typescript-worker-client.ts), [typescript.worker.ts](../apps/web/src/lib/typescript.worker.ts)                 |
+| Transport, document, presence, and outbox            | [room-client.ts](../apps/web/src/lib/room-client.ts), [room-transport.ts](../apps/web/src/lib/room-transport.ts), [room-document.ts](../apps/web/src/lib/room-document.ts), [room-outbox.ts](../apps/web/src/lib/room-outbox.ts)                         |
+| Local draft recovery                                 | [room-drafts.ts](../apps/web/src/lib/room-drafts.ts), [room-draft-store.ts](../apps/web/src/lib/room-draft-store.ts), [draft-sync-port.ts](../apps/web/src/lib/draft-sync-port.ts)                                                                       |
+| Preview composition and scheduling                   | [use-preview-runtime.ts](../apps/web/src/lib/use-preview-runtime.ts), [preview-webcontainer-scheduler.ts](../apps/web/src/lib/preview-webcontainer-scheduler.ts), [webcontainer-runtime.ts](../apps/web/src/lib/webcontainer-runtime.ts)                 |
+| WebSocket admission and room lifecycle               | [room-app.ts](../apps/server/src/room-app.ts), [room-service.ts](../apps/server/src/rooms/room-service.ts), [room-persistence.ts](../apps/server/src/rooms/room-persistence.ts)                                                                          |
+| SQLite initialization and storage                    | [database.ts](../apps/server/src/db/database.ts), [room-repository.ts](../apps/server/src/rooms/room-repository.ts)                                                                                                                                      |
+
+### Workspace commands and navigation
 
 Workspace state is scoped to the application provider. Components subscribe to individual selectors instead of the full workspace object; modal visibility is read by each modal, so opening a search or command palette does not rerender the editor and preview tree.
 
@@ -94,6 +82,13 @@ when following a collaborator with no active file. Activating a file locally exi
 follow mode, while selecting the followed file does not. Pending cursor sends are
 cancelled before file selection so a cursor cannot be published for the old file.
 
+`EditorTabSession` restores and saves tab order and the active file in browser
+local storage under a room-scoped key. Restoration waits for the first accepted
+room snapshot, maps stable file IDs to current paths, drops deleted files, and
+preserves an explicitly empty session. Storage failure leaves navigation usable.
+The persisted record is local navigation state, not a shared Loro container;
+collaborators keep independent tab order and selection.
+
 Controller actions are memoized at the composition boundary, and the file tree,
 editor, preview, file search, and command palette use shallow prop boundaries.
 Presence or connection updates therefore do not recreate unrelated action props or
@@ -106,6 +101,8 @@ cost and verifies that a 5,000-file tree stays bounded in rendered row count.
 Current-user name and color cross the memoized file-tree boundary as scalar
 props. The session identity object is mutable, so passing its stable reference
 would hide profile updates from React's shallow comparison.
+
+### File tree interactions
 
 File actions share the `FileTreeTarget` contract from `file-tree-model.ts` rather
 than importing UI component types. `FileTree` renders `PierreFileTreeView`;
@@ -125,6 +122,8 @@ Closing the active editor tab requests focus through the navigation hook after
 the atomic tab transition; DOM side effects remain outside the state reducer.
 Theme preview is cleared whenever the command palette closes, including when
 another workspace dialog replaces it without calling its local close handler.
+
+### Commands and settings
 
 The Command Palette model builds its root actions and searchable setting
 submenus from the current room settings, local Vim and clipboard preferences,
@@ -249,6 +248,8 @@ Vim search maps existing decorations during edits and schedules one recount afte
 
 CodeMirror keeps the editor instance stable while shared visual settings change. Theme, font size/family, wrapping, and Highlights highlighting are installed through compartments and reconfigured in place; Vim mode and file identity remain initialization boundaries. The room's TypeScript Worker survives file switches and editor reconfiguration.
 
+### Editor lifecycle
+
 The base editor mounts synchronously with collaboration, undo, syntax parsing, and focus available independently of language-service startup.
 CodeMirror providers attach asynchronously and discard results for destroyed views or old documents.
 `RoomSession` owns one bounded TypeScript Worker through `RoomTypeScriptIntelligence`, which consumes the document-source interface in `room-typescript-source.ts`. `RoomClient` owns transport, document, outbox and presence without creating a language service. Mount starts the source subscription; deferred final cleanup releases the client and Worker while StrictMode's immediate effect reattachment reuses both. Final disposal stops subscriptions and reconnection but retains the document and pending updates for the final draft checkpoint. The Worker retries initialization once; if it still fails, language services become unavailable. Oversized or unsafe snapshots also become unavailable rather than bypassing resource limits. Editing, Vim, collaboration, and highlighting remain available independently of language services.
@@ -267,6 +268,8 @@ update layout, relative numbering changes update the gutter, and only a Highligh
 theme change replaces the highlighter. Runtime preferences produce no editor
 reconfiguration. `EditorVimBindings` owns the status, search, cursor-style, and
 clipboard integrations and releases them together before the view is destroyed.
+
+### Syntax highlighting
 
 Each Highlights plugin invalidates its pending request when destroyed. A delayed
 theme or grammar load from an abandoned preview cannot publish decorations to
@@ -428,7 +431,8 @@ The starter manifest is pinned for new rooms. A compatibility transform can adju
 | Identity, interface language, Vim preference, keymap, system-clipboard preference | Browser local storage, scoped to origin                                    |
 | Unacknowledged updates                                                            | Browser memory plus best-effort IndexedDB checkpoint until acknowledgement |
 | Cursors and active-file presence                                                  | Live room connections                                                      |
-| Open tabs, selection, follow state, undo history                                  | Current editor session                                                     |
+| Open tabs, tab order, active file                                                 | Browser local storage, scoped to origin and room ID                        |
+| Cursor selection, follow state, undo history                                      | Current editor session                                                     |
 | Installed project dependencies and preview processes                              | Each browser's WebContainer runtime                                        |
 
 ```mermaid
@@ -463,4 +467,9 @@ flowchart TD
 
 ## Browser test ownership
 
-The Playwright suite uses an in-memory room server on port 3003 and Vite on 5175, without environment files or reused development servers. The test server permits larger test-room batches; production admission limits remain unchanged. The `ui` project runs ordinary browser scenarios with two workers locally; main-branch CI uses the smaller `smoke` project with one worker plus one tagged real preview test, while release candidates, version tags and manual runs execute the complete suite with one worker and a 60-minute job timeout. `preview` remains one worker because its WebContainer scenarios share a real runtime lifecycle. Use `--project=preview --no-deps` for isolated diagnosis; a dependency failure prevents the dependent project from running and is not a passing preview check. Browser CI runs on pushes to `main`, release candidates, version tags and manual runs; unit checks do not establish that remote WebContainer services or dependency downloads work in a real browser. Commands and test ownership are documented in the [development guide](development.md#test-data-and-browser-tests).
+Playwright owns isolated test servers and an in-memory database. Controlled
+fixtures verify local state and scheduling; real WebContainer startup and recovery
+belong to `e2e/preview.spec.ts`. Unit tests and controlled browser fixtures cannot
+establish remote runtime or package-download availability. See the
+[testing guide](testing.md#browser-tests) for project dependencies, CI selection,
+failure artifacts, and benchmark interpretation.

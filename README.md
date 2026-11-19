@@ -12,6 +12,8 @@
 
 <p align="center">
   <a href="docs/getting-started.md">Get started</a> ·
+  <a href="docs/development.md">Develop</a> ·
+  <a href="docs/testing.md">Test</a> ·
   <a href="docs/deployment.md">Deploy</a> ·
   <a href="docs/architecture.md">Architecture</a>
 </p>
@@ -40,11 +42,12 @@ The workspace keeps the file tree, editor, preview, output, and room presence in
 
 - Shared files, folders, workspace settings, cursors, and presence, with SQLite persistence for project data
 - CodeMirror 6 with optional Vim mode, relative line numbers, configurable cursors, browser-local keymaps, and a persistent file/cursor status bar
-- Fuzzy file search, a searchable Command Palette, TypeScript navigation, references, hover information, and inline Peek
+- Fuzzy file search, a searchable Command Palette, and browser-local TypeScript completion, diagnostics, navigation, references, hover information, and inline Peek
+- Reorderable editor tabs with context actions and room-scoped browser persistence
 - Browser-local live previews with incremental file synchronization, console output, and runtime recovery actions
 - Inline file and folder creation or rename, context-menu copy, and deletion with undo
 - Local recovery drafts for pending edits when IndexedDB and Web Locks are available
-- Anonymous room identities with editable display names and avatar colors
+- Anonymous room identities with editable display names and avatar colors; English, Simplified Chinese, Traditional Chinese, and Japanese interfaces
 - Docker Compose deployment with Caddy serving the web app and proxying WebSocket traffic
 
 ## Quick start
@@ -76,16 +79,21 @@ bun run dev:web
 
 Open [http://127.0.0.1:5173/room/demo](http://127.0.0.1:5173/room/demo). The server applies migrations on startup and stores room data in `data/tsugite.sqlite`. Share the room URL with another browser profile or teammate using the same deployment.
 
+Use Vite's printed URL if port `5173` is occupied. A teammate on another device needs a reachable deployment URL; `127.0.0.1` points to their own device. Bun runs the application tooling and room server; the starter project's `pnpm` runs separately inside each browser.
+
 For Docker Compose or published images, see the [deployment guide](docs/deployment.md). Use the documentation from the same revision as the code or images you deploy.
 
 ## Documentation
 
-- [Getting started](docs/getting-started.md): room usage, shortcuts, settings, and preview troubleshooting
-- [Development guide](docs/development.md): repository layout, local workflows, and verification
-- [Deployment guide](docs/deployment.md): Docker Compose, Caddy, images, and configuration
-- [Architecture](docs/architecture.md): runtime boundaries, data flow, and failure boundaries
-- [TypeScript intelligence](docs/typescript-intelligence.md): browser Worker, limits, and language-service recovery
-- [Contributing](CONTRIBUTING.md): focused changes, verification, commits, and dependency updates
+| Task                                                              | Guide                                                      |
+| ----------------------------------------------------------------- | ---------------------------------------------------------- |
+| Use rooms, tabs, settings, shortcuts, and previews                | [Getting started](docs/getting-started.md)                 |
+| Set up a checkout, change the schema, or find a module            | [Development](docs/development.md)                         |
+| Choose checks, run browser tests, or measure performance          | [Testing](docs/testing.md)                                 |
+| Deploy, upgrade, back up, or restore a server                     | [Deployment](docs/deployment.md)                           |
+| Understand state ownership, synchronization, and failure handling | [Architecture](docs/architecture.md)                       |
+| Debug language services, declarations, or Worker limits           | [TypeScript intelligence](docs/typescript-intelligence.md) |
+| Prepare a contribution, release, or dependency update             | [Contributing](CONTRIBUTING.md)                            |
 
 ## Verification
 
@@ -95,7 +103,7 @@ Run unit and integration tests:
 bun run test
 ```
 
-Use the [development guide](docs/development.md#verification) for scoped static checks and browser tests. Playwright starts isolated test servers on ports `3003` and `5175`; it does not reuse development servers or the development database. Browser CI runs on `main`, for release candidates, version tags, and manual runs.
+Use the [testing guide](docs/testing.md) for scoped static checks and browser tests. Playwright starts isolated test servers on ports `3003` and `5175`; it does not reuse development servers or the development database. Main-branch browser CI runs a smoke suite; release candidates, version tags, and manual runs use the full suite. Ordinary PRs do not run browser tests automatically.
 
 ## Current limitations
 

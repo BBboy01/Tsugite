@@ -4,6 +4,12 @@
 
 Run one room-server process with a persistent data volume. There is no authentication or multi-server coordination. Treat room URLs as shareable access to the project, keep deployments private when needed, and avoid putting secrets in shared files or project code.
 
+| Deployment                            | Use when                                          | Requirements                                                                       |
+| ------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| [Build with Compose](#docker-compose) | Deploying a checkout, including native ARM builds | Docker daemon, Compose, repository checkout                                        |
+| [Published images](#published-images) | Deploying matching prebuilt web/server versions   | Docker, Compose configuration, registry access; published images are AMD64         |
+| [Without Docker](#without-docker)     | Managing Bun and a static web server directly     | Pinned Bun, checkout, persistent database directory, HTTPS/WebSocket reverse proxy |
+
 ## Docker Compose
 
 From a repository checkout, the default stack contains two services:
@@ -62,6 +68,27 @@ The publishing workflow currently builds `linux/amd64` images only. On ARM hosts
 
 Keep both image variables set for subsequent Compose commands as well, preferably in the deployment shell or service configuration. Changing `TSUGITE_PORT` changes only the published web port.
 
+## Without Docker
+
+Use the Bun version in [`.bun-version`](../.bun-version). From the repository root:
+
+```bash
+bun install --frozen-lockfile
+bun --no-env-file run build
+```
+
+Serve `apps/web/dist` with a static web server that provides SPA fallback to `index.html`, the two isolation headers below, and a WebSocket proxy from `/ws/*` to the Bun server. The bundled [Caddyfile](../Caddyfile) is the reference; outside Compose, change its document root and `server:3001` upstream to match your host layout.
+
+Start the room server from the repository root, choosing a writable persistent database path:
+
+```bash
+DATABASE_PATH=./data/tsugite.sqlite PORT=3001 bun --no-env-file apps/server/src/index.ts
+```
+
+Keep `drizzle/` available in that working directory; startup applies its migrations. Run Bun under your process supervisor, allow graceful SIGTERM shutdown, and configure HTTPS for remote use. The server listens independently of the static web server; restrict direct backend access through your host/network configuration.
+
+`bun run preview` serves a build for local inspection and does not proxy room WebSockets. The GitHub Release archive contains only static web output, so it still needs a matching server checkout/runtime and persistent database.
+
 ## Configuration
 
 | Variable               | Consumer               | Default / behavior                                                                                                                  |
@@ -103,11 +130,21 @@ The server's `/health` endpoint reports process availability, not a durable-stor
 
 The server runs checked-in Drizzle migrations on startup. The binary snapshot migration preserves legacy JSON data and converts each room on its next successful save. Before upgrading, stop the server cleanly and back up its complete database volume. Do not copy only the main SQLite file while it is running in WAL mode.
 
-After binary snapshots have been written, reverting the application alone is not a safe rollback: older versions cannot read them. Restore the pre-upgrade volume together with the older image, or explicitly convert the binary rows first. Restoring a backup discards edits made after that backup.
+After binary snapshots have been written, reverting to a version that only reads legacy JSON is not a safe application-only rollback. Restore the pre-upgrade volume together with the older image, or explicitly convert the binary rows first. Restoring a backup discards edits made after that backup.
 
 Upgrade the web and server images together and reload already-open editors. The bounded client outbox requires the server's `update:ack` message to release pending edits; mixed frontend/backend versions are not a supported rolling-upgrade path. Acknowledgements confirm in-memory acceptance, not a durable database commit. Unacknowledged updates are held in browser memory and may also be checkpointed to IndexedDB for explicit recovery when browser support and storage permit. The checkpoint is best-effort, can be lost, and is not a substitute for the server database backup described below.
 
 Collaboration broadcasts immediately; snapshots are coalesced on a 500 ms deadline. Last-member disconnect and SIGTERM/SIGINT trigger an immediate flush. Abrupt termination can lose recent unflushed edits; 500 ms is a normal-operation target, not a guarantee during database failures or a blocked process. Shutdown disables SQLite's per-attempt busy wait, retries persistence for up to five seconds and reports failure with a nonzero exit status. Give the container at least the default ten-second stop grace period.
+
+### Upgrade procedure
+
+1. Select matching web/server versions and read the documentation at that revision. Confirm both image publishing jobs and the intended [browser checks](testing.md#browser-ci) completed; the jobs are independent.
+2. Arrange a maintenance window, finish synchronizing open editors, then follow [Backup and restore](#backup-and-restore) through the stopped-container backup. Keep the server stopped while changing versions.
+3. For a source build, check out the selected revision and run `docker compose up -d --build`. For published images, set both image variables to the selected tag and run `docker compose up -d --no-build --pull always`. Preserve the Compose project name, data volume, and host port.
+4. Inspect `docker compose ps` and server logs for startup/migration errors before reopening access. Reload existing editors so web and server use the same protocol.
+5. Check a known room with two independent browser identities, edit a file, and start a real preview. If rollback is needed, restore the compatible database backup and matching images together; preserve the failed-upgrade volume for investigation.
+
+For a standalone deployment, use the same stop/backup/update/start sequence for the Bun process and static web output. Keep the database path and working directory stable. A successful process restart alone does not verify room contents or preview capabilities.
 
 ### Backup and restore
 

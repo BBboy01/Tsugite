@@ -48,9 +48,17 @@ Room IDs contain 1-80 ASCII letters, digits, underscores, or hyphens. Opening an
 
 New rooms start from the shared example project and open `src/App.tsx`. The user card lets you change your anonymous display name and avatar color.
 
+There is no separate save action: edits synchronize automatically. Connection status, pending edits, local draft backup, and server persistence describe different stages. Keep a tab with pending edits open until it synchronizes, or preserve those edits through [draft recovery](#draft-recovery).
+
 Identity is stored per browser origin. Two tabs in the same profile share an identity, so use separate profiles when testing two collaborators. Only one connection per identity is tracked in a room. `127.0.0.1` refers to the current device; a teammate needs the URL of a reachable deployment, not your local loopback address.
 
 Click another member in the presence list to follow their active file, cursor, and selection. The editor outline indicates following; local editor interaction or selecting a file exits it. A file tab's `+N` badge counts other members currently active in that file, not everyone who has it open.
+
+## Files and tabs
+
+Open files from the tree or file search. Drag a tab horizontally to reorder it, or focus it and press `Alt-Shift-ArrowLeft` / `Alt-Shift-ArrowRight`. The tab context menu offers Close, Close others, Close to the right, Close all, and Copy relative path. Closing a tab leaves its shared file intact; deleting from the file tree removes the shared file for everyone.
+
+Tab order and the active file are saved locally for each room in your browser profile. Reloading restores surviving files after the room snapshot arrives; renames are tracked by file identity, deleted files disappear, and a deliberately empty tab strip stays empty. Storage restrictions can prevent restoration. Collaborators keep their own tabs and ordering.
 
 ## Keyboard workflow
 
@@ -87,7 +95,17 @@ System clipboard integration is an optional browser-local setting. When enabled 
 | Relative line numbers and normal-mode cursor style   | Vim enabled/disabled                       |
 | Package manager, automatic install and preview start | Keymap and Vim system-clipboard preference |
 
-Shared preferences affect collaborators and survive server restarts. Browser preferences apply to that origin. Open tabs, current selection, follow state, and undo history are session state rather than persisted room settings.
+Shared preferences affect collaborators and survive server restarts. Browser preferences apply to that origin. Settings > Workspace offers English, Simplified Chinese, Traditional Chinese, and Japanese. Changing language affects only your browser.
+
+Open tabs, their order, and the active file are stored locally per room. Cursor selection, follow state, and undo history last only for the current session. None of these are persisted in the shared room document. Theme previews in the Command Palette remain local until you select a theme.
+
+## TypeScript assistance
+
+JavaScript and TypeScript files support completion, signature help, hover details, diagnostics, definition and reference navigation, and Peek. Use the editor context menu for navigation actions. The language service also sees unopened and remotely edited source files.
+
+Standard JavaScript and DOM types load with the browser Worker. Project dependency types become available after your local preview installs its packages and scans their declarations. A collaborator's successful install does not install types in your browser.
+
+Language services may be loading or unavailable while editing, Vim, collaboration, and syntax highlighting remain usable. Check declaration status, Output, and the [language-service recovery guide](typescript-intelligence.md#recovery) before reinstalling packages or reloading a tab with pending edits.
 
 ## Preview requirements
 
@@ -104,16 +122,19 @@ A project without `package.json` uses the single-file Babel iframe fallback. It 
 
 ## Troubleshooting
 
-| Symptom                          | Check                                                                                                                         |
-| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
-| Editor stays reconnecting        | Verify the room ID, server availability, and WebSocket connection. Both development processes must be running.                |
-| No second collaborator appears   | Use separate browser profiles; tabs in one profile share the same identity.                                                   |
-| Cross-origin isolation error     | Check `window.crossOriginIsolated` in browser DevTools. Preserve both headers above and use HTTPS for a remote deployment.    |
-| Storage partitioning error       | Check browser storage/privacy settings for the WebContainer preview.                                                          |
-| Dependency installation fails    | Read Output for registry or package errors. Installation has a two-minute deadline; try reinstall after correcting the cause. |
-| Preview has no start command     | Add a `dev` or `start` script to the project's root `package.json`.                                                           |
-| Preview is paused                | Enable automatic start or use Run preview.                                                                                    |
-| Offline indicator mentions 1 MiB | A single encoded edit exceeded the limit. Copy local changes before reloading, then reapply them in smaller edits.            |
+| Symptom                          | Check                                                                                                                             |
+| -------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| Editor stays reconnecting        | Verify the room ID, server availability, and WebSocket connection. Both development processes must be running.                    |
+| No second collaborator appears   | Use separate browser profiles; tabs in one profile share the same identity.                                                       |
+| Cross-origin isolation error     | Check `window.crossOriginIsolated` in browser DevTools. Preserve both headers above and use HTTPS for a remote deployment.        |
+| Storage partitioning error       | Check browser storage/privacy settings for the WebContainer preview.                                                              |
+| Dependency installation fails    | Read Output for registry or package errors. Installation has a two-minute deadline; try reinstall after correcting the cause.     |
+| Preview has no start command     | Add a `dev` or `start` script to the project's root `package.json`.                                                               |
+| Preview is paused                | Enable automatic start or use Run preview.                                                                                        |
+| TypeScript package types missing | Check your local dependency install and declaration status; see [language-service recovery](typescript-intelligence.md#recovery). |
+| Offline indicator mentions 1 MiB | A single encoded edit exceeded the limit. Copy local changes before reloading, then reapply them in smaller edits.                |
+
+## Draft recovery
 
 Automatic reconnect retries unacknowledged edits. The browser also checkpoints them to IndexedDB while pending; the connection indicator reports when the local draft has been saved. Reopening the same room offers **Restore draft** or **Discard draft**. Restore merges the draft with the current room and sends pending edits when connected; discard permanently removes only that local copy. Another active tab's draft is not offered for recovery. This is best-effort browser recovery, not a guarantee that every edit survives a crash, storage eviction, or unfinished checkpoint.
 
