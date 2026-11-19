@@ -53,7 +53,7 @@ The server never runs a user's project commands. Dependency installation and pre
 | Room subscriptions and invalidation         | [use-room-session.ts](../apps/web/src/lib/use-room-session.ts)                                                                                                                                                                                   |
 | Workspace state and commands                | [workspace-state.ts](../apps/web/src/lib/workspace-state.ts), [workspace-atoms.ts](../apps/web/src/lib/workspace-atoms.ts)                                                                                                                       |
 | Tabs, follow state, file actions            | [use-workspace-controller.ts](../apps/web/src/lib/use-workspace-controller.ts)                                                                                                                                                                   |
-| File-tree rows and inline actions           | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [file-tree-row.tsx](../apps/web/src/components/file-tree-row.tsx), [file-tree-inline-controls.tsx](../apps/web/src/components/file-tree-inline-controls.tsx)                          |
+| Pierre file tree and inline actions         | [file-tree.tsx](../apps/web/src/components/file-tree.tsx), [pierre-file-tree-view.tsx](../apps/web/src/components/pierre-file-tree-view.tsx), [file-tree-inline-controls.tsx](../apps/web/src/components/file-tree-inline-controls.tsx)          |
 | File and command search                     | [file-fuzzy-search.ts](../apps/web/src/lib/file-fuzzy-search.ts), [command-palette-model.ts](../apps/web/src/lib/command-palette-model.ts), [settings-registry.ts](../apps/web/src/lib/settings-registry.ts)                                     |
 | Focus and shortcuts                         | [use-editor-focus.ts](../apps/web/src/lib/use-editor-focus.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                     |
 | Workspace shortcut model                    | [keymap.ts](../apps/web/src/lib/keymap.ts), [use-workspace-shortcuts.ts](../apps/web/src/lib/use-workspace-shortcuts.ts)                                                                                                                         |
@@ -108,13 +108,13 @@ props. The session identity object is mutable, so passing its stable reference
 would hide profile updates from React's shallow comparison.
 
 File actions share the `FileTreeTarget` contract from `file-tree-model.ts` rather
-than importing UI component types. `FileTree` owns local inline-edit, collapse,
-and confirmation state; `FileTreeNodes` owns virtualization and keyboard
-navigation; `FileTreeContextMenu` renders actions and captures the delete item's
-anchor before the menu closes. Inline editing and deletion confirmation start
-from the menu's close-auto-focus callback and suppress its default focus
-restoration so the new control can receive focus. These transient interactions
-do not enter Jotai or the collaborative document.
+than importing UI component types. `FileTree` renders `PierreFileTreeView`;
+`usePierreFileTreeController` owns file actions and local inline-edit, search,
+and confirmation state. Pierre owns virtualization and keyboard navigation,
+while `usePierreFileTreeDom` adapts its rendered tree. Context actions capture
+the delete item's anchor before the menu closes and suppress default focus
+restoration so inline editing or confirmation can receive focus. These transient
+interactions do not enter Jotai or the collaborative document.
 
 Tree row and keyboard handlers accept only events from their own DOM subtree.
 Delete confirmation is rendered in a portal: its React events must not activate
