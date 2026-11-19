@@ -220,9 +220,11 @@ export class PreviewWebContainerScheduler {
     }
     const command = this.chooseCommand(input);
     if (!command) return;
+    const preflightGeneration = this.preflightGeneration;
     const generation = command.type === "sync" ? this.runtimeGeneration : ++this.runtimeGeneration;
     void this.execute(command, input, runtime, generation).catch((failure: unknown) => {
-      if (this.isCurrent(runtime, generation)) this.reportFailure(failure);
+      if (preflightGeneration === this.preflightGeneration && this.isCurrent(runtime, generation))
+        this.reportFailure(failure);
     });
   }
 

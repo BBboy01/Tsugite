@@ -227,6 +227,30 @@ test("old server-ready and failure callbacks cannot replace a restarted generati
   f.scheduler.dispose();
 });
 
+test("an older sync rejection preserves a newer syntax error", async () => {
+  const f = fixture();
+  f.scheduler.update(f.input);
+  await settle();
+  const pending = Promise.withResolvers<{ packageChanged: boolean }>();
+  f.setSync(() => pending.promise);
+  f.changes.record(f.input.file);
+  f.scheduler.update(f.input);
+  await settle();
+  expect(f.calls.at(-1)?.command).toBe("sync-changed");
+
+  f.input.file.text.toString = () => "invalid";
+  f.changes.record(f.input.file);
+  f.scheduler.update(f.input);
+  await settle();
+  expect(f.scheduler.getSnapshot().buildError).toBe("Syntax error");
+  pending.reject(new Error("older sync failed"));
+  await settle();
+  expect(f.scheduler.getSnapshot().buildError).toBe("Syntax error");
+  expect(f.scheduler.getSnapshot().sourceError?.source).toBe("invalid");
+  expect(f.scheduler.getSnapshot().outputs).toEqual([{ level: "error", message: "Syntax error" }]);
+  f.scheduler.dispose();
+});
+
 test("runtime output stays bounded and iframe errors are deduplicated", async () => {
   const f = fixture();
   f.scheduler.update(f.input);
