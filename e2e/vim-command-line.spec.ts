@@ -244,11 +244,13 @@ for (const vimMode of [true, false]) {
       .toBe(originalHeight);
     const statusPath = statusline.locator(".iris-editor-status-path");
     await expect(statusPath).toHaveAttribute("title", path);
-    expect(
-      await statusPath.evaluate(
-        (element) => element.scrollWidth > element.clientWidth,
-      ),
-    ).toBe(true);
+    await expect
+      .poll(() =>
+        statusPath.evaluate(
+          (element) => element.scrollWidth > element.clientWidth,
+        ),
+      )
+      .toBe(true);
     await expect(statusline.locator("[data-status-position]")).toBeVisible();
     await page.screenshot({
       path: `/tmp/tsugite-long-status-path-vim-${vimMode}.png`,
