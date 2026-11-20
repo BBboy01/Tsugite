@@ -104,14 +104,14 @@ test("undoes only the local edit after concurrent changes", async ({
 
   await firstPage.locator(".cm-content").click();
   await firstPage.keyboard.press("ControlOrMeta+End");
-  await firstPage.keyboard.type("\n// undo-maya");
+  await firstPage.keyboard.insertText("\n// undo-maya");
   await expect
     .poll(() => readEditorText(secondPage), { timeout: 45_000 })
     .toContain("// undo-maya");
 
   await secondPage.locator(".cm-content").click();
   await secondPage.keyboard.press("ControlOrMeta+Home");
-  await secondPage.keyboard.type("// undo-jun\n");
+  await secondPage.keyboard.insertText("// undo-jun\n");
   await expect
     .poll(() => readEditorText(firstPage), { timeout: 45_000 })
     .toContain("// undo-jun");

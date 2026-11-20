@@ -74,7 +74,7 @@ test.describe("file and editor actions", () => {
 
     await editor.click();
     await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.type("\n// before-rename");
+    await page.keyboard.insertText("\n// before-rename");
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
 
     await page
@@ -125,7 +125,7 @@ test.describe("file and editor actions", () => {
 
     await editor.click();
     await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.type("\n// before-switch");
+    await page.keyboard.insertText("\n// before-switch");
     await expect.poll(readText, { timeout: 15_000 }).not.toBe(initial);
     const edited = await readText();
 
