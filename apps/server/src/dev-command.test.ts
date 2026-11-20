@@ -20,7 +20,7 @@ import { RoomRepository } from "./rooms/room-repository";
 const root = resolve(import.meta.dir, "../../..");
 const manifest = await Bun.file(join(root, "package.json")).json();
 
-function setup(script = "dev", failServer = false) {
+function setup(script = "dev", failServer = false, failWeb = false) {
   const directory = mkdtempSync(join(tmpdir(), "tsugite-dev-"));
   const reservations = [0, 1].map(() =>
     Bun.serve({
@@ -32,7 +32,8 @@ function setup(script = "dev", failServer = false) {
   );
   const serverPort = reservations[0]!.port!;
   const webPort = reservations[1]!.port!;
-  for (const reservation of reservations) reservation.stop(true);
+  reservations[0]!.stop(true);
+  if (!failWeb) reservations[1]!.stop(true);
   for (const path of ["apps", "node_modules", "drizzle", "scripts"]) {
     symlinkSync(join(root, path), join(directory, path), "dir");
   }
@@ -121,6 +122,7 @@ export default mergeConfig(config, {
       signal("SIGKILL");
       await child.exited;
       await drained;
+      reservations[1]!.stop(true);
       rmSync(directory, { recursive: true, force: true });
     },
   };
@@ -301,6 +303,18 @@ describe.skipIf(process.platform === "win32")("development commands", () => {
     } finally {
       await dev.cleanup();
     }
+  }, 20_000);
+
+  test("dev reports a web startup failure and stops the server process", async () => {
+    const dev = setup("dev", false, true);
+    try {
+      expect(await dev.waitForExit()).not.toBe(0);
+      expect(dev.output()).toMatch(/Port \d+ is already in use|EADDRINUSE/i);
+      expectPortReleased(dev.serverPort);
+    } finally {
+      await dev.cleanup();
+    }
+    expectPortReleased(dev.webPort);
   }, 20_000);
 
   test.each(["dev:web", "dev:server"])(
