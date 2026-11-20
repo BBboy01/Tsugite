@@ -385,12 +385,12 @@ test("undoes repeated local edits without corrupting the file", async ({
     timeout: 15_000,
   });
   await page.keyboard.press("ControlOrMeta+End");
-  await page.keyboard.type("\n// undo-first");
+  await page.keyboard.insertText("\n// undo-first");
   await page.keyboard.press("ControlOrMeta+z");
   await page.waitForTimeout(250);
   await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
 
-  await page.keyboard.type("\n// undo-second");
+  await page.keyboard.insertText("\n// undo-second");
   await page.keyboard.press("ControlOrMeta+z");
   await page.waitForTimeout(250);
   await expect.poll(readText, { timeout: 15_000 }).toBe(initial);
