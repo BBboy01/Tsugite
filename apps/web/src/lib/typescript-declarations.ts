@@ -3,7 +3,8 @@ import { DECLARATION_SCAN_LIMITS } from "./declaration-scan-limits";
 
 export const DECLARATION_LIMITS = DECLARATION_SCAN_LIMITS;
 
-export const DECLARATION_SCAN_OUTPUT_BYTES = DECLARATION_SCAN_LIMITS.outputBytes;
+export const DECLARATION_SCAN_OUTPUT_BYTES =
+  DECLARATION_SCAN_LIMITS.outputBytes;
 
 export type DeclarationScanResult =
   | { status: "ok"; files: IntelligenceFile[] }
@@ -12,41 +13,72 @@ export type DeclarationScanResult =
 const encoder = new TextEncoder();
 
 function isDeclarationPath(path: string): boolean {
-  if (!path || path.length > DECLARATION_LIMITS.pathLength || /[\\:?#]/.test(path)) return false;
   if (
-    [...path].some((character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)
+    !path ||
+    path.length > DECLARATION_LIMITS.pathLength ||
+    /[\\:?#]/.test(path)
+  )
+    return false;
+  if (
+    [...path].some(
+      (character) =>
+        character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+    )
   ) {
     return false;
   }
   const parts = path.split("/");
   if (parts[0] === "__typescript") return false;
-  if (parts.some((part) => !part || part === "." || part === ".." || part.startsWith(".env"))) {
+  if (
+    parts.some(
+      (part) =>
+        !part || part === "." || part === ".." || part.startsWith(".env"),
+    )
+  ) {
     return false;
   }
   if (path === "package.json") return true;
   if (parts[0] === "node_modules") {
     const packageLength = parts[1]?.startsWith("@") ? 3 : 2;
-    if (parts.length <= packageLength || (packageLength === 3 && parts[1] === "@")) return false;
+    if (
+      parts.length <= packageLength ||
+      (packageLength === 3 && parts[1] === "@")
+    )
+      return false;
     return /\.d\.(?:ts|mts|cts)$/.test(path) || parts.at(-1) === "package.json";
   }
   return /\.d\.(?:ts|mts|cts)$/.test(path);
 }
 
-export function validateDeclarationFiles(files: readonly IntelligenceFile[]): string | undefined {
+export function validateDeclarationFiles(
+  files: readonly IntelligenceFile[],
+): string | undefined {
   if (!Array.isArray(files)) return "Invalid declaration scan result";
-  if (files.length > DECLARATION_LIMITS.files) return "TypeScript declaration file limit exceeded";
+  if (files.length > DECLARATION_LIMITS.files)
+    return "TypeScript declaration file limit exceeded";
   const paths = new Set<string>();
   let totalBytes = 0;
   for (const file of files) {
-    if (!file || typeof file.path !== "string" || !isDeclarationPath(file.path)) {
+    if (
+      !file ||
+      typeof file.path !== "string" ||
+      !isDeclarationPath(file.path)
+    ) {
       return "Invalid TypeScript declaration path";
     }
-    if (typeof file.text !== "string") return "Invalid TypeScript declaration content";
+    if (typeof file.text !== "string")
+      return "Invalid TypeScript declaration content";
     if (paths.has(file.path)) return "Duplicate TypeScript declaration path";
     paths.add(file.path);
     const bytes = encoder.encode(file.text).byteLength;
-    const metadata = file.path === "package.json" || file.path.endsWith("/package.json");
-    if (bytes > (metadata ? DECLARATION_LIMITS.metadataBytes : DECLARATION_LIMITS.fileBytes)) {
+    const metadata =
+      file.path === "package.json" || file.path.endsWith("/package.json");
+    if (
+      bytes >
+      (metadata
+        ? DECLARATION_LIMITS.metadataBytes
+        : DECLARATION_LIMITS.fileBytes)
+    ) {
       return "TypeScript declaration byte limit exceeded";
     }
     totalBytes += bytes;
@@ -83,16 +115,30 @@ export function parseDeclarationScan(output: string): IntelligenceFile[] {
   if (!result || typeof result !== "object" || !("status" in result)) {
     throw new Error("Invalid declaration scan result");
   }
-  if (result.status === "disabled" && "reason" in result && typeof result.reason === "string") {
-    if (!result.reason || result.reason.length > DECLARATION_LIMITS.reasonLength) {
+  if (
+    result.status === "disabled" &&
+    "reason" in result &&
+    typeof result.reason === "string"
+  ) {
+    if (
+      !result.reason ||
+      result.reason.length > DECLARATION_LIMITS.reasonLength
+    ) {
       throw new Error("Invalid declaration scan result");
     }
     throw new Error(`TypeScript declaration scan disabled: ${result.reason}`);
   }
-  if (result.status !== "ok" || !("files" in result) || !Array.isArray(result.files)) {
+  if (
+    result.status !== "ok" ||
+    !("files" in result) ||
+    !Array.isArray(result.files)
+  ) {
     throw new Error("Invalid declaration scan result");
   }
   const error = validateDeclarationFiles(result.files);
   if (error) throw new Error(error);
-  return result.files.map(({ path, text }: IntelligenceFile) => ({ path, text }));
+  return result.files.map(({ path, text }: IntelligenceFile) => ({
+    path,
+    text,
+  }));
 }

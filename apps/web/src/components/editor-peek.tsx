@@ -20,12 +20,17 @@ export function EditorPeek({
   const location = result.locations[selected];
   const canOpenLocation =
     location &&
-    !(location.path.startsWith("node_modules/") && /\.d\.(?:ts|mts|cts)$/.test(location.path));
+    !(
+      location.path.startsWith("node_modules/") &&
+      /\.d\.(?:ts|mts|cts)$/.test(location.path)
+    );
   useEffect(() => {
     host.current?.focus();
   }, []);
   useEffect(() => {
-    host.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" });
+    host.current
+      ?.querySelector('[aria-selected="true"]')
+      ?.scrollIntoView({ block: "nearest" });
   }, [selected]);
   const lines = location?.source.split("\n") ?? [];
   const start = Math.max(0, (location?.line ?? 1) - 4);
@@ -79,12 +84,21 @@ export function EditorPeek({
             aria-label={result.title}
             className="min-w-0 overflow-auto border-r border-iris-divider p-1"
             onKeyDown={(event) => {
-              const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+              const step =
+                event.key === "ArrowDown"
+                  ? 1
+                  : event.key === "ArrowUp"
+                    ? -1
+                    : 0;
               if (!step) return;
               event.preventDefault();
-              const index = (selected + step + result.locations.length) % result.locations.length;
+              const index =
+                (selected + step + result.locations.length) %
+                result.locations.length;
               setSelected(index);
-              host.current?.querySelectorAll<HTMLButtonElement>('[role="option"]')[index]?.focus();
+              host.current
+                ?.querySelectorAll<HTMLButtonElement>('[role="option"]')
+                ?.[index]?.focus();
             }}
           >
             {result.locations.map((item, index) => (
@@ -113,20 +127,22 @@ export function EditorPeek({
             className="m-0 min-w-0 overflow-auto py-1.5 leading-5"
             aria-label={t("editor.context.preview")}
           >
-            {lines.slice(start, Math.max(start + 8, location.line + 3)).map((line, index) => (
-              <div
-                key={start + index}
-                className={`flex min-w-max pr-3 ${start + index + 1 === location.line ? "bg-[var(--selection-surface)]" : ""}`}
-              >
-                <span
-                  aria-hidden="true"
-                  className="sticky left-0 w-10 shrink-0 bg-[var(--editor-surface)] pr-2 text-right text-iris-muted"
+            {lines
+              .slice(start, Math.max(start + 8, location.line + 3))
+              .map((line, index) => (
+                <div
+                  key={start + index}
+                  className={`flex min-w-max pr-3 ${start + index + 1 === location.line ? "bg-[var(--selection-surface)]" : ""}`}
                 >
-                  {start + index + 1}
-                </span>
-                <code>{line || " "}</code>
-              </div>
-            ))}
+                  <span
+                    aria-hidden="true"
+                    className="sticky left-0 w-10 shrink-0 bg-[var(--editor-surface)] pr-2 text-right text-iris-muted"
+                  >
+                    {start + index + 1}
+                  </span>
+                  <code>{line || " "}</code>
+                </div>
+              ))}
           </pre>
         </div>
       ) : (

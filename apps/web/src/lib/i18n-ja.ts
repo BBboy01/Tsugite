@@ -73,7 +73,8 @@ export const japaneseTranslations = {
   "settings.font.empty": "一致するフォントがありません",
   "settings.fontSize": "フォントサイズ",
   "settings.wordWrap": "折り返し",
-  "settings.wordWrapDescription": "長い行をエディターの幅に合わせて折り返します。",
+  "settings.wordWrapDescription":
+    "長い行をエディターの幅に合わせて折り返します。",
   "settings.relativeLineNumbers": "相対行番号",
   "settings.relativeLineNumbersDescription":
     "現在の行は実際の行番号、その他の行は現在の行からの距離を表示します。",
@@ -83,11 +84,14 @@ export const japaneseTranslations = {
   "settings.nav.editor": "エディター",
   "settings.nav.runtime": "ランタイム",
   "settings.section.style.title": "スタイル",
-  "settings.section.style.description": "このルームで共有するビジュアルスタイルを調整します。",
+  "settings.section.style.description":
+    "このルームで共有するビジュアルスタイルを調整します。",
   "settings.section.editor.title": "エディター",
-  "settings.section.editor.description": "共有するコード編集の設定を選択します。",
+  "settings.section.editor.description":
+    "共有するコード編集の設定を選択します。",
   "settings.section.runtime.title": "ランタイム",
-  "settings.section.runtime.description": "依存関係とプレビューサーバーの実行方法を制御します。",
+  "settings.section.runtime.description":
+    "依存関係とプレビューサーバーの実行方法を制御します。",
   "settings.packageManager": "パッケージマネージャー",
   "settings.autoInstall": "依存関係を自動インストール",
   "settings.autoInstallDescription":
@@ -95,7 +99,8 @@ export const japaneseTranslations = {
   "settings.autoStartPreview": "プレビューを自動起動",
   "settings.autoStartPreviewDescription":
     "依存関係の準備後に dev または start スクリプトを起動します。",
-  "settings.runtimeNote": "プレビューは {{manager}} で install とスクリプトを実行します。",
+  "settings.runtimeNote":
+    "プレビューは {{manager}} で install とスクリプトを実行します。",
   "settings.runtimeRestart": "プレビューランタイムを再起動",
   "settings.runtimeRestarting": "プレビューランタイムを再起動中…",
   "settings.runtimeReinstall": "依存関係を再インストールしてプレビューを再起動",
@@ -132,12 +137,14 @@ export const japaneseTranslations = {
     "package.json に dev または start スクリプトを追加してください。",
   "preview.runtime.install-failed": "{{manager}} install に失敗しました。",
   "preview.runtime.start-failed": "プレビューサーバーの起動に失敗しました。",
-  "preview.runtime.server-exited": "プレビューサーバーが停止しました。再起動してください。",
+  "preview.runtime.server-exited":
+    "プレビューサーバーが停止しました。再起動してください。",
   "preview.runtime.cross-origin-isolation-required":
     "WebContainer にはクロスオリジン分離が必要です。",
   "preview.runtime.storage-partitioning-required":
     "Chrome が WebContainer のストレージパーティショニングをブロックしました。chrome://flags/#third-party-storage-partitioning で有効にするか、*.webcontainer.io と *.webcontainer-api.io のサードパーティストレージを許可してから、ページを再読み込みしてください。",
-  "preview.runtime.runtime-unavailable": "このブラウザーでは WebContainer を利用できません。",
+  "preview.runtime.runtime-unavailable":
+    "このブラウザーでは WebContainer を利用できません。",
   "editor.openFiles": "開いているファイル",
   "editor.closeFile": "{{path}} を閉じる",
   "editor.tabs.close": "閉じる",

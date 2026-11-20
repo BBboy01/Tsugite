@@ -5,7 +5,10 @@ import {
   reorderEditorTabs,
   type EditorTabCloseMode,
 } from "./editor-tabs";
-import { toggleMobileWorkspacePanel, type MobileWorkspacePanel } from "./workspace-layout-model";
+import {
+  toggleMobileWorkspacePanel,
+  type MobileWorkspacePanel,
+} from "./workspace-layout-model";
 
 export type WorkspaceDialog = "settings" | "fileSearch" | "commandPalette";
 
@@ -51,10 +54,15 @@ export function isWorkspaceCommand(value: unknown): value is WorkspaceCommand {
     case "close-tabs":
       return (
         typeof command.path === "string" &&
-        (command.mode === "others" || command.mode === "right" || command.mode === "all")
+        (command.mode === "others" ||
+          command.mode === "right" ||
+          command.mode === "all")
       );
     case "set-navigation":
-      if (typeof command.selectedPath !== "string" || !Array.isArray(command.openTabPaths)) {
+      if (
+        typeof command.selectedPath !== "string" ||
+        !Array.isArray(command.openTabPaths)
+      ) {
         return false;
       }
       for (const path of command.openTabPaths) {
@@ -66,7 +74,11 @@ export function isWorkspaceCommand(value: unknown): value is WorkspaceCommand {
     case "set-mobile-panel":
       return command.panel === "files" || command.panel === "preview";
     case "set-mobile-panel-value":
-      return command.panel === null || command.panel === "files" || command.panel === "preview";
+      return (
+        command.panel === null ||
+        command.panel === "files" ||
+        command.panel === "preview"
+      );
     case "toggle-preview-console":
       return true;
     case "set-preview-console-open":
@@ -102,7 +114,11 @@ export function reduceWorkspaceState(
           : state.openTabPaths,
       };
     case "close-tab": {
-      const result = closeEditorTab(state.openTabPaths, command.path, state.selectedPath);
+      const result = closeEditorTab(
+        state.openTabPaths,
+        command.path,
+        state.selectedPath,
+      );
       return {
         ...state,
         selectedPath: result.nextPath,
@@ -112,10 +128,13 @@ export function reduceWorkspaceState(
     }
     case "reorder-tabs": {
       const paths = reorderEditorTabs(state.openTabPaths, command.paths);
-      return paths === state.openTabPaths ? state : { ...state, openTabPaths: paths };
+      return paths === state.openTabPaths
+        ? state
+        : { ...state, openTabPaths: paths };
     }
     case "close-tabs": {
-      if (command.mode !== "all" && !state.openTabPaths.includes(command.path)) return state;
+      if (command.mode !== "all" && !state.openTabPaths.includes(command.path))
+        return state;
       const result = closeEditorTabs(
         state.openTabPaths,
         command.path,
@@ -140,7 +159,10 @@ export function reduceWorkspaceState(
     case "set-mobile-panel":
       return {
         ...state,
-        mobilePanel: toggleMobileWorkspacePanel(state.mobilePanel, command.panel),
+        mobilePanel: toggleMobileWorkspacePanel(
+          state.mobilePanel,
+          command.panel,
+        ),
         followingUserId: null,
       };
     case "set-mobile-panel-value":

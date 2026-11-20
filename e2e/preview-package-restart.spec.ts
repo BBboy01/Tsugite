@@ -44,8 +44,12 @@ async function startControlledPreview(page: Page) {
   await page.goto(`/room/package-restart-${crypto.randomUUID()}`);
   const preview = page.getByRole("region", { name: "Live preview" });
   await expect(preview.getByText("paused", { exact: true })).toBeVisible();
-  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
-  await page.getByRole("treeitem", { name: "package.json", exact: true }).click();
+  await page.clock.pauseAt(
+    new Date(await page.evaluate(() => Date.now() + 1000)),
+  );
+  await page
+    .getByRole("treeitem", { name: "package.json", exact: true })
+    .click();
   await page.clock.runFor(100);
   await expect(
     page.getByRole("region", { name: "Editing package.json", exact: true }),
@@ -57,7 +61,9 @@ async function startControlledPreview(page: Page) {
   await page.keyboard.insertText(" ");
   await expect.poll(() => editor.textContent()).toBe(`${manifest} `);
   await page.clock.runFor(400);
-  await expect.poll(() => page.evaluate(() => Boolean(window.releasePackageSync))).toBe(true);
+  await expect
+    .poll(() => page.evaluate(() => Boolean(window.releasePackageSync)))
+    .toBe(true);
   await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
   await page.clock.runFor(100);
   await expect(
@@ -81,9 +87,13 @@ test("a delayed package sync preserves newer syntax errors and restarts after co
   await page.evaluate(() => window.releasePackageSync!());
   await page.clock.runFor(400);
   await expect(error).toContainText("Unexpected token");
-  await expect(error.getByRole("button", { name: "Go to source" })).toBeVisible();
+  await expect(
+    error.getByRole("button", { name: "Go to source" }),
+  ).toBeVisible();
   expect(await page.evaluate(() => window.restartedSources)).toEqual([]);
-  await page.screenshot({ path: testInfo.outputPath("pending-package-syntax-error.png") });
+  await page.screenshot({
+    path: testInfo.outputPath("pending-package-syntax-error.png"),
+  });
 
   await editor.focus();
   await page.keyboard.press("ControlOrMeta+A");
@@ -112,7 +122,9 @@ test("a delayed package sync still restarts after switching to a valid source", 
   await expect(preview.getByRole("alert")).toHaveCount(0);
 });
 
-test("package changes detected by startup catch-up request a restart", async ({ page }) => {
+test("package changes detected by startup catch-up request a restart", async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.route("**/src/lib/webcontainer-runtime.ts*", (route) =>
     route.fulfill({
@@ -141,34 +153,48 @@ test("package changes detected by startup catch-up request a restart", async ({ 
   await expect
     .poll(() => page.evaluate(() => Boolean(window.finishInitialPreviewStart)))
     .toBe(true);
-  await page.getByRole("treeitem", { name: "package.json", exact: true }).click();
+  await page
+    .getByRole("treeitem", { name: "package.json", exact: true })
+    .click();
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+A");
   const manifest = '{"scripts":{"dev":"vite"},"dependencies":{"vite":"8.3.0"}}';
   await page.keyboard.insertText(manifest);
   await page.evaluate(() => window.finishInitialPreviewStart!());
-  await expect.poll(() => page.evaluate(() => window.catchupRestartedManifest)).toBe(manifest);
-  await expect(page.getByRole("region", { name: "Live preview" }).getByRole("alert")).toHaveCount(
-    0,
-  );
+  await expect
+    .poll(() => page.evaluate(() => window.catchupRestartedManifest))
+    .toBe(manifest);
+  await expect(
+    page.getByRole("region", { name: "Live preview" }).getByRole("alert"),
+  ).toHaveCount(0);
 });
 
-test("an explicit run is not swallowed by a pending package restart", async ({ page }) => {
+test("an explicit run is not swallowed by a pending package restart", async ({
+  page,
+}) => {
   const { editor, preview } = await startControlledPreview(page);
   await editor.focus();
   await page.keyboard.press("ControlOrMeta+k");
-  await page.getByRole("button", { name: "Start preview automatically", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Start preview automatically", exact: true })
+    .click();
   await page.clock.runFor(400);
-  await expect.poll(() => page.evaluate(() => window.previewRestartOptions.length)).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => window.previewRestartOptions.length))
+    .toBe(1);
   await page.evaluate(() => {
     window.previewRestartOptions = [];
     window.releasePackageSync!();
   });
-  await preview.getByRole("button", { name: "Run preview", exact: true }).click();
+  await preview
+    .getByRole("button", { name: "Run preview", exact: true })
+    .click();
   await page.clock.runFor(400);
   await expect
     .poll(() => page.evaluate(() => window.previewRestartOptions))
     .toEqual([{ forceStart: true }]);
   await page.clock.runFor(1000);
-  expect(await page.evaluate(() => window.previewRestartOptions)).toEqual([{ forceStart: true }]);
+  expect(await page.evaluate(() => window.previewRestartOptions)).toEqual([
+    { forceStart: true },
+  ]);
 });

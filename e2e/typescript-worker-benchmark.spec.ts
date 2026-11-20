@@ -29,13 +29,22 @@ async function declarationFixture(): Promise<IntelligenceFile[]> {
   declarations.push(
     {
       path: "node_modules/csstype/package.json",
-      text: await readFile(new URL("../../csstype/package.json", reactRoot), "utf8"),
+      text: await readFile(
+        new URL("../../csstype/package.json", reactRoot),
+        "utf8",
+      ),
     },
     {
       path: "node_modules/csstype/index.d.ts",
-      text: await readFile(new URL("../../csstype/index.d.ts", reactRoot), "utf8"),
+      text: await readFile(
+        new URL("../../csstype/index.d.ts", reactRoot),
+        "utf8",
+      ),
     },
-    { path: "node_modules/typed-pkg/package.json", text: '{"types":"types/index.d.ts"}' },
+    {
+      path: "node_modules/typed-pkg/package.json",
+      text: '{"types":"types/index.d.ts"}',
+    },
     {
       path: "node_modules/typed-pkg/types/index.d.ts",
       text: 'export declare const label: "from-package-types";',
@@ -63,7 +72,10 @@ async function maximumBudgetFixture() {
       path: "src/issues.ts",
       text: 'const invalidCount: number = "invalid";\nexport { invalidCount };',
     },
-    { path: "node_modules/@iris/shared/package.json", text: '{"types":"index.d.ts"}' },
+    {
+      path: "node_modules/@iris/shared/package.json",
+      text: '{"types":"index.d.ts"}',
+    },
     {
       path: "node_modules/@iris/shared/index.d.ts",
       text: "export type SharedIdentifier = string;",
@@ -99,10 +111,14 @@ test("real Worker resolves standard/package/React types and measures isolated qu
     sourceBytes: maxBudget.measuredBytes.source,
     declarationBytes: maxBudget.measuredBytes.declarations,
     maxSourceFileBytes: Math.max(
-      ...maxBudget.sources.map((file) => new TextEncoder().encode(file.text).byteLength),
+      ...maxBudget.sources.map(
+        (file) => new TextEncoder().encode(file.text).byteLength,
+      ),
     ),
     maxDeclarationFileBytes: Math.max(
-      ...maxBudget.declarationFiles.map((file) => new TextEncoder().encode(file.text).byteLength),
+      ...maxBudget.declarationFiles.map(
+        (file) => new TextEncoder().encode(file.text).byteLength,
+      ),
     ),
     measuredIterationsPerMethod: 10,
   };
@@ -112,10 +128,13 @@ test("real Worker resolves standard/package/React types and measures isolated qu
   await page.exposeFunction("measureTypeScriptWorkerHeap", async () => {
     const { targetInfos } = await cdp.send("Target.getTargets");
     const workerTargets = targetInfos.filter(
-      (target) => target.type === "worker" && target.url.includes("typescript.worker"),
+      (target) =>
+        target.type === "worker" && target.url.includes("typescript.worker"),
     );
     if (workerTargets.length !== 1)
-      throw new Error(`Expected one TypeScript Worker target, found ${workerTargets.length}`);
+      throw new Error(
+        `Expected one TypeScript Worker target, found ${workerTargets.length}`,
+      );
     const { sessionId } = await cdp.send("Target.attachToTarget", {
       targetId: workerTargets[0].targetId,
       flatten: false,
@@ -182,7 +201,8 @@ test("real Worker resolves standard/package/React types and measures isolated qu
     environment: {
       browser: "Chromium",
       browserVersion: context.browser()?.version(),
-      serving: "Vite development server; module compilation and lazy lib assets included",
+      serving:
+        "Vite development server; module compilation and lazy lib assets included",
       browserPlugin: "Browser plugin not available; regular Playwright used",
       memoryMeasurement:
         "CDP Runtime.getHeapUsage reads the TypeScript Dedicated Worker V8 target heap; CDP page heap is reported separately. Embedder and backing storage are included as exposed by CDP.",
@@ -219,7 +239,9 @@ test("real Worker resolves standard/package/React types and measures isolated qu
     expect(result.valid.status).toBe("empty");
     expect(result.invalid.status).toBe("ok");
     if (result.invalid.status === "ok")
-      expect(result.invalid.value.filter((item) => item.code === 2322)).toHaveLength(2);
+      expect(
+        result.invalid.value.filter((item) => item.code === 2322),
+      ).toHaveLength(2);
     expect(result.completionHasQuerySelector).toBe(true);
     expect(new Set(result.queryStatuses)).toEqual(new Set(["ok"]));
     expect(result.mainThread.heartbeat.samples).toBeGreaterThan(0);
@@ -245,7 +267,11 @@ test("real Worker resolves standard/package/React types and measures isolated qu
   expect(fullBudget.firstQueries.completion.status).toBe("ok");
   expect(fullBudget.firstQueries.diagnostics.status).toBe("ok");
   if (fullBudget.firstQueries.diagnostics.status === "ok")
-    expect(fullBudget.firstQueries.diagnostics.value.some((item) => item.code === 2322)).toBe(true);
+    expect(
+      fullBudget.firstQueries.diagnostics.value.some(
+        (item) => item.code === 2322,
+      ),
+    ).toBe(true);
   expect(fullBudget.repeatedQueries.statuses).toEqual({
     hover: Array.from({ length: 10 }, () => "ok"),
     completion: Array.from({ length: 10 }, () => "ok"),

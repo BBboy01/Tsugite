@@ -34,10 +34,19 @@ import { formatEditorLineNumber } from "./editor-line-numbers";
 
 const themeFallbackHighlightStyle = HighlightStyle.define([
   {
-    tag: [tags.keyword, tags.controlKeyword, tags.operatorKeyword, tags.bool, tags.null],
+    tag: [
+      tags.keyword,
+      tags.controlKeyword,
+      tags.operatorKeyword,
+      tags.bool,
+      tags.null,
+    ],
     color: "var(--accent)",
   },
-  { tag: [tags.number, tags.atom, tags.typeName, tags.className], color: "var(--accent-deep)" },
+  {
+    tag: [tags.number, tags.atom, tags.typeName, tags.className],
+    color: "var(--accent-deep)",
+  },
   { tag: [tags.string, tags.regexp], color: "var(--success)" },
   { tag: tags.comment, color: "var(--muted)" },
   { tag: tags.definition(tags.variableName), color: "var(--accent-deep)" },
@@ -57,7 +66,9 @@ export function editorLineNumbers(relativeLineNumbers: boolean) {
 export function editorBasicSetup() {
   return [
     EditorView.editorAttributes.compute(["selection"], (state) => ({
-      class: state.selection.ranges.some((range) => !range.empty) ? "cm-has-selection" : "",
+      class: state.selection.ranges.some((range) => !range.empty)
+        ? "cm-has-selection"
+        : "",
     })),
     highlightActiveLineGutter(),
     highlightSpecialChars(),

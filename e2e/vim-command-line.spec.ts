@@ -1,7 +1,9 @@
 import { expect, test } from "playwright/test";
 
 for (const width of [1280, 390]) {
-  test(`keeps Vim commands in one themed statusline at ${width}px`, async ({ page }) => {
+  test(`keeps Vim commands in one themed statusline at ${width}px`, async ({
+    page,
+  }) => {
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
@@ -43,7 +45,9 @@ for (const width of [1280, 390]) {
     await expect(commandInput).toBeFocused();
     await expect(editor.locator(".cm-vim-panel")).toHaveCount(1);
     expect((await statusline.boundingBox())!.height).toBe(statusBounds.height);
-    expect((await editor.locator(".cm-scroller").boundingBox())!.height).toBe(contentBounds.height);
+    expect((await editor.locator(".cm-scroller").boundingBox())!.height).toBe(
+      contentBounds.height,
+    );
     const inputBounds = (await commandInput.boundingBox())!;
     expect(inputBounds.y).toBeGreaterThanOrEqual(statusBounds.y);
     expect(inputBounds.y + inputBounds.height).toBeLessThanOrEqual(
@@ -73,22 +77,31 @@ for (const width of [1280, 390]) {
       { name: "Dracula", id: "dracula" },
     ]) {
       await page.keyboard.press("ControlOrMeta+K");
-      await page.getByRole("button", { name: "Choose theme", exact: true }).click();
+      await page
+        .getByRole("button", { name: "Choose theme", exact: true })
+        .click();
       await page.getByRole("button", { name: theme.name, exact: true }).click();
-      await expect(page.locator("main")).toHaveClass(new RegExp(`theme-${theme.id}`));
+      await expect(page.locator("main")).toHaveClass(
+        new RegExp(`theme-${theme.id}`),
+      );
       await expect(content).toBeFocused();
       await page.keyboard.press(":");
       await expect(commandInput).toBeFocused();
       await commandInput.fill("s/omega/themed/");
       await expect(statusline).toHaveCSS(
         "background-color",
-        await editor.evaluate((element) => getComputedStyle(element).backgroundColor),
+        await editor.evaluate(
+          (element) => getComputedStyle(element).backgroundColor,
+        ),
       );
       await expect(commandInput).toHaveCSS(
         "color",
         await editor.evaluate((element) => getComputedStyle(element).color),
       );
-      await expect(commandInput).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+      await expect(commandInput).toHaveCSS(
+        "background-color",
+        "rgba(0, 0, 0, 0)",
+      );
       const divider = await editor.evaluate((element) => {
         const probe = document.createElement("span");
         probe.style.color = "var(--divider)";
@@ -97,9 +110,14 @@ for (const width of [1280, 390]) {
         probe.remove();
         return color;
       });
-      await expect(editor.locator(".cm-panels-bottom")).toHaveCSS("border-top-color", divider);
+      await expect(editor.locator(".cm-panels-bottom")).toHaveCSS(
+        "border-top-color",
+        divider,
+      );
       await expect(statusline).toHaveCSS("border-top-width", "0px");
-      await page.screenshot({ path: `/tmp/tsugite-vim-cmdline-${theme.id}-${width}.png` });
+      await page.screenshot({
+        path: `/tmp/tsugite-vim-cmdline-${theme.id}-${width}.png`,
+      });
       await page.keyboard.press("Escape");
     }
     await expect(page.locator("vite-error-overlay")).toHaveCount(0);
@@ -107,7 +125,9 @@ for (const width of [1280, 390]) {
   });
 }
 
-test("shows the Vim mode control only in Vim mode and updates its label", async ({ page }) => {
+test("shows the Vim mode control only in Vim mode and updates its label", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     if (window !== window.top) return;
     localStorage.setItem("iris.language", "en");
@@ -125,12 +145,18 @@ test("shows the Vim mode control only in Vim mode and updates its label", async 
   await page.keyboard.press("ControlOrMeta+K");
   await page.getByRole("button", { name: "Vim mode", exact: true }).click();
   await expect(statusline).toHaveCount(1);
-  await expect(statusline.locator("[data-status-mode]")).toHaveText("--NORMAL--");
+  await expect(statusline.locator("[data-status-mode]")).toHaveText(
+    "--NORMAL--",
+  );
   await content.focus();
   await page.keyboard.press("i");
-  await expect(statusline.locator("[data-status-mode]")).toHaveText("--INSERT--");
+  await expect(statusline.locator("[data-status-mode]")).toHaveText(
+    "--INSERT--",
+  );
   await page.keyboard.press("Escape");
-  await expect(statusline.locator("[data-status-mode]")).toHaveText("--NORMAL--");
+  await expect(statusline.locator("[data-status-mode]")).toHaveText(
+    "--NORMAL--",
+  );
   await expect(content).toBeFocused();
   await page.evaluate(
     () =>
@@ -139,9 +165,13 @@ test("shows the Vim mode control only in Vim mode and updates its label", async 
       ),
   );
   await page.keyboard.press("v");
-  await expect(statusline.locator("[data-status-mode]")).toHaveText("--VISUAL--");
+  await expect(statusline.locator("[data-status-mode]")).toHaveText(
+    "--VISUAL--",
+  );
   await page.keyboard.press("Escape");
-  await expect(statusline.locator("[data-status-mode]")).toHaveText("--NORMAL--");
+  await expect(statusline.locator("[data-status-mode]")).toHaveText(
+    "--NORMAL--",
+  );
 
   await page.keyboard.press("ControlOrMeta+K");
   await page.getByRole("button", { name: "Vim mode", exact: true }).click();
@@ -149,7 +179,9 @@ test("shows the Vim mode control only in Vim mode and updates its label", async 
   await expect(page.locator("[data-vim-mode]")).toHaveCount(0);
 });
 
-test("keeps file position details in non-Vim mode without a mode control", async ({ page }) => {
+test("keeps file position details in non-Vim mode without a mode control", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     if (window !== window.top) return;
     localStorage.setItem("iris.language", "en");
@@ -163,7 +195,9 @@ test("keeps file position details in non-Vim mode without a mode control", async
   const statusline = page.locator("[data-editor-status]");
   await expect(content).toBeFocused({ timeout: 15_000 });
   await expect(statusline).toBeVisible();
-  await expect(statusline.locator("[data-status-path]")).toHaveText("src/App.tsx");
+  await expect(statusline.locator("[data-status-path]")).toHaveText(
+    "src/App.tsx",
+  );
   await expect(statusline.locator("[data-status-position]")).toHaveText("1:1");
   await expect(statusline.locator("[data-status-progress]")).toHaveText("Top");
   await expect(statusline.locator("[data-status-mode]")).toHaveCount(0);
@@ -193,22 +227,31 @@ for (const vimMode of [true, false]) {
     await expect(statusline).toBeVisible({ timeout: 15_000 });
     const originalHeight = (await statusline.boundingBox())!.height;
 
-    await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click({ button: "right" });
+    await page
+      .getByRole("treeitem", { name: "App.tsx", exact: true })
+      .click({ button: "right" });
     await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
-    const path = "src/feature notes/nested components/a very long workspace component.tsx";
+    const path =
+      "src/feature notes/nested components/a very long workspace component.tsx";
     const pathInput = page.locator("[data-item-rename-input]");
     await pathInput.fill(path);
     await pathInput.press("Enter");
     await expect(statusline.locator("[data-status-path]")).toHaveText(path);
     await page.setViewportSize({ width: 390, height: 800 });
 
-    await expect.poll(async () => (await statusline.boundingBox())?.height).toBe(originalHeight);
+    await expect
+      .poll(async () => (await statusline.boundingBox())?.height)
+      .toBe(originalHeight);
     const statusPath = statusline.locator(".iris-editor-status-path");
     await expect(statusPath).toHaveAttribute("title", path);
-    expect(await statusPath.evaluate((element) => element.scrollWidth > element.clientWidth)).toBe(
-      true,
-    );
+    expect(
+      await statusPath.evaluate(
+        (element) => element.scrollWidth > element.clientWidth,
+      ),
+    ).toBe(true);
     await expect(statusline.locator("[data-status-position]")).toBeVisible();
-    await page.screenshot({ path: `/tmp/tsugite-long-status-path-vim-${vimMode}.png` });
+    await page.screenshot({
+      path: `/tmp/tsugite-long-status-path-vim-${vimMode}.png`,
+    });
   });
 }

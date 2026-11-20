@@ -33,7 +33,9 @@ export function PierreFileTreeToolbar({
       });
     };
     const onKeyDown = (event: KeyboardEvent) => {
-      const current = buttons.indexOf(document.activeElement as HTMLButtonElement);
+      const current = buttons.indexOf(
+        document.activeElement as HTMLButtonElement,
+      );
       const rtl = getComputedStyle(toolbar).direction === "rtl";
       const step =
         event.key === "ArrowRight"
@@ -74,7 +76,9 @@ export function PierreFileTreeToolbar({
       aria-label={label}
       className="flex items-center justify-end gap-1 px-4 pt-1 pb-2"
     >
-      <h2 className="mr-auto min-w-0 truncate text-xs font-normal text-iris-muted">{title}</h2>
+      <h2 className="mr-auto min-w-0 truncate text-xs font-normal text-iris-muted">
+        {title}
+      </h2>
       <Tooltip content="Search">
         <button
           type="button"

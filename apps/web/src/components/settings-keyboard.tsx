@@ -21,11 +21,17 @@ export function KeyboardSettings({
   onVimModeChange,
   keymap,
   onKeymapChange,
-}: Pick<SettingsDialogProps, "vimMode" | "onVimModeChange" | "keymap" | "onKeymapChange">) {
+}: Pick<
+  SettingsDialogProps,
+  "vimMode" | "onVimModeChange" | "keymap" | "onKeymapChange"
+>) {
   const { t } = useTranslation();
   const [systemClipboard, setSystemClipboard] = useSystemClipboard();
-  const [keymapErrors, setKeymapErrors] = useState<Partial<Record<AppAction, string>>>({});
-  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
+  const [keymapErrors, setKeymapErrors] = useState<
+    Partial<Record<AppAction, string>>
+  >({});
+  const settingLabel = (id: string) =>
+    t(getSettingDefinition(id)?.labelKey ?? id);
   const settingDescription = (id: string) => {
     const key = getSettingDefinition(id)?.descriptionKey;
     return key ? t(key) : "";
@@ -55,7 +61,8 @@ export function KeyboardSettings({
               : action === "command.palette"
                 ? "settings.commandPaletteKeymap"
                 : "settings.previewConsoleKeymap";
-        const binding = keymap.find((item) => item.action === action)?.key ?? "";
+        const binding =
+          keymap.find((item) => item.action === action)?.key ?? "";
         const settingId =
           action === "file.search"
             ? "fileSearchKeymap"
@@ -112,7 +119,9 @@ export function KeyboardSettings({
                       key:
                         item === action
                           ? key
-                          : (keymap.find((candidate) => candidate.action === item)?.key ?? ""),
+                          : (keymap.find(
+                              (candidate) => candidate.action === item,
+                            )?.key ?? ""),
                     })),
                   );
                 }}
@@ -136,8 +145,12 @@ export function KeyboardSettings({
                       action: item,
                       key:
                         item === action
-                          ? DEFAULT_KEYMAP.find((candidate) => candidate.action === item)!.key
-                          : (keymap.find((candidate) => candidate.action === item)?.key ?? ""),
+                          ? DEFAULT_KEYMAP.find(
+                              (candidate) => candidate.action === item,
+                            )!.key
+                          : (keymap.find(
+                              (candidate) => candidate.action === item,
+                            )?.key ?? ""),
                     })),
                   );
                 }}
@@ -146,7 +159,10 @@ export function KeyboardSettings({
               </IconButton>
             </div>
             {keymapErrors[action] && (
-              <span className="text-[10px] normal-case tracking-normal text-rose-600" role="alert">
+              <span
+                className="text-[10px] normal-case tracking-normal text-rose-600"
+                role="alert"
+              >
                 {keymapErrors[action]}
               </span>
             )}

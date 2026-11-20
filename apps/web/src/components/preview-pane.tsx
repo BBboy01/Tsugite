@@ -3,7 +3,10 @@ import { RefreshCw } from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { AnimatePresence, motion } from "motion/react";
 import { useTranslation } from "react-i18next";
-import { getLatestPreviewError, getPreviewRecoveryActions } from "../lib/preview-error-model";
+import {
+  getLatestPreviewError,
+  getPreviewRecoveryActions,
+} from "../lib/preview-error-model";
 import { getPreviewRunState } from "../lib/preview-runtime-model";
 import { usePreviewRuntime } from "../lib/use-preview-runtime";
 import { PreviewConsole } from "./preview-console";
@@ -32,12 +35,17 @@ export const PreviewPane = memo(function PreviewPane(props: PreviewPaneProps) {
     clearOutputs,
   } = usePreviewRuntime(props);
   const runState = getPreviewRunState(runtimeError, runtimeState);
-  const headerLabel = previewUrl ?? t(`preview.${runState === "idle" ? "ready" : runState}`);
+  const headerLabel =
+    previewUrl ?? t(`preview.${runState === "idle" ? "ready" : runState}`);
   const previewErrorMessage = previewBuildError
     ? (getLatestPreviewError(outputs) ?? previewBuildError)
     : undefined;
   const hasRuntime = props.files.some((item) => item.path === "package.json");
-  const recoveryActions = getPreviewRecoveryActions(runtimeError, hasSyntaxError, hasRuntime);
+  const recoveryActions = getPreviewRecoveryActions(
+    runtimeError,
+    hasSyntaxError,
+    hasRuntime,
+  );
   const showPreviewLoader =
     !runtimeError &&
     (runtimeState === "installing" ||
@@ -93,7 +101,9 @@ export const PreviewPane = memo(function PreviewPane(props: PreviewPaneProps) {
           title={`Preview of ${file.path}`}
           src={previewUrl}
           srcDoc={previewUrl ? undefined : fallbackDocument}
-          sandbox={previewUrl ? "allow-scripts allow-same-origin" : "allow-scripts"}
+          sandbox={
+            previewUrl ? "allow-scripts allow-same-origin" : "allow-scripts"
+          }
           className="block h-full min-h-[260px] w-full border-0 bg-white shadow-none"
           onLoad={handlePreviewLoad}
         />
@@ -128,7 +138,9 @@ export const PreviewPane = memo(function PreviewPane(props: PreviewPaneProps) {
         onClear={clearOutputs}
         open={props.previewConsoleOpen}
         onOpenChange={props.onPreviewConsoleOpenChange}
-        getPreviewHeight={() => sectionRef.current?.getBoundingClientRect().height ?? 288}
+        getPreviewHeight={() =>
+          sectionRef.current?.getBoundingClientRect().height ?? 288
+        }
         theme={props.settings.theme}
       />
     </motion.section>

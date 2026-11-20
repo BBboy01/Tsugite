@@ -11,7 +11,9 @@ async function literalColor(page: Page, expression: string) {
   }, expression);
 }
 
-test("theme-derived colors follow nested boundaries and portal dialogs", async ({ page }) => {
+test("theme-derived colors follow nested boundaries and portal dialogs", async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/theme-tokens-${crypto.randomUUID()}`);
 
@@ -38,7 +40,10 @@ test("theme-derived colors follow nested boundaries and portal dialogs", async (
     dark.append(darkLabel, light);
     light.append(lightLabel);
     document.querySelector("main")?.append(dark);
-    const result = [getComputedStyle(darkLabel).color, getComputedStyle(lightLabel).color];
+    const result = [
+      getComputedStyle(darkLabel).color,
+      getComputedStyle(lightLabel).color,
+    ];
     dark.remove();
     return result;
   });
@@ -52,12 +57,20 @@ test("theme-derived colors follow nested boundaries and portal dialogs", async (
   const dialog = page.getByRole("dialog");
   const paletteSearch = dialog.locator("input").first();
   await expect
-    .poll(() => paletteSearch.evaluate((input) => getComputedStyle(input, "::placeholder").color))
+    .poll(() =>
+      paletteSearch.evaluate(
+        (input) => getComputedStyle(input, "::placeholder").color,
+      ),
+    )
     .toBe(await literalColor(page, "color-mix(in srgb, #6e6e73 45%, #343438)"));
   await page.getByRole("button", { name: "Choose theme", exact: true }).click();
   await page.getByRole("button", { name: "Dracula", exact: true }).hover();
   await expect
-    .poll(() => paletteSearch.evaluate((input) => getComputedStyle(input, "::placeholder").color))
+    .poll(() =>
+      paletteSearch.evaluate(
+        (input) => getComputedStyle(input, "::placeholder").color,
+      ),
+    )
     .toBe(await literalColor(page, "color-mix(in srgb, #a7a9b5 45%, #e6e6dc)"));
   await page.getByRole("button", { name: "Dracula", exact: true }).click();
 

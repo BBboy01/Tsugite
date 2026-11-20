@@ -14,8 +14,14 @@ type PendingCleanup = {
   timer: ReturnType<typeof setTimeout>;
 };
 
-export function useEditorUndoManager(doc: LoroDoc, fileId: string): UndoManager {
-  const cache = useMemo<UndoManagerCache>(() => ({ doc, managers: new Map() }), [doc]);
+export function useEditorUndoManager(
+  doc: LoroDoc,
+  fileId: string,
+): UndoManager {
+  const cache = useMemo<UndoManagerCache>(
+    () => ({ doc, managers: new Map() }),
+    [doc],
+  );
   const undoManager = useMemo(() => {
     const existing = cache.managers.get(fileId);
     if (existing) return existing;

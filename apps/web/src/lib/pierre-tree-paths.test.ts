@@ -11,5 +11,8 @@ test("maps Loro files and explicit folders to Pierre canonical paths", () => {
 });
 
 test("deduplicates folders already inferred from file paths", () => {
-  expect(toPierreTreePaths(["src/main.ts"], ["src", "src"])).toEqual(["src/", "src/main.ts"]);
+  expect(toPierreTreePaths(["src/main.ts"], ["src", "src"])).toEqual([
+    "src/",
+    "src/main.ts",
+  ]);
 });

@@ -10,8 +10,10 @@ export const draftTranslations = {
     "drafts.discard": "Discard draft",
     "drafts.saved": "Local draft saved",
     "drafts.saving": "Saving local draft",
-    "drafts.storageError": "Local backup unavailable. Keep this tab open until changes are synced.",
-    "drafts.recoveryError": "Could not restore this draft. The saved copy has been kept.",
+    "drafts.storageError":
+      "Local backup unavailable. Keep this tab open until changes are synced.",
+    "drafts.recoveryError":
+      "Could not restore this draft. The saved copy has been kept.",
   },
   "zh-CN": {
     "drafts.title": "恢复本地草稿",
@@ -38,7 +40,8 @@ export const draftTranslations = {
     "drafts.discard": "捨棄草稿",
     "drafts.saved": "本機草稿已儲存",
     "drafts.saving": "正在儲存本機草稿",
-    "drafts.storageError": "本機備份無法使用，請保持此頁開啟，直到修改同步完成。",
+    "drafts.storageError":
+      "本機備份無法使用，請保持此頁開啟，直到修改同步完成。",
     "drafts.recoveryError": "無法復原草稿，已保留本機副本。",
   },
   ja: {
@@ -54,6 +57,7 @@ export const draftTranslations = {
     "drafts.saving": "下書きを保存中",
     "drafts.storageError":
       "ローカルバックアップを利用できません。同期が完了するまで、このタブを開いたままにしてください。",
-    "drafts.recoveryError": "下書きを復元できません。保存済みのコピーは保持しています。",
+    "drafts.recoveryError":
+      "下書きを復元できません。保存済みのコピーは保持しています。",
   },
 } as const;

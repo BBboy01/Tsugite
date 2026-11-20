@@ -4,7 +4,11 @@ import type { EditorLocation } from "./editor-navigation";
 
 function applyLocation(view: EditorView, location: EditorLocation): boolean {
   if (location.source !== view.state.doc.toString()) return false;
-  if (location.from < 0 || location.to < location.from || location.to > view.state.doc.length) {
+  if (
+    location.from < 0 ||
+    location.to < location.from ||
+    location.to > view.state.doc.length
+  ) {
     return false;
   }
   view.focus();
@@ -39,7 +43,8 @@ export function useEditorLocation({
     const pending = pendingLocationRef.current;
     if (!pending || pending.path !== path) return false;
     pendingLocationRef.current = null;
-    if (pending === requestRef.current.requestedLocation) requestRef.current.onLocationHandled?.();
+    if (pending === requestRef.current.requestedLocation)
+      requestRef.current.onLocationHandled?.();
     return applyLocation(view, pending);
   };
 

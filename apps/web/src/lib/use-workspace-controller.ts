@@ -49,7 +49,8 @@ export function useWorkspaceController(roomId: string) {
     [dispatchWorkspace],
   );
   const setFollowingUserId = useCallback(
-    (userId: string | null) => dispatchWorkspace({ type: "set-following", userId }),
+    (userId: string | null) =>
+      dispatchWorkspace({ type: "set-following", userId }),
     [],
   );
   const setMobilePanel = useCallback(
@@ -58,11 +59,13 @@ export function useWorkspaceController(roomId: string) {
     [],
   );
   const setFileSearchOpen = useCallback(
-    (open: boolean) => dispatchWorkspace({ type: "set-file-search-open", open }),
+    (open: boolean) =>
+      dispatchWorkspace({ type: "set-file-search-open", open }),
     [],
   );
   const setCommandPaletteOpen = useCallback(
-    (open: boolean) => dispatchWorkspace({ type: "set-command-palette-open", open }),
+    (open: boolean) =>
+      dispatchWorkspace({ type: "set-command-palette-open", open }),
     [],
   );
   const togglePreviewConsole = useCallback(
@@ -70,7 +73,8 @@ export function useWorkspaceController(roomId: string) {
     [],
   );
   const setPreviewConsoleOpen = useCallback(
-    (open: boolean) => dispatchWorkspace({ type: "set-preview-console-open", open }),
+    (open: boolean) =>
+      dispatchWorkspace({ type: "set-preview-console-open", open }),
     [],
   );
   const setSettingsOpen = useCallback(
@@ -144,26 +148,45 @@ export function useWorkspaceController(roomId: string) {
     togglePreviewConsole,
   });
 
-  const stopFollowing = useCallback(() => setFollowingUserId(null), [setFollowingUserId]);
-  const { handleAddFile, handleAddFolder, handleRename, handleMove, handleCopy, handleDelete } =
-    useMemo(
-      () =>
-        createWorkspaceFileActions({
-          doc: client.doc,
-          selectedPath,
-          openTabPaths,
-          setNavigation: updateNavigation,
-          activateFile,
-          stopFollowing,
-        }),
-      [activateFile, client.doc, openTabPaths, selectedPath, updateNavigation, stopFollowing],
-    );
+  const stopFollowing = useCallback(
+    () => setFollowingUserId(null),
+    [setFollowingUserId],
+  );
+  const {
+    handleAddFile,
+    handleAddFolder,
+    handleRename,
+    handleMove,
+    handleCopy,
+    handleDelete,
+  } = useMemo(
+    () =>
+      createWorkspaceFileActions({
+        doc: client.doc,
+        selectedPath,
+        openTabPaths,
+        setNavigation: updateNavigation,
+        activateFile,
+        stopFollowing,
+      }),
+    [
+      activateFile,
+      client.doc,
+      openTabPaths,
+      selectedPath,
+      updateNavigation,
+      stopFollowing,
+    ],
+  );
 
   const handleCursorChange = useCallback(
     (cursor: { anchor: number; head: number }) => {
       setFollowingUserId(null);
       clearPresenceTimer();
-      presenceTimer.current = setTimeout(() => client.sendPresence(selectedPath, cursor), 120);
+      presenceTimer.current = setTimeout(
+        () => client.sendPresence(selectedPath, cursor),
+        120,
+      );
     },
     [clearPresenceTimer, client, selectedPath, setFollowingUserId],
   );

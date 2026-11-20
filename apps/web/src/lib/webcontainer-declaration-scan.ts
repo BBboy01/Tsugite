@@ -1,7 +1,10 @@
 import type { IntelligenceFile } from "./editor-intelligence";
 import { parseDeclarationScan } from "./typescript-declarations";
 import type { RuntimeContainer, RuntimeProcess } from "./webcontainer-runtime";
-import { DECLARATION_SCAN_LIMITS, type DeclarationScanLimits } from "./declaration-scan-limits";
+import {
+  DECLARATION_SCAN_LIMITS,
+  type DeclarationScanLimits,
+} from "./declaration-scan-limits";
 import { scanNodeDeclarations } from "./declaration-scan-node";
 import { createDeclarationReferenceReader } from "./declaration-scan-references";
 
@@ -43,15 +46,20 @@ export async function scanWebContainerDeclarations(
   };
   signal.addEventListener("abort", abort, { once: true });
   try {
-    if (signal.aborted) throw new Error("TypeScript declaration scan cancelled");
+    if (signal.aborted)
+      throw new Error("TypeScript declaration scan cancelled");
     const script =
       timeoutMs === DECLARATION_SCAN_LIMITS.deadlineMs
         ? DECLARATION_SCAN_SCRIPT
-        : createDeclarationScanScript({ ...DECLARATION_SCAN_LIMITS, deadlineMs: timeoutMs });
+        : createDeclarationScanScript({
+            ...DECLARATION_SCAN_LIMITS,
+            deadlineMs: timeoutMs,
+          });
     const args = ["-e", script];
     if (sources) args.push(serializeSources(sources));
     const deadline = Promise.withResolvers<never>();
-    const expire = () => deadline.reject(new Error("TypeScript declaration scan timed out"));
+    const expire = () =>
+      deadline.reject(new Error("TypeScript declaration scan timed out"));
     timer = setTimeout(expire, spawnTimeoutMs);
     process = await Promise.race([
       container.spawn("node", args).then((spawned) => {
@@ -62,7 +70,8 @@ export async function scanWebContainerDeclarations(
       deadline.promise,
     ]);
     clearTimeout(timer);
-    if (signal.aborted) throw new Error("TypeScript declaration scan cancelled");
+    if (signal.aborted)
+      throw new Error("TypeScript declaration scan cancelled");
     timer = setTimeout(expire, spawnTimeoutMs);
     reader = process.output.getReader();
     const output = collectOutput(reader, () => {
@@ -70,14 +79,16 @@ export async function scanWebContainerDeclarations(
       timer = setTimeout(expire, timeoutMs);
     });
     const exit = process.exit.then((code) => {
-      if (code !== 0) throw new Error(`TypeScript declaration scan exit ${code}`);
+      if (code !== 0)
+        throw new Error(`TypeScript declaration scan exit ${code}`);
     });
     const [text] = await Promise.race([
       Promise.all([output, exit]),
       cancelled.promise,
       deadline.promise,
     ]);
-    if (signal.aborted) throw new Error("TypeScript declaration scan cancelled");
+    if (signal.aborted)
+      throw new Error("TypeScript declaration scan cancelled");
     return parseDeclarationScan(text);
   } catch (error) {
     process?.kill();
@@ -148,7 +159,10 @@ async function collectOutput(
     while (true) {
       const result = await reader.read();
       if (result.done) return prefix + chunks.join("");
-      if (typeof result.value !== "string" || result.value.length > limits.outputBytes) {
+      if (
+        typeof result.value !== "string" ||
+        result.value.length > limits.outputBytes
+      ) {
         throw new Error("TypeScript declaration output limit exceeded");
       }
       bytes += encoder.encode(result.value).byteLength;
@@ -157,10 +171,15 @@ async function collectOutput(
       }
       if (!started) {
         prefix += result.value;
-        if (READY_MARKER.startsWith(prefix) && prefix !== READY_MARKER) continue;
+        if (READY_MARKER.startsWith(prefix) && prefix !== READY_MARKER)
+          continue;
         started = true;
         ready();
-        chunks.push(prefix.startsWith(READY_MARKER) ? prefix.slice(READY_MARKER.length) : prefix);
+        chunks.push(
+          prefix.startsWith(READY_MARKER)
+            ? prefix.slice(READY_MARKER.length)
+            : prefix,
+        );
         prefix = "";
       } else chunks.push(result.value);
     }

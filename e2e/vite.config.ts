@@ -8,7 +8,11 @@ export default mergeConfig(
   config,
   defineConfig({
     envDir: false,
-    define: { "import.meta.env.VITE_WS_URL": JSON.stringify(`ws://127.0.0.1:${serverPort}/ws`) },
+    define: {
+      "import.meta.env.VITE_WS_URL": JSON.stringify(
+        `ws://127.0.0.1:${serverPort}/ws`,
+      ),
+    },
     server: { host: "127.0.0.1", port: webPort, strictPort: true },
   }),
 );

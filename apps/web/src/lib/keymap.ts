@@ -1,4 +1,5 @@
-export type AppAction = "file.search" | "settings.open" | "command.palette" | "preview.console";
+export type AppAction =
+  "file.search" | "settings.open" | "command.palette" | "preview.console";
 export type KeyBinding = { action: AppAction; key: string };
 
 export const KEYMAP_ACTIONS: readonly AppAction[] = [
@@ -14,7 +15,9 @@ export const DEFAULT_KEYMAP: readonly KeyBinding[] = [
   { action: "preview.console", key: "Mod-J" },
 ];
 
-export function isMacPlatform(platform: string = globalThis.navigator?.platform ?? ""): boolean {
+export function isMacPlatform(
+  platform: string = globalThis.navigator?.platform ?? "",
+): boolean {
   return /Mac|iPhone|iPad|iPod/i.test(platform);
 }
 
@@ -24,7 +27,11 @@ export function formatKeyBinding(
 ) {
   const modifier = binding.match(/^(Mod|Cmd|Ctrl)-/i)?.[1];
   if (!modifier) return binding;
-  const displayModifier = isMacPlatform(platform) ? (modifier === "Ctrl" ? "Ctrl" : "Cmd") : "Ctrl";
+  const displayModifier = isMacPlatform(platform)
+    ? modifier === "Ctrl"
+      ? "Ctrl"
+      : "Cmd"
+    : "Ctrl";
   return `${displayModifier}-${binding.slice(modifier.length + 1)}`;
 }
 
@@ -44,7 +51,9 @@ export function findKeymapConflict(
   const comparable = comparableKey(key, platform);
   return (
     bindings.find(
-      (binding) => binding.action !== action && comparableKey(binding.key, platform) === comparable,
+      (binding) =>
+        binding.action !== action &&
+        comparableKey(binding.key, platform) === comparable,
     )?.action ?? null
   );
 }

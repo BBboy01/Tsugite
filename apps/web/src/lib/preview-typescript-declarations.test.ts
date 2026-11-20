@@ -24,7 +24,9 @@ function target() {
       state = reason ? "unavailable" : "ready";
     },
     loadDeclarations: async (
-      read: (sources: readonly IntelligenceFile[]) => Promise<readonly IntelligenceFile[]>,
+      read: (
+        sources: readonly IntelligenceFile[],
+      ) => Promise<readonly IntelligenceFile[]>,
     ) => {
       const current = ++generation;
       state = "loading";
@@ -44,7 +46,10 @@ function target() {
   };
 }
 const declarations = [
-  { path: "node_modules/pkg/index.d.ts", text: 'export declare const value: "ok";' },
+  {
+    path: "node_modules/pkg/index.d.ts",
+    text: 'export declare const value: "ok";',
+  },
 ];
 
 test("scans declarations when installed runtime is paused without waiting for preview", async () => {
@@ -76,7 +81,9 @@ test("source import changes refresh types but ordinary edits keep the existing d
   const sync = new PreviewTypeScriptDeclarations(sink);
   let available = declarations;
   const runtime = { readTypeScriptDeclarations: async () => available };
-  const files = [{ path: "app.ts", text: 'import { value } from "pkg"; value;' }];
+  const files = [
+    { path: "app.ts", text: 'import { value } from "pkg"; value;' },
+  ];
   sink.setSources(files);
   await sync.onRuntimeState("starting", runtime);
   await sync.syncSources(runtime, files);
@@ -85,7 +92,9 @@ test("source import changes refresh types but ordinary edits keep the existing d
     { path: "app.ts", text: 'import { value } from "pkg"; value; // edit' },
   ]);
   expect(sink.current().files).toEqual(declarations);
-  const next = [{ path: "app.ts", text: 'import { value } from "next"; value;' }];
+  const next = [
+    { path: "app.ts", text: 'import { value } from "next"; value;' },
+  ];
   sink.setSources(next);
   await sync.syncSources(runtime, next);
   expect(sink.current().files).toEqual(available);
@@ -94,12 +103,16 @@ test("source import changes refresh types but ordinary edits keep the existing d
 test("import-looking strings and comments do not refresh or clear declarations", async () => {
   const sink = target();
   const sync = new PreviewTypeScriptDeclarations(sink);
-  const initial = [{ path: "app.ts", text: "const example = 'ordinary text';" }];
+  const initial = [
+    { path: "app.ts", text: "const example = 'ordinary text';" },
+  ];
   sink.setSources(initial);
   let reads = 0;
   const scanFailureMarker = ["https:", "", "example.test"].join("/") + "/";
   const runtime = {
-    readTypeScriptDeclarations: async (sources: readonly IntelligenceFile[] = []) => {
+    readTypeScriptDeclarations: async (
+      sources: readonly IntelligenceFile[] = [],
+    ) => {
       reads++;
       if (sources.some(({ text }) => text.includes(scanFailureMarker))) {
         throw new Error("TypeScript declaration scan disabled");
@@ -121,13 +134,23 @@ test("import-looking strings and comments do not refresh or clear declarations",
 test("dynamic imports inside template expressions refresh declarations", async () => {
   const sink = target();
   const sync = new PreviewTypeScriptDeclarations(sink);
-  const current = [{ path: "app.ts", text: 'const loaded = `value ${import("pkg")}`;' }];
+  const current = [
+    { path: "app.ts", text: 'const loaded = `value ${import("pkg")}`;' },
+  ];
   sink.setSources(current);
-  const next = [{ path: "app.ts", text: 'const loaded = `value ${import("next")}`;' }];
-  const nextDeclarations = [{ path: "node_modules/next/index.d.ts", text: "export {};" }];
+  const next = [
+    { path: "app.ts", text: 'const loaded = `value ${import("next")}`;' },
+  ];
+  const nextDeclarations = [
+    { path: "node_modules/next/index.d.ts", text: "export {};" },
+  ];
   const runtime = {
-    readTypeScriptDeclarations: async (sources: readonly IntelligenceFile[] = []) =>
-      sources.some(({ text }) => text.includes('import("next")')) ? nextDeclarations : declarations,
+    readTypeScriptDeclarations: async (
+      sources: readonly IntelligenceFile[] = [],
+    ) =>
+      sources.some(({ text }) => text.includes('import("next")'))
+        ? nextDeclarations
+        : declarations,
   };
   await sync.onRuntimeState("paused", runtime);
   sink.setSources(next);
@@ -139,7 +162,9 @@ test("detaching preview cancels pending results without turning source services 
   const sink = target();
   const sync = new PreviewTypeScriptDeclarations(sink);
   const pending = Promise.withResolvers<IntelligenceFile[]>();
-  const scan = sync.onRuntimeState("paused", { readTypeScriptDeclarations: () => pending.promise });
+  const scan = sync.onRuntimeState("paused", {
+    readTypeScriptDeclarations: () => pending.promise,
+  });
   await sync.clear();
   pending.resolve(declarations);
   await scan;
@@ -168,7 +193,9 @@ test("does not require unscanned development tooling metadata", async () => {
     { path: "node_modules/pkg/package.json", text: "{}" },
     ...declarations,
   ];
-  await sync.onRuntimeState("paused", { readTypeScriptDeclarations: async () => files });
+  await sync.onRuntimeState("paused", {
+    readTypeScriptDeclarations: async () => files,
+  });
   expect(sink.current()).toEqual({ state: "ready", files });
 });
 
@@ -183,7 +210,9 @@ test("missing optional packages do not block available project types", async () 
     { path: "node_modules/pkg/package.json", text: "{}" },
     ...declarations,
   ];
-  await sync.onRuntimeState("paused", { readTypeScriptDeclarations: async () => files });
+  await sync.onRuntimeState("paused", {
+    readTypeScriptDeclarations: async () => files,
+  });
   expect(sink.current()).toEqual({ state: "ready", files });
 });
 
@@ -240,12 +269,15 @@ test("an older refresh cannot cancel the latest runtime scan after its index res
   const indexing = Promise.withResolvers<string>();
   const scanStarted = Promise.withResolvers<void>();
   const scan = Promise.withResolvers<IntelligenceFile[]>();
-  const imports = spyOn(TypeScriptImportIndex.prototype, "getKey").mockImplementationOnce(
-    () => indexing.promise,
-  );
+  const imports = spyOn(
+    TypeScriptImportIndex.prototype,
+    "getKey",
+  ).mockImplementationOnce(() => indexing.promise);
   const reads: string[] = [];
   const runtime = {
-    readTypeScriptDeclarations: async (sources: readonly IntelligenceFile[] = []) => {
+    readTypeScriptDeclarations: async (
+      sources: readonly IntelligenceFile[] = [],
+    ) => {
       const path = sources[0].path;
       reads.push(path);
       if (path === "latest.ts") {
@@ -280,9 +312,10 @@ test.each(["clear", "installing"] as const)(
     const sink = target();
     const sync = new PreviewTypeScriptDeclarations(sink);
     const indexing = Promise.withResolvers<string>();
-    const imports = spyOn(TypeScriptImportIndex.prototype, "getKey").mockImplementationOnce(
-      () => indexing.promise,
-    );
+    const imports = spyOn(
+      TypeScriptImportIndex.prototype,
+      "getKey",
+    ).mockImplementationOnce(() => indexing.promise);
     let reads = 0;
     const runtime = {
       readTypeScriptDeclarations: async () => {

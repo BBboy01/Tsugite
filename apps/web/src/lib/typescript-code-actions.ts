@@ -4,7 +4,10 @@ import {
   type CompletionResult,
 } from "@codemirror/autocomplete";
 import type { Diagnostic } from "@codemirror/lint";
-import type { IntelligenceCompletion, IntelligenceDiagnostic } from "./editor-intelligence";
+import type {
+  IntelligenceCompletion,
+  IntelligenceDiagnostic,
+} from "./editor-intelligence";
 
 export function toCodeMirrorCompletions(
   items: readonly IntelligenceCompletion[],
@@ -19,7 +22,10 @@ export function toCodeMirrorCompletions(
       return {
         label: item.name,
         type: item.kind,
-        detail: item.insertText && item.insertText !== item.name ? item.insertText : undefined,
+        detail:
+          item.insertText && item.insertText !== item.name
+            ? item.insertText
+            : undefined,
         apply: replacement
           ? (view, completion, currentFrom, currentTo) =>
               view.dispatch({
@@ -36,7 +42,9 @@ export function toCodeMirrorCompletions(
     }),
   };
 }
-export function toCodeMirrorDiagnostics(items: readonly IntelligenceDiagnostic[]): Diagnostic[] {
+export function toCodeMirrorDiagnostics(
+  items: readonly IntelligenceDiagnostic[],
+): Diagnostic[] {
   return items
     .filter((item) => item.severity === "error" || item.severity === "warning")
     .map((item) => ({

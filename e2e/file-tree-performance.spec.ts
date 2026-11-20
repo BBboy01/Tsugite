@@ -13,13 +13,21 @@ function createProjectSnapshot(generatedFileCount: number): {
     createFile(doc, `src/generated/file-${index}.tsx`, "typescript");
   }
   doc.commit();
-  const snapshot = { bytes: doc.export({ mode: "snapshot" }), fileCount: listFiles(doc).length };
+  const snapshot = {
+    bytes: doc.export({ mode: "snapshot" }),
+    fileCount: listFiles(doc).length,
+  };
   doc.free();
   return snapshot;
 }
 
-test("records file tree mount cost for a large room snapshot", async ({ page }, testInfo) => {
-  const projects = [createProjectSnapshot(0), createProjectSnapshot(GENERATED_FILE_COUNT)];
+test("records file tree mount cost for a large room snapshot", async ({
+  page,
+}, testInfo) => {
+  const projects = [
+    createProjectSnapshot(0),
+    createProjectSnapshot(GENERATED_FILE_COUNT),
+  ];
   let currentProject = projects[0];
   await page.addInitScript(() => {
     localStorage.setItem("iris.language", "en");
@@ -35,7 +43,9 @@ test("records file tree mount cost for a large room snapshot", async ({ page }, 
         socket.send(Buffer.from(currentProject.bytes));
         socket.send(JSON.stringify({ type: "presence:list", members: [] }));
       } else if (payload.type === "presence") {
-        socket.send(JSON.stringify({ type: "presence:list", members: [payload] }));
+        socket.send(
+          JSON.stringify({ type: "presence:list", members: [payload] }),
+        );
       }
     });
   });
@@ -58,31 +68,45 @@ test("records file tree mount cost for a large room snapshot", async ({ page }, 
       await expect
         .poll(async () =>
           Number(
-            (await virtualizedList.getAttribute("style"))?.match(/height:\s*([\d.]+)px/)?.[1] ?? 0,
+            (await virtualizedList.getAttribute("style"))?.match(
+              /height:\s*([\d.]+)px/,
+            )?.[1] ?? 0,
           ),
         )
         .toBeGreaterThan(GENERATED_FILE_COUNT * 20);
-      await expect.poll(() => renderedRows.count()).toBeLessThan(MAX_RENDERED_ROWS);
+      await expect
+        .poll(() => renderedRows.count())
+        .toBeLessThan(MAX_RENDERED_ROWS);
     }
     const metrics = {
       startupMs: await page.evaluate(
         () =>
           performance.now() -
-          performance.getEntriesByName("file-tree-benchmark-start")[0].startTime,
+          performance.getEntriesByName("file-tree-benchmark-start")[0]
+            .startTime,
       ),
       fileNodes: await files.count(),
       folderNodes: await folders.count(),
       totalRows: Number(
-        (await virtualizedList.getAttribute("style"))?.match(/height:\s*([\d.]+)px/)?.[1] ?? 0,
+        (await virtualizedList.getAttribute("style"))?.match(
+          /height:\s*([\d.]+)px/,
+        )?.[1] ?? 0,
       ),
     };
-    measurements.push({ generatedFiles: index === 0 ? 0 : GENERATED_FILE_COUNT, ...metrics });
+    measurements.push({
+      generatedFiles: index === 0 ? 0 : GENERATED_FILE_COUNT,
+      ...metrics,
+    });
     if (index === 1) {
       await scroller.evaluate((element) => {
         element.scrollTop = element.scrollHeight;
       });
-      await expect(tree.locator('[data-item-path="src/generated/file-4999.tsx"]')).toBeInViewport();
-      await expect.poll(() => renderedRows.count()).toBeLessThan(MAX_RENDERED_ROWS);
+      await expect(
+        tree.locator('[data-item-path="src/generated/file-4999.tsx"]'),
+      ).toBeInViewport();
+      await expect
+        .poll(() => renderedRows.count())
+        .toBeLessThan(MAX_RENDERED_ROWS);
     }
   }
   console.info("FILE_TREE_BENCHMARK", JSON.stringify(measurements));

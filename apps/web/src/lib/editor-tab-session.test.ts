@@ -33,13 +33,19 @@ test("keeps the room's saved tabs untouched until its first snapshot arrives", (
   save(storage, "room", ["main", "app"], "main");
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files: [], hasReceivedSnapshot: false })).toBeNull();
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: false })).toBeNull();
+  expect(
+    session.synchronize({ ...initial, files: [], hasReceivedSnapshot: false }),
+  ).toBeNull();
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: false }),
+  ).toBeNull();
   expect(JSON.parse(storage.getItem(key("room"))!)).toEqual({
     fileIds: ["main", "app"],
     activeFileId: "main",
   });
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: ["src/main.tsx", "src/App.tsx"],
     selectedPath: "src/main.tsx",
   });
@@ -52,7 +58,11 @@ test("restores the saved order and active file by stable IDs after a rename", ()
   const renamedFiles = [{ id: "main", path: "src/renamed.tsx" }, files[0]!];
 
   expect(
-    session.synchronize({ ...initial, files: renamedFiles, hasReceivedSnapshot: true }),
+    session.synchronize({
+      ...initial,
+      files: renamedFiles,
+      hasReceivedSnapshot: true,
+    }),
   ).toEqual({
     openTabPaths: ["src/renamed.tsx", "src/App.tsx"],
     selectedPath: "src/renamed.tsx",
@@ -63,15 +73,24 @@ test("does not write stale defaults when the restore effect repeats before its u
   const storage = memoryStorage();
   save(storage, "room", ["main", "app"], "main");
   const session = new EditorTabSession("room", storage);
-  const restored = { openTabPaths: ["src/main.tsx", "src/App.tsx"], selectedPath: "src/main.tsx" };
+  const restored = {
+    openTabPaths: ["src/main.tsx", "src/App.tsx"],
+    selectedPath: "src/main.tsx",
+  };
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual(restored);
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual(restored);
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual(restored);
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual(restored);
   expect(JSON.parse(storage.getItem(key("room"))!)).toEqual({
     fileIds: ["main", "app"],
     activeFileId: "main",
   });
-  expect(session.synchronize({ ...restored, files, hasReceivedSnapshot: true })).toBeNull();
+  expect(
+    session.synchronize({ ...restored, files, hasReceivedSnapshot: true }),
+  ).toBeNull();
 });
 
 test("saves later local order and active changes as stable IDs", () => {
@@ -96,7 +115,9 @@ test("filters deleted saved files and falls back to the first surviving tab", ()
   save(storage, "room", ["deleted", "styles", "main", "app"], "deleted");
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: ["src/index.css", "src/main.tsx", "src/App.tsx"],
     selectedPath: "src/index.css",
   });
@@ -107,7 +128,9 @@ test("restores an empty editor when all saved files have been deleted", () => {
   save(storage, "room", ["deleted"], "deleted");
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: [],
     selectedPath: "",
   });
@@ -118,7 +141,9 @@ test("restores an explicitly saved empty session instead of opening the default 
   save(storage, "room", [], null);
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: [],
     selectedPath: "",
   });
@@ -129,7 +154,9 @@ test("preserves an explicitly empty active file while tabs remain open", () => {
   save(storage, "room", ["main", "app"], null);
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: ["src/main.tsx", "src/App.tsx"],
     selectedPath: "",
   });
@@ -139,7 +166,9 @@ test("keeps normal initial navigation when the room has no saved session", () =>
   const storage = memoryStorage();
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toBeNull();
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toBeNull();
   expect(JSON.parse(storage.getItem(key("room"))!)).toEqual({
     fileIds: ["app"],
     activeFileId: "app",
@@ -150,13 +179,23 @@ test("treats an empty received room snapshot as a real deletion", () => {
   const storage = memoryStorage();
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files: [], hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files: [], hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: [],
     selectedPath: "",
   });
   expect(storage.getItem(key("room"))).toBeNull();
-  session.synchronize({ openTabPaths: [], selectedPath: "", files: [], hasReceivedSnapshot: true });
-  expect(JSON.parse(storage.getItem(key("room"))!)).toEqual({ fileIds: [], activeFileId: null });
+  session.synchronize({
+    openTabPaths: [],
+    selectedPath: "",
+    files: [],
+    hasReceivedSnapshot: true,
+  });
+  expect(JSON.parse(storage.getItem(key("room"))!)).toEqual({
+    fileIds: [],
+    activeFileId: null,
+  });
 });
 
 test("preserves a live rename in place and selects the first surviving tab after remote deletion", () => {
@@ -167,7 +206,11 @@ test("preserves a live rename in place and selects the first surviving tab after
     selectedPath: "src/main.tsx",
   };
   session.synchronize({ ...navigation, files, hasReceivedSnapshot: true });
-  const renamedFiles = [files[0]!, { id: "main", path: "src/renamed.tsx" }, files[2]!];
+  const renamedFiles = [
+    files[0]!,
+    { id: "main", path: "src/renamed.tsx" },
+    files[2]!,
+  ];
   const renamed = {
     ...navigation,
     openTabPaths: ["src/index.css", "src/renamed.tsx", "src/App.tsx"],
@@ -175,11 +218,23 @@ test("preserves a live rename in place and selects the first surviving tab after
   };
 
   expect(
-    session.synchronize({ ...navigation, files: renamedFiles, hasReceivedSnapshot: true }),
+    session.synchronize({
+      ...navigation,
+      files: renamedFiles,
+      hasReceivedSnapshot: true,
+    }),
   ).toEqual(renamed);
-  session.synchronize({ ...renamed, files: renamedFiles, hasReceivedSnapshot: true });
+  session.synchronize({
+    ...renamed,
+    files: renamedFiles,
+    hasReceivedSnapshot: true,
+  });
   expect(
-    session.synchronize({ ...renamed, files: [files[0]!, files[2]!], hasReceivedSnapshot: true }),
+    session.synchronize({
+      ...renamed,
+      files: [files[0]!, files[2]!],
+      hasReceivedSnapshot: true,
+    }),
   ).toEqual({
     openTabPaths: ["src/index.css", "src/App.tsx"],
     selectedPath: "src/index.css",
@@ -226,7 +281,9 @@ for (const invalid of [
         hasReceivedSnapshot: true,
       }),
     ).toBeNull();
-    expect(storage.getItem(key("room"))).toBe('{"fileIds":["app"],"activeFileId":"app"}');
+    expect(storage.getItem(key("room"))).toBe(
+      '{"fileIds":["app"],"activeFileId":"app"}',
+    );
   });
 }
 
@@ -257,8 +314,12 @@ test("continues navigating when local storage reads or writes fail", () => {
   };
   const session = new EditorTabSession("room", storage);
 
-  expect(session.synchronize({ ...initial, files, hasReceivedSnapshot: true })).toBeNull();
-  expect(session.synchronize({ ...initial, files: [], hasReceivedSnapshot: true })).toEqual({
+  expect(
+    session.synchronize({ ...initial, files, hasReceivedSnapshot: true }),
+  ).toBeNull();
+  expect(
+    session.synchronize({ ...initial, files: [], hasReceivedSnapshot: true }),
+  ).toEqual({
     openTabPaths: [],
     selectedPath: "",
   });

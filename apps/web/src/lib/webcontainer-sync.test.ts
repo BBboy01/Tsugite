@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { WebContainerRuntime, type RuntimeSettings } from "./webcontainer-runtime";
+import {
+  WebContainerRuntime,
+  type RuntimeSettings,
+} from "./webcontainer-runtime";
 import { fakeContainer, projectFile } from "./webcontainer-test-utils";
 
 const settings: RuntimeSettings = {
@@ -24,7 +27,9 @@ for (const latest of ["second edit", "original"]) {
       }
       actual = contents;
     };
-    const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+    const runtime = new WebContainerRuntime({
+      boot: async () => fake.container,
+    });
     await runtime.start(project("original"), [], () => {}, settings);
 
     const first = runtime.sync(project("first edit"), []);
@@ -45,7 +50,8 @@ test("restarting waits for an in-flight mount before applying the new project", 
   let actual: string | Uint8Array | undefined;
   fake.container.mount = async (tree) => {
     const entry = tree["main.js"];
-    if (!("file" in entry) || !("contents" in entry.file)) throw new Error("expected main.js");
+    if (!("file" in entry) || !("contents" in entry.file))
+      throw new Error("expected main.js");
     if (entry.file.contents === "original") {
       mounting.resolve();
       await release.promise;
@@ -55,7 +61,12 @@ test("restarting waits for an in-flight mount before applying the new project", 
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const first = runtime.start(project("original"), [], () => {}, settings);
   await mounting.promise;
-  const second = runtime.restart(project("replacement"), [], () => {}, settings);
+  const second = runtime.restart(
+    project("replacement"),
+    [],
+    () => {},
+    settings,
+  );
   await Promise.resolve();
   release.resolve();
   await Promise.all([first, second]);
@@ -80,7 +91,10 @@ test("an old sync cannot write into a container created after disposal", async (
     boot: async () => (++boots === 1 ? old.container : current.container),
   });
   await runtime.start(project("original"), [], () => {}, settings);
-  const pending = runtime.sync([...project("edit"), projectFile("other.js", "obsolete")], []);
+  const pending = runtime.sync(
+    [...project("edit"), projectFile("other.js", "obsolete")],
+    [],
+  );
   await writing.promise;
   runtime.dispose();
   await runtime.start(project("current"), [], () => {}, settings);
@@ -101,14 +115,21 @@ test("sync after a partial write failure reconciles the files actually written",
     ["/other.js", "original"],
   ]);
   fake.container.fs.writeFile = async (path, contents) => {
-    if (path === "/other.js" && contents === "broken") throw new Error("disk write failed");
+    if (path === "/other.js" && contents === "broken")
+      throw new Error("disk write failed");
     actual.set(path, contents);
   };
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
-  const original = [...project("original"), projectFile("other.js", "original")];
+  const original = [
+    ...project("original"),
+    projectFile("other.js", "original"),
+  ];
   await runtime.start(original, [], () => {}, settings);
   await expect(
-    runtime.sync([...project("changed"), projectFile("other.js", "broken")], []),
+    runtime.sync(
+      [...project("changed"), projectFile("other.js", "broken")],
+      [],
+    ),
   ).rejects.toThrow("disk write failed");
   await runtime.sync(original, []);
 
@@ -121,7 +142,12 @@ test("syncs only changed files without reading the rest of the project", async (
   const fake = fakeContainer();
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const untouched = projectFile("untouched.js", "untouched");
-  await runtime.start([...project("original"), untouched], [], () => {}, settings);
+  await runtime.start(
+    [...project("original"), untouched],
+    [],
+    () => {},
+    settings,
+  );
   fake.calls.writes.length = 0;
   let untouchedReads = 0;
   untouched.text = {
@@ -131,7 +157,9 @@ test("syncs only changed files without reading the rest of the project", async (
     },
   } as typeof untouched.text;
 
-  const result = await runtime.syncChangedFiles([projectFile("main.js", "changed")]);
+  const result = await runtime.syncChangedFiles([
+    projectFile("main.js", "changed"),
+  ]);
 
   expect(result).toEqual({ packageChanged: false });
   expect(fake.calls.writes).toEqual(["/main.js:changed"]);
@@ -149,7 +177,9 @@ test("reports package changes from incremental file sync", async () => {
   ]);
 
   expect(result).toEqual({ packageChanged: true });
-  expect(fake.calls.writes).toEqual(['/package.json:{"scripts":{"dev":"node main.js"}}']);
+  expect(fake.calls.writes).toEqual([
+    '/package.json:{"scripts":{"dev":"node main.js"}}',
+  ]);
   runtime.dispose();
 });
 
@@ -175,7 +205,9 @@ test("keeps a pending package restart until package.json is included in a succes
   ).rejects.toThrow("write failed");
   fail = false;
 
-  expect(await runtime.syncChangedFiles([projectFile("main.js", "latest")])).toEqual({
+  expect(
+    await runtime.syncChangedFiles([projectFile("main.js", "latest")]),
+  ).toEqual({
     packageChanged: false,
   });
   expect(
@@ -202,13 +234,20 @@ test("queued incremental syncs keep the latest content for a changed file", asyn
   await runtime.start(project("original"), [], () => {}, settings);
   fake.calls.writes.length = 0;
 
-  const first = runtime.syncChangedFiles([projectFile("main.js", "first edit")]);
+  const first = runtime.syncChangedFiles([
+    projectFile("main.js", "first edit"),
+  ]);
   await writing.promise;
-  const second = runtime.syncChangedFiles([projectFile("main.js", "latest edit")]);
+  const second = runtime.syncChangedFiles([
+    projectFile("main.js", "latest edit"),
+  ]);
   release.resolve();
   await Promise.all([first, second]);
 
-  expect(fake.calls.writes).toEqual(["/main.js:first edit", "/main.js:latest edit"]);
+  expect(fake.calls.writes).toEqual([
+    "/main.js:first edit",
+    "/main.js:latest edit",
+  ]);
   runtime.dispose();
 });
 
@@ -250,8 +289,16 @@ test("a restart skips queued edits from the abandoned generation", async () => {
   await runtime.start(project("original"), [], () => {}, settings);
   const first = runtime.sync(project("first edit"), []);
   await writing.promise;
-  const queued = runtime.sync([...project("obsolete"), projectFile("obsolete.js", "obsolete")], []);
-  const restarted = runtime.restart(project("replacement"), [], () => {}, settings);
+  const queued = runtime.sync(
+    [...project("obsolete"), projectFile("obsolete.js", "obsolete")],
+    [],
+  );
+  const restarted = runtime.restart(
+    project("replacement"),
+    [],
+    () => {},
+    settings,
+  );
   release.resolve();
   await Promise.all([first, queued, restarted]);
 

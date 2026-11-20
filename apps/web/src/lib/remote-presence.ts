@@ -1,6 +1,11 @@
 import { RangeSetBuilder, StateEffect, StateField } from "@codemirror/state";
 import type { Extension } from "@codemirror/state";
-import { Decoration, EditorView, WidgetType, type DecorationSet } from "@codemirror/view";
+import {
+  Decoration,
+  EditorView,
+  WidgetType,
+  type DecorationSet,
+} from "@codemirror/view";
 
 import type { PresenceMember } from "@iris/shared";
 
@@ -18,9 +23,12 @@ const setRemotePresence = StateEffect.define<readonly RemoteSelection[]>();
 const remotePresenceField = StateField.define<DecorationSet>({
   create: () => Decoration.none,
   update(decorations, transaction) {
-    let next = transaction.docChanged ? decorations.map(transaction.changes) : decorations;
+    let next = transaction.docChanged
+      ? decorations.map(transaction.changes)
+      : decorations;
     for (const effect of transaction.effects) {
-      if (effect.is(setRemotePresence)) next = buildRemoteDecorations(effect.value);
+      if (effect.is(setRemotePresence))
+        next = buildRemoteDecorations(effect.value);
     }
     return next;
   },
@@ -31,7 +39,10 @@ export function remotePresenceExtension(): Extension {
   return remotePresenceField;
 }
 
-export function updateRemotePresence(view: EditorView, selections: readonly RemoteSelection[]) {
+export function updateRemotePresence(
+  view: EditorView,
+  selections: readonly RemoteSelection[],
+) {
   view.dispatch({ effects: setRemotePresence.of(selections) });
 }
 
@@ -41,10 +52,16 @@ export function getRemoteSelections(
   selectedPath: string,
   documentLength: number,
 ): RemoteSelection[] {
-  const length = Number.isFinite(documentLength) ? Math.max(0, Math.trunc(documentLength)) : 0;
+  const length = Number.isFinite(documentLength)
+    ? Math.max(0, Math.trunc(documentLength))
+    : 0;
 
   return members.flatMap((member) => {
-    if (member.userId === currentUserId || member.selectedPath !== selectedPath || !member.cursor) {
+    if (
+      member.userId === currentUserId ||
+      member.selectedPath !== selectedPath ||
+      !member.cursor
+    ) {
       return [];
     }
 
@@ -98,8 +115,15 @@ class RemoteCursorWidget extends WidgetType {
   }
 }
 
-function buildRemoteDecorations(selections: readonly RemoteSelection[]): DecorationSet {
-  const ranges: Array<{ from: number; to: number; decoration: Decoration; order: number }> = [];
+function buildRemoteDecorations(
+  selections: readonly RemoteSelection[],
+): DecorationSet {
+  const ranges: Array<{
+    from: number;
+    to: number;
+    decoration: Decoration;
+    order: number;
+  }> = [];
 
   for (const selection of selections) {
     if (selection.from < selection.to) {
@@ -129,11 +153,13 @@ function buildRemoteDecorations(selections: readonly RemoteSelection[]): Decorat
   }
 
   ranges.sort(
-    (left, right) => left.from - right.from || left.to - right.to || left.order - right.order,
+    (left, right) =>
+      left.from - right.from || left.to - right.to || left.order - right.order,
   );
 
   const builder = new RangeSetBuilder<Decoration>();
-  for (const range of ranges) builder.add(range.from, range.to, range.decoration);
+  for (const range of ranges)
+    builder.add(range.from, range.to, range.decoration);
   return builder.finish();
 }
 

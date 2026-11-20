@@ -3,7 +3,10 @@ import type { ProjectFile, ProjectSettings } from "@iris/shared";
 import type { TFunction } from "i18next";
 import type { PendingPreviewChange } from "./preview-content-changes";
 import type { ProjectDeclarations } from "./room-typescript-intelligence";
-import { dispatchRuntimeActionComplete, subscribeRuntimeAction } from "./runtime-actions";
+import {
+  dispatchRuntimeActionComplete,
+  subscribeRuntimeAction,
+} from "./runtime-actions";
 import { PreviewWebContainerScheduler } from "./preview-webcontainer-scheduler";
 
 export function usePreviewWebContainer({
@@ -62,7 +65,9 @@ export function usePreviewWebContainer({
       acknowledgeContentChanges,
       getPendingContentChanges,
       translateError: (error) =>
-        translate(`preview.runtime.${error}`, { manager: settings.packageManager }),
+        translate(`preview.runtime.${error}`, {
+          manager: settings.packageManager,
+        }),
     });
     return () => scheduler.cancelPending();
   }, [

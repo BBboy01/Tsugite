@@ -1,6 +1,9 @@
 import { expect, test } from "bun:test";
 
-import { getEditorLanguage, supportsTypeScriptServices } from "./editor-language";
+import {
+  getEditorLanguage,
+  supportsTypeScriptServices,
+} from "./editor-language";
 
 test("recognizes common frontend file extensions", () => {
   expect(getEditorLanguage("index.html", "javascript")).toBe("html");

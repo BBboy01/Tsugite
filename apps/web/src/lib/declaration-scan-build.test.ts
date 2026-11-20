@@ -19,12 +19,15 @@ test("Vite minification preserves a self-contained Node scanner and reference re
       },
     },
   });
-  const outputs = (Array.isArray(result) ? result : [result]).flatMap((output) =>
-    "output" in output ? output.output : [],
+  const outputs = (Array.isArray(result) ? result : [result]).flatMap(
+    (output) => ("output" in output ? output.output : []),
   );
   const bundle = outputs.find((output) => output.type === "chunk");
-  if (!bundle || bundle.type !== "chunk") throw new Error("Missing scanner bundle");
-  const moduleUrl = "data:text/javascript;base64," + Buffer.from(bundle.code).toString("base64");
+  if (!bundle || bundle.type !== "chunk")
+    throw new Error("Missing scanner bundle");
+  const moduleUrl =
+    "data:text/javascript;base64," +
+    Buffer.from(bundle.code).toString("base64");
   const generator = Bun.spawn(
     [
       "node",
@@ -42,9 +45,14 @@ test("Vite minification preserves a self-contained Node scanner and reference re
   try {
     await mkdir(join(cwd, "node_modules/pkg"), { recursive: true });
     await writeFile(join(cwd, "package.json"), "{}");
-    await writeFile(join(cwd, "node_modules/pkg/index.d.ts"), "export interface Value {}");
+    await writeFile(
+      join(cwd, "node_modules/pkg/index.d.ts"),
+      "export interface Value {}",
+    );
     const sources = Buffer.from(
-      JSON.stringify([{ path: "src/界.ts", text: 'const loaded = `value ${import("pkg")}`;' }]),
+      JSON.stringify([
+        { path: "src/界.ts", text: 'const loaded = `value ${import("pkg")}`;' },
+      ]),
     ).toString("base64");
     const scanner = Bun.spawn(["node", "-e", script, sources], {
       cwd,

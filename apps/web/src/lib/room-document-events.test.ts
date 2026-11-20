@@ -46,7 +46,11 @@ async function setup() {
 test("initial snapshot invalidates workspace and settings exactly once", async () => {
   const { events } = await setup();
   expect(events).toHaveLength(1);
-  expect(events[0]?.changes).toEqual({ workspace: true, settings: true, content: true });
+  expect(events[0]?.changes).toEqual({
+    workspace: true,
+    settings: true,
+    content: true,
+  });
 });
 
 test("local text edits notify content without rebuilding workspace metadata", async () => {
@@ -57,7 +61,10 @@ test("local text edits notify content without rebuilding workspace metadata", as
   client.doc.commit();
   await Promise.resolve();
   expect(events).toEqual([
-    { type: "document", changes: { workspace: false, settings: false, content: true } },
+    {
+      type: "document",
+      changes: { workspace: false, settings: false, content: true },
+    },
   ]);
   expect(sent.at(-1)).toBeInstanceOf(Uint8Array);
 });
@@ -75,9 +82,14 @@ test("remote text edits and duplicate imports do not create structural invalidat
   socket.onmessage!({ data: bytes });
   await Promise.resolve();
   expect(events).toEqual([
-    { type: "document", changes: { workspace: false, settings: false, content: true } },
+    {
+      type: "document",
+      changes: { workspace: false, settings: false, content: true },
+    },
   ]);
-  expect(getFileByPath(client.doc, "src/App.tsx")!.text.toString()).toStartWith("// remote edit");
+  expect(getFileByPath(client.doc, "src/App.tsx")!.text.toString()).toStartWith(
+    "// remote edit",
+  );
 });
 
 test("settings changes do not invalidate file structure", async () => {
@@ -87,7 +99,10 @@ test("settings changes do not invalidate file structure", async () => {
   client.doc.commit();
   await Promise.resolve();
   expect(events).toEqual([
-    { type: "document", changes: { workspace: false, settings: true, content: false } },
+    {
+      type: "document",
+      changes: { workspace: false, settings: true, content: false },
+    },
   ]);
 });
 
@@ -99,7 +114,10 @@ test("mixed file creation and settings changes preserve both invalidations", asy
   client.doc.commit();
   await Promise.resolve();
   expect(events).toEqual([
-    { type: "document", changes: { workspace: true, settings: true, content: true } },
+    {
+      type: "document",
+      changes: { workspace: true, settings: true, content: true },
+    },
   ]);
 });
 

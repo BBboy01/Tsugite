@@ -1,5 +1,11 @@
 import { expect, spyOn, test } from "bun:test";
-import { createFile, createProjectDoc, deleteFile, getFileByPath, renameFile } from "@iris/shared";
+import {
+  createFile,
+  createProjectDoc,
+  deleteFile,
+  getFileByPath,
+  renameFile,
+} from "@iris/shared";
 import { RoomTypeScriptIntelligence } from "./room-typescript-intelligence";
 import { createRoomTypeScriptSource } from "./room-typescript-source";
 import { TypeScriptWorkerSession } from "./typescript-worker-session";
@@ -23,7 +29,9 @@ test("room owner defers its default worker until language services are needed", 
   const doc = createProjectDoc();
   const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc));
   expect(owner.intelligence).toBeInstanceOf(TypeScriptWorkerClient);
-  expect((owner.intelligence as TypeScriptWorkerClient).getMetricsSnapshot()).toMatchObject({
+  expect(
+    (owner.intelligence as TypeScriptWorkerClient).getMetricsSnapshot(),
+  ).toMatchObject({
     workerStarts: 0,
   });
   owner.dispose();
@@ -34,16 +42,19 @@ test("rejected Loro edits recover only with the current complete source snapshot
   createFile(doc, "src/large.ts", "typescript", "const large = true;");
   doc.commit();
   const workers: ReturnType<typeof transport>[] = [];
-  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc), {
-    createIntelligence: (files) =>
-      new TypeScriptWorkerClient(files, {
-        createWorker: () => {
-          const fake = transport();
-          workers.push(fake);
-          return fake.worker;
-        },
-      }),
-  });
+  const owner = new RoomTypeScriptIntelligence(
+    createRoomTypeScriptSource(doc),
+    {
+      createIntelligence: (files) =>
+        new TypeScriptWorkerClient(files, {
+          createWorker: () => {
+            const fake = transport();
+            workers.push(fake);
+            return fake.worker;
+          },
+        }),
+    },
+  );
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   const fullSnapshotReads = spyOn(doc, "getByPath");
   const countFullSnapshotReads = () =>
@@ -71,7 +82,8 @@ test("rejected Loro edits recover only with the current complete source snapshot
   await new Promise((resolve) => setTimeout(resolve, 150));
   const recoveredWorker = workers[1];
   const initialization = recoveredWorker?.sent[0];
-  if (initialization) recoveredWorker.reply(initialization, { status: "ok", value: null });
+  if (initialization)
+    recoveredWorker.reply(initialization, { status: "ok", value: null });
   const recoveredStatus = owner.getServiceStatus().state;
   owner.dispose();
   expect(oversizedStatus).toBe("unavailable");
@@ -95,29 +107,48 @@ function createOwner() {
   const doc = createProjectDoc();
   const session = new TypeScriptWorkerSession((files) => {
     const first = files.find((file) => file.path === "src/App.tsx")!;
-    return createTypeScriptIntelligence(first.path, first.text, files, standardLibraries);
+    return createTypeScriptIntelligence(
+      first.path,
+      first.text,
+      files,
+      standardLibraries,
+    );
   });
   const worker: IntelligenceWorker = {
     onmessage: null,
     onerror: null,
     onmessageerror: null,
     postMessage(request) {
-      void session.enqueue(request).then((data) => worker.onmessage?.({ data } as MessageEvent));
+      void session
+        .enqueue(request)
+        .then((data) => worker.onmessage?.({ data } as MessageEvent));
     },
     terminate: () => session.dispose(),
   };
-  const owner = new RoomTypeScriptIntelligence(createRoomTypeScriptSource(doc), {
-    createIntelligence: (files) =>
-      new TypeScriptWorkerClient(files, { createWorker: () => worker }),
-  });
+  const owner = new RoomTypeScriptIntelligence(
+    createRoomTypeScriptSource(doc),
+    {
+      createIntelligence: (files) =>
+        new TypeScriptWorkerClient(files, { createWorker: () => worker }),
+    },
+  );
   return { doc, owner };
 }
 
 function typedPackageDeclarations(entry: string) {
   return [
-    { path: "node_modules/typed-pkg/package.json", text: JSON.stringify({ types: entry }) },
-    { path: "node_modules/typed-pkg/first.d.ts", text: "export declare const value: 1;" },
-    { path: "node_modules/typed-pkg/second.d.ts", text: "export declare const value: 2;" },
+    {
+      path: "node_modules/typed-pkg/package.json",
+      text: JSON.stringify({ types: entry }),
+    },
+    {
+      path: "node_modules/typed-pkg/first.d.ts",
+      text: "export declare const value: 1;",
+    },
+    {
+      path: "node_modules/typed-pkg/second.d.ts",
+      text: "export declare const value: 2;",
+    },
   ];
 }
 
@@ -135,15 +166,21 @@ test("room owner publishes Loro edits, creates, renames and deletes to one intel
   createFile(doc, "src/new.ts", "typescript", "export const created = true;");
   doc.commit();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(await engine.hover({ path: "src/new.ts", position: 13 })).toMatchObject({ status: "ok" });
+  expect(
+    await engine.hover({ path: "src/new.ts", position: 13 }),
+  ).toMatchObject({ status: "ok" });
   renameFile(doc, getFileByPath(doc, "src/new.ts")!.id, "src/renamed.ts");
   doc.commit();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(await engine.hover({ path: "src/new.ts", position: 13 })).toEqual({ status: "empty" });
+  expect(await engine.hover({ path: "src/new.ts", position: 13 })).toEqual({
+    status: "empty",
+  });
   deleteFile(doc, getFileByPath(doc, "src/renamed.ts")!.id);
   doc.commit();
   await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(await engine.hover({ path: "src/renamed.ts", position: 0 })).toEqual({ status: "empty" });
+  expect(await engine.hover({ path: "src/renamed.ts", position: 0 })).toEqual({
+    status: "empty",
+  });
   owner.dispose();
   expect(await query()).toEqual({ status: "disposed" });
 });
@@ -155,11 +192,19 @@ test("third-party declarations resolve in the worker and failed reads remove sta
   source.insert(0, 'import { value } from "typed-pkg"; value;');
   doc.commit();
   await owner.loadDeclarations(async () => [
-    { path: "node_modules/typed-pkg/package.json", text: '{"types":"index.d.ts"}' },
-    { path: "node_modules/typed-pkg/index.d.ts", text: 'export declare const value: "typed";' },
+    {
+      path: "node_modules/typed-pkg/package.json",
+      text: '{"types":"index.d.ts"}',
+    },
+    {
+      path: "node_modules/typed-pkg/index.d.ts",
+      text: 'export declare const value: "typed";',
+    },
   ]);
   expect(owner.getDeclarationsStatus()).toEqual({ status: "ready" });
-  expect(await owner.intelligence.hover({ path: "src/App.tsx", position: 35 })).toMatchObject({
+  expect(
+    await owner.intelligence.hover({ path: "src/App.tsx", position: 35 }),
+  ).toMatchObject({
     status: "ok",
     value: { signature: '(alias) const value: "typed"\nimport value' },
   });
@@ -171,7 +216,9 @@ test("third-party declarations resolve in the worker and failed reads remove sta
     status: "unavailable",
     reason: "Dependency installation incomplete",
   });
-  expect(await owner.intelligence.hover({ path: "src/App.tsx", position: 35 })).not.toMatchObject({
+  expect(
+    await owner.intelligence.hover({ path: "src/App.tsx", position: 35 }),
+  ).not.toMatchObject({
     value: { signature: '(alias) const value: "typed"\nimport value' },
   });
   owner.dispose();
@@ -185,14 +232,21 @@ test("room declaration rescans invalidate cached package type entrypoints", asyn
   app.insert(0, source);
   doc.commit();
   const hover = () =>
-    owner.intelligence.hover({ path: "src/App.tsx", position: source.length - 1 });
+    owner.intelligence.hover({
+      path: "src/App.tsx",
+      position: source.length - 1,
+    });
   try {
-    await owner.loadDeclarations(async () => typedPackageDeclarations("first.d.ts"));
+    await owner.loadDeclarations(async () =>
+      typedPackageDeclarations("first.d.ts"),
+    );
     expect(await hover()).toMatchObject({
       status: "ok",
       value: { signature: "(alias) const value: 1\nimport value" },
     });
-    await owner.loadDeclarations(async () => typedPackageDeclarations("second.d.ts"));
+    await owner.loadDeclarations(async () =>
+      typedPackageDeclarations("second.d.ts"),
+    );
     expect(await hover()).toMatchObject({
       status: "ok",
       value: { signature: "(alias) const value: 2\nimport value" },
@@ -210,7 +264,9 @@ test("new scans and disposal discard late declaration results", async () => {
   const stop = owner.subscribeDeclarations(() => notifications++);
   const pending = owner.loadDeclarations(() => old.promise);
   expect(owner.getDeclarationsStatus()).toEqual({ status: "loading" });
-  await owner.syncDeclarations([{ path: "latest.d.ts", text: 'declare const latest: "new";' }]);
+  await owner.syncDeclarations([
+    { path: "latest.d.ts", text: 'declare const latest: "new";' },
+  ]);
   old.resolve([{ path: "old.d.ts", text: 'declare const old: "stale";' }]);
   await pending;
   expect(owner.getDeclarationsSnapshot()).toEqual([
@@ -228,16 +284,19 @@ test("new scans and disposal discard late declaration results", async () => {
 
 test("invalid scans are rejected before disabling the source worker", async () => {
   const { owner } = createOwner();
-  await owner.syncDeclarations([{ path: "../unsafe.d.ts", text: "export {};" }]);
+  await owner.syncDeclarations([
+    { path: "../unsafe.d.ts", text: "export {};" },
+  ]);
   expect(owner.getDeclarationsStatus()).toEqual({
     status: "unavailable",
     reason: "Invalid TypeScript declaration path",
   });
   expect(owner.status).toBe("worker");
   expect(owner.getDeclarationsSnapshot()).toEqual([]);
-  expect((await owner.intelligence.completion({ path: "src/App.tsx", position: 0 })).status).toBe(
-    "ok",
-  );
+  expect(
+    (await owner.intelligence.completion({ path: "src/App.tsx", position: 0 }))
+      .status,
+  ).toBe("ok");
   owner.dispose();
 });
 

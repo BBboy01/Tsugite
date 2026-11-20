@@ -20,7 +20,8 @@ export function reconcileWorkspaceNavigation(
 
   for (const [fileId, previousPath] of previousFilePaths) {
     const nextPath = currentFilePaths.get(fileId);
-    if (nextPath && nextPath !== previousPath) renamedPaths.set(previousPath, nextPath);
+    if (nextPath && nextPath !== previousPath)
+      renamedPaths.set(previousPath, nextPath);
   }
 
   const nextTabs = openTabPaths

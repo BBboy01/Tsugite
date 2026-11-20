@@ -12,14 +12,19 @@ export function readVimMode(storage: PreferenceStorage | undefined): boolean {
   return storage?.getItem(VIM_MODE_STORAGE_KEY) === "true";
 }
 
-export function writeVimMode(storage: PreferenceStorage | undefined, enabled: boolean): void {
+export function writeVimMode(
+  storage: PreferenceStorage | undefined,
+  enabled: boolean,
+): void {
   storage?.setItem(VIM_MODE_STORAGE_KEY, String(enabled));
 }
 
 export function useWorkspacePreferences() {
   const { i18n } = useTranslation();
   const [vimMode, setVimMode] = useState(() =>
-    readVimMode(typeof window === "undefined" ? undefined : window.localStorage),
+    readVimMode(
+      typeof window === "undefined" ? undefined : window.localStorage,
+    ),
   );
   const [keymap, setKeymap] = useState<KeyBinding[]>(() => readKeymap());
 

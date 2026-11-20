@@ -24,7 +24,9 @@ export class TypeScriptImportIndex {
       }
       const cached = this.entries.get(path);
       const entry =
-        cached?.text === text ? cached : { text, references: findImportReferences(text) };
+        cached?.text === text
+          ? cached
+          : { text, references: findImportReferences(text) };
       entries.set(path, entry);
       for (const reference of entry.references) references.add(reference);
     }
@@ -67,7 +69,10 @@ function skipQuoted(source: string, start: number, quote: string): number {
 function regexCanStart(previous: ImportReferenceToken | undefined): boolean {
   if (!previous) return true;
   if (previous.kind === "word") return regexPrefixWords.has(previous.value);
-  return previous.kind === "punctuation" && "([{:;,=!?&|+-*%^~<>".includes(previous.value);
+  return (
+    previous.kind === "punctuation" &&
+    "([{:;,=!?&|+-*%^~<>".includes(previous.value)
+  );
 }
 
 function skipRegex(source: string, start: number): number {
@@ -113,8 +118,10 @@ function findImportReferences(text: string): string[] {
     let cursor = start;
     while (cursor < source.length) {
       const char = source[cursor];
-      if (char === "'" || char === '"') cursor = skipQuoted(source, cursor, char);
-      else if (char.charCodeAt(0) === 96) cursor = templateEnd(source, cursor).end;
+      if (char === "'" || char === '"')
+        cursor = skipQuoted(source, cursor, char);
+      else if (char.charCodeAt(0) === 96)
+        cursor = templateEnd(source, cursor).end;
       else if (source.startsWith("//", cursor)) {
         const end = source.indexOf("\n", cursor);
         cursor = end < 0 ? source.length : end + 1;
@@ -133,12 +140,16 @@ function findImportReferences(text: string): string[] {
     return source.length;
   }
 
-  function templateEnd(source: string, start: number): { end: number; expressions: string[] } {
+  function templateEnd(
+    source: string,
+    start: number,
+  ): { end: number; expressions: string[] } {
     const expressions: string[] = [];
     let cursor = start + 1;
     while (cursor < source.length) {
       if (source[cursor] === "\\") cursor += 2;
-      else if (source[cursor].charCodeAt(0) === 96) return { end: cursor + 1, expressions };
+      else if (source[cursor].charCodeAt(0) === 96)
+        return { end: cursor + 1, expressions };
       else if (source.startsWith("${", cursor)) {
         const expressionStart = cursor + 2;
         const expressionEnd = templateExpressionEnd(source, expressionStart);
@@ -159,9 +170,10 @@ function findImportReferences(text: string): string[] {
     if (text.startsWith("//", offset)) {
       const end = text.indexOf("\n", offset);
       const comment = text.slice(offset, end < 0 ? text.length : end);
-      const directive = /^\/\/\/\s*<reference\b[^>\n]{0,1024}?\btypes\s*=\s*(["'])([^"']+)\1/.exec(
-        comment,
-      );
+      const directive =
+        /^\/\/\/\s*<reference\b[^>\n]{0,1024}?\btypes\s*=\s*(["'])([^"']+)\1/.exec(
+          comment,
+        );
       if (directive) values.push(directive[2]);
       offset = end < 0 ? text.length : end;
       continue;
@@ -213,8 +225,14 @@ function findImportReferences(text: string): string[] {
     for (let cursor = start + 1; cursor < tokens.length; cursor++) {
       const token = tokens[cursor];
       if (token.kind === "punctuation") {
-        if (token.value === "{" || token.value === "[" || token.value === "(") depth++;
-        else if (token.value === "}" || token.value === "]" || token.value === ")") depth--;
+        if (token.value === "{" || token.value === "[" || token.value === "(")
+          depth++;
+        else if (
+          token.value === "}" ||
+          token.value === "]" ||
+          token.value === ")"
+        )
+          depth--;
         else if (token.value === ";" && depth === 0) return;
       }
       if (
@@ -246,8 +264,12 @@ function findImportReferences(text: string): string[] {
     ) {
       values.push(tokens[index + 2].value);
     } else if (token.value === "import") {
-      if (tokens[index + 1]?.kind === "string") values.push(tokens[index + 1].value);
-      else if (tokens[index + 1]?.value === "(" && tokens[index + 2]?.kind === "string")
+      if (tokens[index + 1]?.kind === "string")
+        values.push(tokens[index + 1].value);
+      else if (
+        tokens[index + 1]?.value === "(" &&
+        tokens[index + 2]?.kind === "string"
+      )
         values.push(tokens[index + 2].value);
       else addFrom(index);
     } else if (token.value === "export") addFrom(index);

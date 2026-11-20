@@ -19,7 +19,12 @@ export const navigationItems = [
   { id: "references", kind: "references", icon: List, peek: true },
   { id: "peekDefinition", kind: "definition", icon: Eye, peek: true },
   { id: "peekReferences", kind: "references", icon: Eye, peek: true },
-] satisfies { id: string; kind: NavigationKind; icon: typeof Eye; peek?: boolean }[];
+] satisfies {
+  id: string;
+  kind: NavigationKind;
+  icon: typeof Eye;
+  peek?: boolean;
+}[];
 
 export const editItems = [
   { id: "undo", icon: Undo2 },

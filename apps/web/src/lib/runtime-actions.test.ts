@@ -31,7 +31,10 @@ describe("runtime action events", () => {
   it("stops delivering events after a subscription is removed", () => {
     const target = new EventTarget();
     const received: string[] = [];
-    const unsubscribe = subscribeRuntimeAction((action) => received.push(action), target);
+    const unsubscribe = subscribeRuntimeAction(
+      (action) => received.push(action),
+      target,
+    );
 
     unsubscribe();
     dispatchRuntimeAction("reinstall", target);
@@ -45,9 +48,9 @@ describe("runtime action events", () => {
     subscribeRuntimeActionComplete((action) => received.push(action), target);
     const failure = new Error("restart failed");
 
-    await expect(runRuntimeAction("restart", () => Promise.reject(failure), target)).rejects.toBe(
-      failure,
-    );
+    await expect(
+      runRuntimeAction("restart", () => Promise.reject(failure), target),
+    ).rejects.toBe(failure);
 
     expect(received).toEqual(["restart"]);
   });

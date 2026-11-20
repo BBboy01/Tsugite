@@ -21,7 +21,10 @@ export function createEditorTypeScriptEnvironment(
     target: ts.ScriptTarget.ES2022,
   };
   const files = new Map<string, string>(
-    [...libraries, ...projectFiles].map((file) => [`/${file.path.replace(/^\//, "")}`, file.text]),
+    [...libraries, ...projectFiles].map((file) => [
+      `/${file.path.replace(/^\//, "")}`,
+      file.text,
+    ]),
   );
   const absolutePath = `/${path.replace(/^\//, "")}`;
   files.set(absolutePath, source);
@@ -41,8 +44,11 @@ export function createEditorTypeScriptEnvironment(
   const system = {
     useCaseSensitiveFileNames: true,
     getCurrentDirectory: () => "/",
-    getDirectories: (name: string) => [...(directories.get(normalizeDirectory(name)) ?? [])],
-    directoryExists: (name: string) => directories.has(normalizeDirectory(name)),
+    getDirectories: (name: string) => [
+      ...(directories.get(normalizeDirectory(name)) ?? []),
+    ],
+    directoryExists: (name: string) =>
+      directories.has(normalizeDirectory(name)),
     fileExists: (name: string) => files.has(name),
     readFile: (name: string) => files.get(name),
     writeFile: (name: string, text: string) => files.set(name, text),
@@ -57,11 +63,14 @@ export function createEditorTypeScriptEnvironment(
     getCompilationSettings: () => compilerOptions,
     getDefaultLibFileName: () => "/__typescript/lib/lib.es2022.full.d.ts",
     getProjectVersion: () => String(projectVersion),
-    getScriptFileNames: () => [...files.keys()].filter((name) => /\.[cm]?[jt]sx?$/.test(name)),
+    getScriptFileNames: () =>
+      [...files.keys()].filter((name) => /\.[cm]?[jt]sx?$/.test(name)),
     getScriptVersion: (fileName) => String(versions.get(fileName) ?? 0),
     getScriptSnapshot(fileName) {
       const text = files.get(fileName);
-      return text === undefined ? undefined : ts.ScriptSnapshot.fromString(text);
+      return text === undefined
+        ? undefined
+        : ts.ScriptSnapshot.fromString(text);
     },
   });
   const createFile = (fileName: string, content: string) => {
@@ -69,20 +78,25 @@ export function createEditorTypeScriptEnvironment(
     system.writeFile(fileName, content);
     addDirectories(fileName);
     versions.set(fileName, ++projectVersion);
-    if (fileName.endsWith("/package.json")) languageService.cleanupSemanticCache();
+    if (fileName.endsWith("/package.json"))
+      languageService.cleanupSemanticCache();
   };
   return {
     sys: system,
     languageService,
-    getSourceFile: (fileName: string) => languageService.getProgram()?.getSourceFile(fileName),
+    getSourceFile: (fileName: string) =>
+      languageService.getProgram()?.getSourceFile(fileName),
     createFile,
     updateFile(fileName: string, content: string, span?: ts.TextSpan) {
       const previous = files.get(fileName);
-      if (previous === undefined) throw new Error(`Did not find a source file for ${fileName}`);
+      if (previous === undefined)
+        throw new Error(`Did not find a source file for ${fileName}`);
       createFile(
         fileName,
         span
-          ? previous.slice(0, span.start) + content + previous.slice(span.start + span.length)
+          ? previous.slice(0, span.start) +
+              content +
+              previous.slice(span.start + span.length)
           : content,
       );
     },
@@ -93,7 +107,8 @@ export function createEditorTypeScriptEnvironment(
       files.forEach((_, name) => addDirectories(name));
       versions.delete(fileName);
       projectVersion++;
-      if (fileName.endsWith("/package.json")) languageService.cleanupSemanticCache();
+      if (fileName.endsWith("/package.json"))
+        languageService.cleanupSemanticCache();
     },
   };
 }

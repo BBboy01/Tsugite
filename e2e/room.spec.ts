@@ -5,8 +5,12 @@ test.beforeEach(async ({ page }) => {
 });
 
 test("opens file search from Vim normal mode", async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
-  await page.goto(`/room/e2e-vim-search-${Date.now()}`, { waitUntil: "domcontentloaded" });
+  await page.addInitScript(() =>
+    window.localStorage.setItem("tsugite.vim-mode", "true"),
+  );
+  await page.goto(`/room/e2e-vim-search-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
   await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
@@ -14,20 +18,32 @@ test("opens file search from Vim normal mode", async ({ page }) => {
   await expect(page.getByRole("dialog")).toBeVisible();
 });
 
-test("opens the editor context menu with language actions", async ({ page }) => {
+test("opens the editor context menu with language actions", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-editor-context-menu-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await page.locator(".cm-content").click({ button: "right", position: { x: 80, y: 24 } });
+  await page
+    .locator(".cm-content")
+    .click({ button: "right", position: { x: 80, y: 24 } });
   await expect(page.getByRole("menu")).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Go to definition" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Find references" })).toBeVisible();
-  await expect(page.getByRole("menuitem", { name: "Peek definition" })).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: "Go to definition" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: "Find references" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("menuitem", { name: "Peek definition" }),
+  ).toBeVisible();
   await expect(page.getByRole("menuitem", { name: "Copy" })).toBeVisible();
 });
 
-test("de-emphasizes file search directories and uses text-only matches", async ({ page }) => {
+test("de-emphasizes file search directories and uses text-only matches", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-file-search-highlight-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -39,19 +55,32 @@ test("de-emphasizes file search directories and uses text-only matches", async (
   const result = page.getByRole("option", { name: /App\.tsx/ }).first();
   await expect(result.locator("[data-file-directory]")).toHaveText("src/");
   await expect(result.locator("[data-file-name]")).toContainText("App.tsx");
-  await expect(result.locator("mark")).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(result.locator("mark")).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
 
   await search.fill("");
   const inactiveResult = page.getByRole("dialog").getByRole("option").nth(1);
   await expect(inactiveResult).toHaveAttribute("aria-selected", "false");
-  const mutedColor = await inactiveResult.evaluate((element) => getComputedStyle(element).color);
-  await expect(inactiveResult.locator("[data-file-name]")).toHaveCSS("color", mutedColor);
+  const mutedColor = await inactiveResult.evaluate(
+    (element) => getComputedStyle(element).color,
+  );
+  await expect(inactiveResult.locator("[data-file-name]")).toHaveCSS(
+    "color",
+    mutedColor,
+  );
   await search.press("ArrowDown");
   await expect(inactiveResult).toHaveAttribute("aria-selected", "true");
-  await expect(inactiveResult.locator("[data-file-name]")).not.toHaveCSS("color", mutedColor);
+  await expect(inactiveResult.locator("[data-file-name]")).not.toHaveCSS(
+    "color",
+    mutedColor,
+  );
 });
 
-test("keeps inactive file names muted until they are opened", async ({ page }) => {
+test("keeps inactive file names muted until they are opened", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-file-tree-emphasis-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -61,8 +90,14 @@ test("keeps inactive file names muted until they are opened", async ({ page }) =
   const index = page.getByRole("treeitem", { name: "index.css", exact: true });
   const src = page.getByRole("treeitem", { name: "src folder", exact: true });
   await expect(app).toHaveCSS("color", "rgb(29, 29, 31)");
-  await expect(index.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
-  await expect(src.locator("span").last()).not.toHaveCSS("color", "rgb(200, 192, 147)");
+  await expect(index.locator("span").last()).not.toHaveCSS(
+    "color",
+    "rgb(200, 192, 147)",
+  );
+  await expect(src.locator("span").last()).not.toHaveCSS(
+    "color",
+    "rgb(200, 192, 147)",
+  );
   await index.click();
   await expect(app).toHaveCSS("color", "rgb(110, 110, 115)");
   await expect(index).toHaveCSS("color", "rgb(29, 29, 31)");
@@ -74,24 +109,36 @@ test("toggles the preview console with Mod-J", async ({ page }) => {
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
-  await expect(page.getByRole("button", { name: "Expand output" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Expand output" }),
+  ).toBeVisible();
   await page.keyboard.press("ControlOrMeta+J");
-  await expect(page.getByRole("button", { name: "Collapse output" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Collapse output" }),
+  ).toBeVisible();
   await page.keyboard.press("ControlOrMeta+J");
-  await expect(page.getByRole("button", { name: "Expand output" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Expand output" }),
+  ).toBeVisible();
 });
 
-test("exposes the system clipboard setting in Vim keyboard preferences", async ({ page }) => {
+test("exposes the system clipboard setting in Vim keyboard preferences", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-system-clipboard-setting-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Keyboard" }).click();
-  await expect(page.getByRole("switch", { name: "Use system clipboard" })).toBeVisible();
+  await expect(
+    page.getByRole("switch", { name: "Use system clipboard" }),
+  ).toBeVisible();
 });
 
-test("cycles focus from the current menu through search and right content", async ({ page }) => {
+test("cycles focus from the current menu through search and right content", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-settings-focus-cycle-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -111,7 +158,9 @@ test("cycles focus from the current menu through search and right content", asyn
   await expect(currentMenu).toBeFocused();
 });
 
-test("highlights the command selected with keyboard navigation", async ({ page }) => {
+test("highlights the command selected with keyboard navigation", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-highlight-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -122,7 +171,11 @@ test("highlights the command selected with keyboard navigation", async ({ page }
   await page.keyboard.press("Control+n");
   const selectedCommand = page.getByRole("button", { name: "Open settings" });
   await expect
-    .poll(() => selectedCommand.evaluate((element) => getComputedStyle(element).backgroundColor))
+    .poll(() =>
+      selectedCommand.evaluate(
+        (element) => getComputedStyle(element).backgroundColor,
+      ),
+    )
     .not.toBe("rgba(0, 0, 0, 0)");
 });
 
@@ -144,7 +197,9 @@ test("scrolls the keyboard-selected command into view", async ({ page }) => {
   const selectedCommand = commands.nth(count - 2);
   const followingCommand = commands.last();
   await expect(selectedCommand).toHaveClass(/text-iris-ink/);
-  await expect.poll(() => commandList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(() => commandList.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
   await expect(selectedCommand).toBeInViewport();
   await expect
     .poll(async () => {
@@ -153,7 +208,8 @@ test("scrolls the keyboard-selected command into view", async ({ page }) => {
       const followingBox = await followingCommand.boundingBox();
       if (!listBox || !selectedBox || !followingBox) return false;
       return (
-        selectedBox.y + selectedBox.height <= listBox.y + listBox.height - followingBox.height + 1
+        selectedBox.y + selectedBox.height <=
+        listBox.y + listBox.height - followingBox.height + 1
       );
     })
     .toBe(true);
@@ -175,7 +231,9 @@ test("scrolls the keyboard-selected command into view", async ({ page }) => {
     .toBe(true);
 });
 
-test("keeps a following file visible while moving through file search", async ({ page }) => {
+test("keeps a following file visible while moving through file search", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 1280, height: 400 });
   await page.goto(`/room/e2e-file-search-scroll-${Date.now()}`, {
     waitUntil: "domcontentloaded",
@@ -195,7 +253,9 @@ test("keeps a following file visible while moving through file search", async ({
   const selectedFile = files.nth(count - 2);
   const followingFile = files.last();
   await expect(selectedFile).toHaveAttribute("aria-selected", "true");
-  await expect.poll(() => fileList.evaluate((element) => element.scrollTop)).toBeGreaterThan(0);
+  await expect
+    .poll(() => fileList.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
   await expect
     .poll(async () => {
       const listBox = await fileList.boundingBox();
@@ -203,7 +263,8 @@ test("keeps a following file visible while moving through file search", async ({
       const followingBox = await followingFile.boundingBox();
       if (!listBox || !selectedBox || !followingBox) return false;
       return (
-        selectedBox.y + selectedBox.height <= listBox.y + listBox.height - followingBox.height + 1
+        selectedBox.y + selectedBox.height <=
+        listBox.y + listBox.height - followingBox.height + 1
       );
     })
     .toBe(true);
@@ -241,7 +302,9 @@ test("uses the active workspace theme", async ({ page }) => {
   const colors = await dialog.evaluate((element) => ({
     backgroundColor: getComputedStyle(element).backgroundColor,
     color: getComputedStyle(element).color,
-    surface: getComputedStyle(element).getPropertyValue("--glass-popover").trim(),
+    surface: getComputedStyle(element)
+      .getPropertyValue("--glass-popover")
+      .trim(),
   }));
   expect(colors).toEqual({
     backgroundColor: "rgb(40, 42, 54)",
@@ -250,8 +313,15 @@ test("uses the active workspace theme", async ({ page }) => {
   });
 });
 
-for (const theme of ["Ink Dark", "GitHub Dark", "Solarized Dark", "Tokyo Night"]) {
-  test(`${theme} keeps the preview surface aligned with the editor`, async ({ page }) => {
+for (const theme of [
+  "Ink Dark",
+  "GitHub Dark",
+  "Solarized Dark",
+  "Tokyo Night",
+]) {
+  test(`${theme} keeps the preview surface aligned with the editor`, async ({
+    page,
+  }) => {
     await page.goto(
       `/room/e2e-preview-theme-${theme.replaceAll(" ", "-").toLowerCase()}-${Date.now()}`,
       {
@@ -264,8 +334,12 @@ for (const theme of ["Ink Dark", "GitHub Dark", "Solarized Dark", "Tokyo Night"]
     await page.getByRole("button", { name: "Close settings" }).click();
 
     const colors = await page.evaluate(() => {
-      const editor = document.querySelector<HTMLElement>('[aria-label^="Editing "]');
-      const preview = document.querySelector<HTMLElement>('[aria-label="Live preview"]');
+      const editor = document.querySelector<HTMLElement>(
+        '[aria-label^="Editing "]',
+      );
+      const preview = document.querySelector<HTMLElement>(
+        '[aria-label="Live preview"]',
+      );
       return {
         editor: editor ? getComputedStyle(editor).backgroundColor : "",
         preview: preview ? getComputedStyle(preview).backgroundColor : "",
@@ -275,8 +349,12 @@ for (const theme of ["Ink Dark", "GitHub Dark", "Solarized Dark", "Tokyo Night"]
   });
 }
 
-test("returns focus to the editor after closing file search", async ({ page }) => {
-  await page.goto(`/room/e2e-search-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
+test("returns focus to the editor after closing file search", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-search-focus-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+P");
@@ -287,7 +365,9 @@ test("returns focus to the editor after closing file search", async ({ page }) =
     .toBe("cm-content");
 });
 
-test("focuses the editor after opening a file from file search", async ({ page }) => {
+test("focuses the editor after opening a file from file search", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-search-select-focus-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -298,15 +378,23 @@ test("focuses the editor after opening a file from file search", async ({ page }
   await page.getByPlaceholder("Search files...").fill("App.tsx");
   await page.getByRole("option", { name: "src/App.tsx" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Editing src/App.tsx" }),
+  ).toBeVisible();
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.className))
     .toBe("cm-content");
 });
 
-test("keeps Vim navigation focused after opening a file from search", async ({ page }) => {
-  await page.addInitScript(() => window.localStorage.setItem("tsugite.vim-mode", "true"));
-  await page.goto(`/room/e2e-search-vim-focus-${Date.now()}`, { waitUntil: "domcontentloaded" });
+test("keeps Vim navigation focused after opening a file from search", async ({
+  page,
+}) => {
+  await page.addInitScript(() =>
+    window.localStorage.setItem("tsugite.vim-mode", "true"),
+  );
+  await page.goto(`/room/e2e-search-vim-focus-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
   await expect(page.locator("[data-vim-mode='normal']")).toBeVisible();
@@ -322,34 +410,50 @@ test("keeps Vim navigation focused after opening a file from search", async ({ p
   await expect(page.locator(".cm-editor")).toHaveClass(/cm-focused/);
 });
 
-test("loads the editor and supports collapsing the source tree", async ({ page }) => {
+test("loads the editor and supports collapsing the source tree", async ({
+  page,
+}) => {
   await page.goto("/room/e2e", { waitUntil: "domcontentloaded" });
 
   await expect(page.locator("header.glass-header")).toBeVisible();
   await expect(page.getByText("Tsugite", { exact: true })).toBeVisible();
-  await expect(page.getByRole("complementary", { name: "Project files" })).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Project files" }),
+  ).toBeVisible();
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
 
   const sourceFolder = page.getByRole("treeitem", { name: "src folder" });
   await expect(sourceFolder).toHaveAttribute("aria-expanded", "true");
   await sourceFolder.click();
   await expect(sourceFolder).toHaveAttribute("aria-expanded", "false");
-  await expect(page.getByRole("treeitem", { name: "main.tsx", exact: true })).toBeHidden();
+  await expect(
+    page.getByRole("treeitem", { name: "main.tsx", exact: true }),
+  ).toBeHidden();
   await sourceFolder.click();
-  await expect(page.getByRole("treeitem", { name: "main.tsx", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("treeitem", { name: "main.tsx", exact: true }),
+  ).toBeVisible();
   await page.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
   await expect
     .poll(() => page.evaluate(() => document.activeElement?.className))
     .toBe("cm-content");
 });
 
-test("opens App.tsx and focuses the editor after a refresh", async ({ page }) => {
-  await page.goto(`/room/e2e-default-editor-${Date.now()}`, { waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible({
+test("opens App.tsx and focuses the editor after a refresh", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-default-editor-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(
+    page.getByRole("region", { name: "Editing src/App.tsx" }),
+  ).toBeVisible({
     timeout: 15_000,
   });
   await page.reload({ waitUntil: "domcontentloaded" });
-  await expect(page.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible({
+  await expect(
+    page.getByRole("region", { name: "Editing src/App.tsx" }),
+  ).toBeVisible({
     timeout: 15_000,
   });
   await expect(page.locator(".cm-content")).toBeFocused();

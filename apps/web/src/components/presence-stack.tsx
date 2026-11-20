@@ -32,9 +32,12 @@ export function PresenceStack({
 }: PresenceStackProps) {
   const [open, setOpen] = useState(false);
   const { t } = useTranslation();
-  const statusLabel = hasPendingChanges ? t("status.unsynced") : t(`status.${status}`);
+  const statusLabel = hasPendingChanges
+    ? t("status.unsynced")
+    : t(`status.${status}`);
   const statusDescription =
-    syncError ?? (hasPendingChanges ? t("status.unsyncedDescription") : undefined);
+    syncError ??
+    (hasPendingChanges ? t("status.unsyncedDescription") : undefined);
   const backupDescription =
     draftBackup === "error"
       ? t("drafts.storageError")
@@ -59,7 +62,10 @@ export function PresenceStack({
           data-sync-pending={hasPendingChanges || undefined}
           data-draft-backup={draftBackup}
           role="status"
-          title={[statusDescription, backupDescription].filter(Boolean).join(" ") || undefined}
+          title={
+            [statusDescription, backupDescription].filter(Boolean).join(" ") ||
+            undefined
+          }
         >
           {statusLabel}
           {backupDescription && <span> · {backupDescription}</span>}
@@ -74,7 +80,10 @@ export function PresenceStack({
         onFocus={() => setOpen(true)}
         onBlur={(event) => {
           const nextTarget = event.relatedTarget;
-          if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+          if (
+            !(nextTarget instanceof Node) ||
+            !event.currentTarget.contains(nextTarget)
+          ) {
             setOpen(false);
           }
         }}
@@ -124,7 +133,10 @@ export function PresenceStack({
               </div>
               <div className="grid gap-px pt-1.5">
                 {orderedMembers.map((member) => {
-                  const isCurrentUser = isPresenceCurrentUser(member.userId, currentUserId);
+                  const isCurrentUser = isPresenceCurrentUser(
+                    member.userId,
+                    currentUserId,
+                  );
                   const isFollowing = followingUserId === member.userId;
                   const memberContent = (
                     <>
@@ -162,14 +174,17 @@ export function PresenceStack({
                           ? {
                               backgroundColor:
                                 "color-mix(in srgb, var(--accent) 14%, var(--canvas))",
-                              borderColor: "color-mix(in srgb, var(--accent) 42%, var(--divider))",
+                              borderColor:
+                                "color-mix(in srgb, var(--accent) 42%, var(--divider))",
                             }
                           : undefined
                       }
                       type="button"
                       aria-label={member.displayName}
                       aria-pressed={isFollowing}
-                      data-following-member={isFollowing ? member.userId : undefined}
+                      data-following-member={
+                        isFollowing ? member.userId : undefined
+                      }
                       onClick={() => onFollowMember(member.userId)}
                       key={member.userId}
                     >

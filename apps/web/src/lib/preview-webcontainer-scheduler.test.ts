@@ -13,14 +13,20 @@ const unchangedSync = () => Promise.resolve({ packageChanged: false });
 
 function fixture(
   options: {
-    runtimeFactory?: (runtime: PreviewRuntimePort) => Promise<PreviewRuntimePort>;
+    runtimeFactory?: (
+      runtime: PreviewRuntimePort,
+    ) => Promise<PreviewRuntimePort>;
     debounceMs?: number;
   } = {},
 ) {
   const changes = new PreviewContentChanges();
   const app = projectFile("app.ts", "const value = 1;");
-  const files = [projectFile("package.json", '{"scripts":{"dev":"vite"}}'), app];
-  const calls: Array<{ command: string; paths: string[]; options?: unknown }> = [];
+  const files = [
+    projectFile("package.json", '{"scripts":{"dev":"vite"}}'),
+    app,
+  ];
+  const calls: Array<{ command: string; paths: string[]; options?: unknown }> =
+    [];
   const listeners: Array<(event: RuntimeEvent) => void> = [];
   const completed: string[] = [];
   let start = completedStart;
@@ -50,7 +56,10 @@ function fixture(
       return sync();
     },
     async syncChangedFiles(current) {
-      calls.push({ command: "sync-changed", paths: current.map(({ path }) => path) });
+      calls.push({
+        command: "sync-changed",
+        paths: current.map(({ path }) => path),
+      });
       return sync();
     },
     async readTypeScriptDeclarations() {
@@ -61,10 +70,14 @@ function fixture(
     },
   };
   const scheduler = new PreviewWebContainerScheduler({
-    createRuntime: () => options.runtimeFactory?.(runtime) ?? Promise.resolve(runtime),
+    createRuntime: () =>
+      options.runtimeFactory?.(runtime) ?? Promise.resolve(runtime),
     loadSyntaxValidator: async () => (source) =>
       source === "invalid"
-        ? { message: "Syntax error", location: { line: 1, column: 1, offset: 0 } }
+        ? {
+            message: "Syntax error",
+            location: { line: 1, column: 1, offset: 0 },
+          }
         : undefined,
     completeAction: (action) => completed.push(action),
     debounceMs: options.debounceMs ?? 1,
@@ -74,7 +87,11 @@ function fixture(
     file: app,
     files,
     folders: [],
-    settings: { packageManager: "pnpm", autoInstall: true, autoStartPreview: true },
+    settings: {
+      packageManager: "pnpm",
+      autoInstall: true,
+      autoStartPreview: true,
+    },
     runKey: 0,
     acknowledgeContentChanges: (pending) => changes.acknowledge(pending),
     getPendingContentChanges: () => changes.pending(),
@@ -106,7 +123,9 @@ test("debounces rapid edits and syncs only their latest pending revision", async
   f.changes.record(f.input.file);
   f.scheduler.update(f.input);
   await settle();
-  expect(f.calls.slice(baseline)).toEqual([{ command: "sync-changed", paths: ["app.ts"] }]);
+  expect(f.calls.slice(baseline)).toEqual([
+    { command: "sync-changed", paths: ["app.ts"] },
+  ]);
   expect(f.changes.pending()).toEqual([]);
   f.scheduler.dispose();
 });
@@ -141,7 +160,11 @@ test("package changes request a preflight restart after the completed write", as
   await settle();
   expect(f.calls.slice(-2)).toEqual([
     { command: "sync-changed", paths: ["package.json"] },
-    { command: "restart", paths: ["package.json", "app.ts"], options: { forceStart: false } },
+    {
+      command: "restart",
+      paths: ["package.json", "app.ts"],
+      options: { forceStart: false },
+    },
   ]);
   f.scheduler.dispose();
 });
@@ -200,7 +223,10 @@ test("disposal cancels debounce and ignores ready, output and rejected work from
   installing.reject(new Error("obsolete failure"));
   await settle();
   expect(f.disposed()).toBe(1);
-  expect(f.scheduler.getSnapshot()).toMatchObject({ runtimeState: "idle", outputs: [] });
+  expect(f.scheduler.getSnapshot()).toMatchObject({
+    runtimeState: "idle",
+    outputs: [],
+  });
   expect(f.scheduler.getSnapshot().previewUrl).toBeUndefined();
   expect(f.scheduler.getSnapshot().buildError).toBeUndefined();
   f.scheduler.update(f.input);
@@ -247,7 +273,9 @@ test("an older sync rejection preserves a newer syntax error", async () => {
   await settle();
   expect(f.scheduler.getSnapshot().buildError).toBe("Syntax error");
   expect(f.scheduler.getSnapshot().sourceError?.source).toBe("invalid");
-  expect(f.scheduler.getSnapshot().outputs).toEqual([{ level: "error", message: "Syntax error" }]);
+  expect(f.scheduler.getSnapshot().outputs).toEqual([
+    { level: "error", message: "Syntax error" },
+  ]);
   f.scheduler.dispose();
 });
 
@@ -263,7 +291,9 @@ test("runtime output stays bounded and iframe errors are deduplicated", async ()
   f.scheduler.reportIframeError("frame failed");
   f.scheduler.reportIframeError("frame failed");
   expect(
-    f.scheduler.getSnapshot().outputs.filter(({ message }) => message === "frame failed"),
+    f.scheduler
+      .getSnapshot()
+      .outputs.filter(({ message }) => message === "frame failed"),
   ).toHaveLength(1);
   expect(f.scheduler.getSnapshot().runtimeState).toBe("error");
   f.scheduler.dispose();
@@ -283,8 +313,13 @@ test("settings and translation refreshes preserve the current run without restar
   f.listeners[0]?.({ type: "server-ready", port: 1, url: "http://current" });
   f.listeners[0]?.({ type: "state", state: "error", error: "start-failed" });
   expect(f.calls).toEqual(commands);
-  expect(f.scheduler.getSnapshot().buildError).toBe("new translation: start-failed");
-  f.scheduler.update({ ...f.input, settings: { ...f.input.settings, autoInstall: false } });
+  expect(f.scheduler.getSnapshot().buildError).toBe(
+    "new translation: start-failed",
+  );
+  f.scheduler.update({
+    ...f.input,
+    settings: { ...f.input.settings, autoInstall: false },
+  });
   await settle();
   expect(f.calls.at(-1)?.command).toBe("restart");
   f.scheduler.dispose();
@@ -305,7 +340,8 @@ test("StrictMode dispose and remount reject a late runtime load without disposin
   const pending = Promise.withResolvers<PreviewRuntimePort>();
   let loads = 0;
   const f = fixture({
-    runtimeFactory: (runtime) => (++loads === 1 ? pending.promise : Promise.resolve(runtime)),
+    runtimeFactory: (runtime) =>
+      ++loads === 1 ? pending.promise : Promise.resolve(runtime),
   });
   f.scheduler.update(f.input);
   f.scheduler.dispose();
@@ -317,7 +353,11 @@ test("StrictMode dispose and remount reject a late runtime load without disposin
   expect(old.calls).toEqual([]);
   expect(f.disposed()).toBe(0);
   expect(f.calls.map(({ command }) => command)).toEqual(["start", "sync"]);
-  f.listeners[0]?.({ type: "server-ready", port: 1, url: "http://replacement" });
+  f.listeners[0]?.({
+    type: "server-ready",
+    port: 1,
+    url: "http://replacement",
+  });
   expect(f.scheduler.getSnapshot().previewUrl).toBe("http://replacement");
   f.scheduler.dispose();
 });

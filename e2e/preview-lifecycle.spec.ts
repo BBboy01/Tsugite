@@ -31,7 +31,9 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("reports a failed file sync and recovers through the preview action", async ({ page }) => {
+test("reports a failed file sync and recovers through the preview action", async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await useControlledRuntime(page);
@@ -48,17 +50,23 @@ test("reports a failed file sync and recovers through the preview action", async
   await expect
     .poll(() =>
       page.evaluate(
-        () => (window as typeof window & { previewSyncCalls: string[] }).previewSyncCalls,
+        () =>
+          (window as typeof window & { previewSyncCalls: string[] })
+            .previewSyncCalls,
       ),
     )
     .toContain("incremental:src/App.tsx");
-  await expect(preview.getByRole("alert")).toContainText("Preview file write failed");
+  await expect(preview.getByRole("alert")).toContainText(
+    "Preview file write failed",
+  );
   await expect(editor).toContainText("sync retry remains editable");
 
   await page.evaluate(() => {
     delete document.documentElement.dataset.failPreviewSync;
   });
-  await preview.getByRole("button", { name: "Run preview", exact: true }).click();
+  await preview
+    .getByRole("button", { name: "Run preview", exact: true })
+    .click();
   await expect(preview.getByRole("alert")).toHaveCount(0);
   await expect(preview.getByText("paused", { exact: true })).toBeVisible();
   expect(errors).toEqual([]);
@@ -82,13 +90,22 @@ test("ignores malformed iframe output while preserving valid messages and the ed
         { source: "iris-preview", level: "warn", message: { invalid: true } },
         "*",
       );
-      parent.postMessage({ source: "iris-preview", level: "invalid", message: "ignore me" }, "*");
       parent.postMessage(
-        { source: "iris-preview", level: "log", message: "valid preview output" },
+        { source: "iris-preview", level: "invalid", message: "ignore me" },
+        "*",
+      );
+      parent.postMessage(
+        {
+          source: "iris-preview",
+          level: "log",
+          message: "valid preview output",
+        },
         "*",
       );
     });
-  await preview.getByRole("button", { name: "Expand output", exact: true }).click();
+  await preview
+    .getByRole("button", { name: "Expand output", exact: true })
+    .click();
   await expect(preview).toContainText("valid preview output");
   await expect(preview).not.toContainText("ignore me");
   await expect(page.locator(".cm-content")).toBeVisible();
@@ -100,7 +117,9 @@ test("a failed runtime module load does not prevent editing or silently leave a 
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.route("**/src/lib/webcontainer-runtime.ts*", (route) => route.abort("failed"));
+  await page.route("**/src/lib/webcontainer-runtime.ts*", (route) =>
+    route.abort("failed"),
+  );
   await page.goto(`/room/preview-module-failure-${crypto.randomUUID()}`);
   const editor = page.locator(".cm-content");
   await expect(editor).toBeVisible();
@@ -111,7 +130,9 @@ test("a failed runtime module load does not prevent editing or silently leave a 
   await expect(preview.getByRole("status")).toHaveCount(0);
   await editor.focus();
   await page.keyboard.press("ControlOrMeta+End");
-  await page.keyboard.insertText("\n// runtime failure does not block editing\n");
+  await page.keyboard.insertText(
+    "\n// runtime failure does not block editing\n",
+  );
   await expect(editor).toContainText("runtime failure does not block editing");
   expect(errors).toEqual([]);
 });
@@ -121,7 +142,9 @@ test("switching between project and single-file previews disposes and restores t
 }) => {
   await page.addInitScript(() => {
     localStorage.setItem("iris.language", "en");
-    (window as typeof window & { previewRuntimeCalls: string[] }).previewRuntimeCalls = [];
+    (
+      window as typeof window & { previewRuntimeCalls: string[] }
+    ).previewRuntimeCalls = [];
   });
   await page.route("**/src/lib/webcontainer-runtime.ts*", (route) =>
     route.fulfill({
@@ -153,24 +176,36 @@ test("switching between project and single-file previews disposes and restores t
     .getByRole("treeitem", { name: "package.json", exact: true })
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
   await expect(iframe.locator("#app")).toHaveText("Single file preview");
   await expect
     .poll(() =>
       page.evaluate(
-        () => (window as typeof window & { previewRuntimeCalls: string[] }).previewRuntimeCalls,
+        () =>
+          (window as typeof window & { previewRuntimeCalls: string[] })
+            .previewRuntimeCalls,
       ),
     )
     .toEqual(["start", "dispose"]);
   await expect(page.locator(".cm-content")).toBeVisible();
 
-  await page.getByRole("button", { name: "Undo deletion", exact: true }).click();
-  await expect(page.locator('iframe[title^="Preview of "]')).toHaveAttribute("srcdoc", "");
+  await page
+    .getByRole("button", { name: "Undo deletion", exact: true })
+    .click();
+  await expect(page.locator('iframe[title^="Preview of "]')).toHaveAttribute(
+    "srcdoc",
+    "",
+  );
   await expect(preview.getByText("paused", { exact: true })).toBeVisible();
   await expect
     .poll(() =>
       page.evaluate(
-        () => (window as typeof window & { previewRuntimeCalls: string[] }).previewRuntimeCalls,
+        () =>
+          (window as typeof window & { previewRuntimeCalls: string[] })
+            .previewRuntimeCalls,
       ),
     )
     .toEqual(["start", "dispose", "start"]);
@@ -191,12 +226,19 @@ test("a standalone iframe runtime error changes status without replacing the pre
     .getByRole("treeitem", { name: "package.json", exact: true })
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
 
   const preview = page.getByRole("region", { name: "Live preview" });
-  await expect(page.frameLocator('iframe[title^="Preview of "]').locator("body")).toBeVisible();
+  await expect(
+    page.frameLocator('iframe[title^="Preview of "]').locator("body"),
+  ).toBeVisible();
   await expect(preview).toContainText("error");
   await expect(preview).not.toContainText("standalone failure");
-  await preview.getByRole("button", { name: "Expand output", exact: true }).click();
+  await preview
+    .getByRole("button", { name: "Expand output", exact: true })
+    .click();
   await expect(preview).toContainText("standalone failure");
 });

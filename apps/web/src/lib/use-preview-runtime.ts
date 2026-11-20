@@ -21,16 +21,28 @@ export function usePreviewRuntime({
   const [runKey, setRunKey] = useState(0);
   const [contentRevision, setContentRevision] = useState(0);
   const contentChangesRef = useRef(new PreviewContentChanges());
-  const contentChanges = useMemo(() => contentChangesRef.current.pending(), [contentRevision]);
+  const contentChanges = useMemo(
+    () => contentChangesRef.current.pending(),
+    [contentRevision],
+  );
   const acknowledgeContentChanges = useCallback(
-    (changes: typeof contentChanges) => contentChangesRef.current.acknowledge(changes),
+    (changes: typeof contentChanges) =>
+      contentChangesRef.current.acknowledge(changes),
     [],
   );
-  const getPendingContentChanges = useCallback(() => contentChangesRef.current.pending(), []);
+  const getPendingContentChanges = useCallback(
+    () => contentChangesRef.current.pending(),
+    [],
+  );
   const previewLoadTimerRef = useRef<number | undefined>(undefined);
   const requestRun = useCallback(() => setRunKey((value) => value + 1), []);
   const hasRuntime = files.some((item) => item.path === "package.json");
-  const standalone = usePreviewStandalone(file, !hasRuntime, contentRevision, runKey);
+  const standalone = usePreviewStandalone(
+    file,
+    !hasRuntime,
+    contentRevision,
+    runKey,
+  );
   const webcontainer = usePreviewWebContainer({
     enabled: hasRuntime,
     file,
@@ -49,8 +61,12 @@ export function usePreviewRuntime({
   const outputs = hasRuntime ? webcontainer.outputs : standalone.outputs;
   const previewUrl = hasRuntime ? webcontainer.previewUrl : undefined;
   const previewLoaded = hasRuntime && webcontainer.previewLoaded;
-  const previewBuildError = hasRuntime ? webcontainer.buildError : standalone.buildError;
-  const sourceError = hasRuntime ? webcontainer.sourceError : standalone.sourceError;
+  const previewBuildError = hasRuntime
+    ? webcontainer.buildError
+    : standalone.buildError;
+  const sourceError = hasRuntime
+    ? webcontainer.sourceError
+    : standalone.sourceError;
 
   useEffect(() => {
     const unsubscribe = files.map((item) =>
@@ -63,7 +79,9 @@ export function usePreviewRuntime({
   }, [files]);
 
   useEffect(() => {
-    const handleMessage = (event: MessageEvent<PreviewOutput & { source?: string }>) => {
+    const handleMessage = (
+      event: MessageEvent<PreviewOutput & { source?: string }>,
+    ) => {
       if (
         event.source !== iframeRef.current?.contentWindow ||
         event.data?.source !== "iris-preview" ||
@@ -120,14 +138,20 @@ export function usePreviewRuntime({
 
   return {
     outputs,
-    runtimeState: hasRuntime ? webcontainer.runtimeState : standalone.runtimeState,
+    runtimeState: hasRuntime
+      ? webcontainer.runtimeState
+      : standalone.runtimeState,
     runtimeError: hasRuntime ? webcontainer.runtimeError : undefined,
     previewUrl,
     previewLoaded,
     previewLoadKey,
     fallbackDocument: standalone.document,
     previewBuildError,
-    previewSourceLocation: getPreviewSourceLocation(sourceError, file.path, file.text.toString()),
+    previewSourceLocation: getPreviewSourceLocation(
+      sourceError,
+      file.path,
+      file.text.toString(),
+    ),
     hasSyntaxError: Boolean(sourceError),
     iframeRef,
     handlePreviewLoad,
@@ -136,11 +160,15 @@ export function usePreviewRuntime({
   };
 }
 
-function isPreviewOutput(value: unknown): value is PreviewOutput & { source?: string } {
+function isPreviewOutput(
+  value: unknown,
+): value is PreviewOutput & { source?: string } {
   if (!value || typeof value !== "object") return false;
   const output = value as Partial<PreviewOutput>;
   return (
-    (output.level === "log" || output.level === "warn" || output.level === "error") &&
+    (output.level === "log" ||
+      output.level === "warn" ||
+      output.level === "error") &&
     typeof output.message === "string"
   );
 }

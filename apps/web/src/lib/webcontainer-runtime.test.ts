@@ -8,7 +8,11 @@ import {
   type RuntimeProcess,
   type RuntimeSettings,
 } from "./webcontainer-runtime";
-import { fakeContainer, fakeProcess, projectFile } from "./webcontainer-test-utils";
+import {
+  fakeContainer,
+  fakeProcess,
+  projectFile,
+} from "./webcontainer-test-utils";
 
 const npmSettings: RuntimeSettings = {
   packageManager: "npm",
@@ -23,7 +27,10 @@ test("starts pnpm project and emits ready after server-ready", async () => {
 
   await runtime.start(
     [
-      projectFile("package.json", '{"scripts":{"dev":"vite"},"devDependencies":{"vite":"latest"}}'),
+      projectFile(
+        "package.json",
+        '{"scripts":{"dev":"vite"},"devDependencies":{"vite":"latest"}}',
+      ),
       projectFile("src/main.js", "console.log('ok')"),
     ],
     ["src"],
@@ -38,7 +45,9 @@ test("starts pnpm project and emits ready after server-ready", async () => {
       },
     },
     "pnpm-workspace.yaml": {
-      file: { contents: "packages:\n  - .\noverrides:\n  rolldown@1.2.9: 1.2.8\n" },
+      file: {
+        contents: "packages:\n  - .\noverrides:\n  rolldown@1.2.9: 1.2.8\n",
+      },
     },
   });
   expect(fake.calls.spawn).toEqual([
@@ -71,11 +80,17 @@ test("reports install failure and terminates an installation that exceeds its de
     installTimeoutMs: 10,
   });
   const events: RuntimeEvent[] = [];
-  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
-    events.push(event),
+  await runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    (event) => events.push(event),
   );
   expect(killed).toBe(true);
-  expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "install-failed" });
+  expect(events.at(-1)).toEqual({
+    type: "state",
+    state: "error",
+    error: "install-failed",
+  });
   runtime.dispose();
 }, 1000);
 
@@ -217,20 +232,37 @@ test("forwards preview errors that occur after the server is ready", async () =>
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const events: RuntimeEvent[] = [];
 
-  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
-    events.push(event),
+  await runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    (event) => events.push(event),
   );
   fake.emitError(new Error("Unexpected token"));
 
-  expect(events.at(-2)).toEqual({ type: "output", level: "error", message: "Unexpected token" });
-  expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "start-failed" });
+  expect(events.at(-2)).toEqual({
+    type: "output",
+    level: "error",
+    message: "Unexpected token",
+  });
+  expect(events.at(-1)).toEqual({
+    type: "state",
+    state: "error",
+    error: "start-failed",
+  });
 });
 
 test("syncs changed and removed files without remounting", async () => {
   const fake = fakeContainer();
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
-  const packageFile = projectFile("package.json", '{"scripts":{"start":"vite"}}');
-  await runtime.start([packageFile, projectFile("src/main.js", "old")], ["src"], () => {});
+  const packageFile = projectFile(
+    "package.json",
+    '{"scripts":{"start":"vite"}}',
+  );
+  await runtime.start(
+    [packageFile, projectFile("src/main.js", "old")],
+    ["src"],
+    () => {},
+  );
   await runtime.sync([packageFile, projectFile("src/next.js", "new")], ["src"]);
 
   expect(fake.calls.mount).toHaveLength(1);
@@ -243,12 +275,20 @@ test("reports a missing preview script without spawning a dev server", async () 
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const events: RuntimeEvent[] = [];
 
-  await runtime.start([projectFile("package.json", '{"name":"room"}')], [], (event) =>
-    events.push(event),
+  await runtime.start(
+    [projectFile("package.json", '{"name":"room"}')],
+    [],
+    (event) => events.push(event),
   );
 
-  expect(fake.calls.spawn).toEqual([["pnpm", "install", "--reporter=append-only"]]);
-  expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "missing-preview-script" });
+  expect(fake.calls.spawn).toEqual([
+    ["pnpm", "install", "--reporter=append-only"],
+  ]);
+  expect(events.at(-1)).toEqual({
+    type: "state",
+    state: "error",
+    error: "missing-preview-script",
+  });
 });
 
 test("uses the selected package manager for install and preview commands", async () => {
@@ -301,20 +341,26 @@ test("restarts the preview process without tearing down the WebContainer", async
 });
 
 test("recognizes storage partitioning failures from WebContainer", () => {
-  expect(getRuntimeError(new Error("Enable Storage Partitioning to run this preview"))).toBe(
-    "storage-partitioning-required",
-  );
-  expect(getRuntimeError({ message: "Enable Storage Partitioning to run this preview" })).toBe(
-    "storage-partitioning-required",
-  );
+  expect(
+    getRuntimeError(
+      new Error("Enable Storage Partitioning to run this preview"),
+    ),
+  ).toBe("storage-partitioning-required");
+  expect(
+    getRuntimeError({
+      message: "Enable Storage Partitioning to run this preview",
+    }),
+  ).toBe("storage-partitioning-required");
   expect(
     isStoragePartitioningErrorUrl(
       "https://project.local-corp.webcontainer-api.io/.localservice@sw-install-error.abc.html",
     ),
   ).toBe(true);
-  expect(isStoragePartitioningErrorUrl("https://project.local-corp.webcontainer-api.io/")).toBe(
-    false,
-  );
+  expect(
+    isStoragePartitioningErrorUrl(
+      "https://project.local-corp.webcontainer-api.io/",
+    ),
+  ).toBe(false);
 });
 
 test("stops preview startup when the server-ready URL is a storage error page", async () => {
@@ -324,8 +370,10 @@ test("stops preview startup when the server-ready URL is a storage error page", 
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const events: RuntimeEvent[] = [];
 
-  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], (event) =>
-    events.push(event),
+  await runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    (event) => events.push(event),
   );
 
   expect(events).toContainEqual({

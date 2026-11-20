@@ -17,7 +17,11 @@ export type HighlightsRequest = {
   lineOffsets: readonly number[];
 };
 
-export type HighlightsReply = { id: number; spans: HighlightSpan[]; ready: boolean };
+export type HighlightsReply = {
+  id: number;
+  spans: HighlightSpan[];
+  ready: boolean;
+};
 
 export type HighlightsWorker = {
   postMessage: (request: HighlightsRequest) => void;
@@ -60,7 +64,9 @@ export class HighlightsWorkerClient {
 
   constructor(
     private readonly createWorker: () => HighlightsWorker = () =>
-      new Worker(new URL("./highlights.worker.ts", import.meta.url), { type: "module" }),
+      new Worker(new URL("./highlights.worker.ts", import.meta.url), {
+        type: "module",
+      }),
     private readonly timeoutMs = 3000,
   ) {}
 
@@ -76,12 +82,17 @@ export class HighlightsWorkerClient {
     return this.activeScopeId;
   }
 
-  highlight(input: HighlightsInput, scopeId?: number): Promise<HighlightSpan[] | undefined> {
+  highlight(
+    input: HighlightsInput,
+    scopeId?: number,
+  ): Promise<HighlightSpan[] | undefined> {
     if (this.disposed) return Promise.resolve(undefined);
     if (this.failed) return Promise.resolve([]);
-    if (scopeId !== undefined && scopeId !== this.activeScopeId) return Promise.resolve(undefined);
+    if (scopeId !== undefined && scopeId !== this.activeScopeId)
+      return Promise.resolve(undefined);
     return new Promise((resolve) => {
-      const isNewScope = scopeId !== undefined && scopeId !== this.lastRequestScopeId;
+      const isNewScope =
+        scopeId !== undefined && scopeId !== this.lastRequestScopeId;
       const canReuseTokenizer =
         isNewScope &&
         Boolean(this.worker) &&
@@ -176,7 +187,6 @@ export class HighlightsWorkerClient {
           this.fail();
         };
       }
-      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated workers do not accept targetOrigin.
       this.worker.postMessage(next.request);
       this.timeout = setTimeout(() => this.fail(), this.timeoutMs);
     } catch {
@@ -197,13 +207,19 @@ export class HighlightsWorkerClient {
     clearTimeout(this.timeout);
     this.timeout = undefined;
     if (!this.worker) return;
-    this.worker.onmessage = this.worker.onerror = this.worker.onmessageerror = null;
+    this.worker.onmessage =
+      this.worker.onerror =
+      this.worker.onmessageerror =
+        null;
     this.worker.terminate();
     this.worker = undefined;
   }
 }
 
-function canReuseActiveSession(active: HighlightsRequest, pending: HighlightsRequest): boolean {
+function canReuseActiveSession(
+  active: HighlightsRequest,
+  pending: HighlightsRequest,
+): boolean {
   return (
     active.reset &&
     pending.reset &&
@@ -213,7 +229,10 @@ function canReuseActiveSession(active: HighlightsRequest, pending: HighlightsReq
   );
 }
 
-function sameSessionContext(previous: SessionContext | undefined, next: SessionContext): boolean {
+function sameSessionContext(
+  previous: SessionContext | undefined,
+  next: SessionContext,
+): boolean {
   return (
     previous?.source === next.source &&
     previous.language === next.language &&

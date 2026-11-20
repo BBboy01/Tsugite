@@ -28,13 +28,16 @@ export function EditorTabs({ label, activeValue, children }: EditorTabsProps) {
         aria-label={label}
         onKeyDown={(event) => {
           const tabs = Array.from(
-            event.currentTarget.querySelectorAll<HTMLButtonElement>('[role="tab"]'),
+            event.currentTarget.querySelectorAll<HTMLButtonElement>(
+              '[role="tab"]',
+            ),
           );
           const index = tabs.indexOf(event.target as HTMLButtonElement);
           if (index < 0) return;
           let next: number;
           if (event.key === "ArrowRight") next = (index + 1) % tabs.length;
-          else if (event.key === "ArrowLeft") next = (index + tabs.length - 1) % tabs.length;
+          else if (event.key === "ArrowLeft")
+            next = (index + tabs.length - 1) % tabs.length;
           else if (event.key === "Home") next = 0;
           else if (event.key === "End") next = tabs.length - 1;
           else return;

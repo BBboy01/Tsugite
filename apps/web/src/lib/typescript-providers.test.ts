@@ -44,10 +44,17 @@ test("signature help ignores results requested before the editor selection chang
   } as unknown as EditorIntelligence;
   const doc = { length: 12 };
   const firstSelection = { main: { head: 10 } };
-  const view = { state: { doc, selection: firstSelection } } as unknown as EditorView;
+  const view = {
+    state: { doc, selection: firstSelection },
+  } as unknown as EditorView;
   const pending = querySignatureHelp(intelligence, "app.ts", view, 10);
-  (view.state as { doc: object; selection: object }).selection = { main: { head: 2 } };
-  resolve?.({ status: "ok", value: { signatures: [], activeSignature: 0, activeParameter: 0 } });
+  (view.state as { doc: object; selection: object }).selection = {
+    main: { head: 2 },
+  };
+  resolve?.({
+    status: "ok",
+    value: { signatures: [], activeSignature: 0, activeParameter: 0 },
+  });
   expect(await pending).toBeNull();
 });
 
@@ -73,7 +80,10 @@ test("signature help ignores results from an outdated workspace", async () => {
   } as unknown as EditorView;
   const pending = querySignatureHelp(intelligence, "app.ts", view, 10);
   workspaceVersion++;
-  resolve?.({ status: "ok", value: { signatures: [], activeSignature: 0, activeParameter: 0 } });
+  resolve?.({
+    status: "ok",
+    value: { signatures: [], activeSignature: 0, activeParameter: 0 },
+  });
   expect(await pending).toBeNull();
 });
 
@@ -119,12 +129,20 @@ test("automatic completions do not query after statements or whitespace", async 
   const source = createCompletionSource(intelligence, "app.ts");
   for (const doc of ["const count = 1;", "add(1, 2);", "\n", " ", '"text"']) {
     expect(
-      await source(new CompletionContext(EditorState.create({ doc }), doc.length, false)),
+      await source(
+        new CompletionContext(EditorState.create({ doc }), doc.length, false),
+      ),
     ).toBeNull();
   }
   expect(calls).toBe(0);
   for (const doc of ["con", "document.", ""]) {
-    await source(new CompletionContext(EditorState.create({ doc }), doc.length, doc.length === 0));
+    await source(
+      new CompletionContext(
+        EditorState.create({ doc }),
+        doc.length,
+        doc.length === 0,
+      ),
+    );
   }
   expect(calls).toBe(3);
 });
@@ -136,7 +154,11 @@ test("completion replaces the typed identifier when TypeScript omits a replaceme
       value: [{ name: "console", kind: "var", sortText: "0" }],
     }),
   } as unknown as EditorIntelligence;
-  const context = new CompletionContext(EditorState.create({ doc: "con" }), 3, true);
+  const context = new CompletionContext(
+    EditorState.create({ doc: "con" }),
+    3,
+    true,
+  );
   const result = await createCompletionSource(intelligence, "app.ts")(context);
   expect(result?.from).toBe(0);
   expect(result?.options[0].apply).toBe("console");
@@ -158,7 +180,11 @@ test("completion ignores results from an outdated workspace", async () => {
           });
       }),
   } as unknown as EditorIntelligence;
-  const context = new CompletionContext(EditorState.create({ doc: "con" }), 3, true);
+  const context = new CompletionContext(
+    EditorState.create({ doc: "con" }),
+    3,
+    true,
+  );
   const pending = createCompletionSource(intelligence, "app.ts")(context);
   workspaceVersion++;
   finish?.();
@@ -175,8 +201,16 @@ test("completion sources use request IDs unique across editor instances", async 
   } as unknown as EditorIntelligence;
   const first = createCompletionSource(intelligence, "app.ts");
   const second = createCompletionSource(intelligence, "app.ts");
-  const firstContext = new CompletionContext(EditorState.create({ doc: "con" }), 3, true);
-  const secondContext = new CompletionContext(EditorState.create({ doc: "con" }), 3, true);
+  const firstContext = new CompletionContext(
+    EditorState.create({ doc: "con" }),
+    3,
+    true,
+  );
+  const secondContext = new CompletionContext(
+    EditorState.create({ doc: "con" }),
+    3,
+    true,
+  );
 
   await Promise.all([first(firstContext), second(secondContext)]);
 

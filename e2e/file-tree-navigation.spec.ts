@@ -7,12 +7,19 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const source of ["quick open", "editor tab"] as const) {
-  test(`${source} reveals the selected file in its collapsed directory`, async ({ page }) => {
-    const folder = page.getByRole("treeitem", { name: "src folder", exact: true });
+  test(`${source} reveals the selected file in its collapsed directory`, async ({
+    page,
+  }) => {
+    const folder = page.getByRole("treeitem", {
+      name: "src folder",
+      exact: true,
+    });
     const file = page.getByRole("treeitem", { name: "index.css", exact: true });
     if (source === "editor tab") {
       await file.click();
-      await page.getByRole("treeitem", { name: "index.html", exact: true }).click();
+      await page
+        .getByRole("treeitem", { name: "index.html", exact: true })
+        .click();
     }
     await folder.click();
     await expect(folder).toHaveAttribute("aria-expanded", "false");
@@ -21,7 +28,9 @@ for (const source of ["quick open", "editor tab"] as const) {
       await page.getByPlaceholder("Search files...").fill("index.css");
       await page.getByPlaceholder("Search files...").press("Enter");
     } else {
-      await page.getByRole("tab", { name: "src/index.css", exact: true }).click();
+      await page
+        .getByRole("tab", { name: "src/index.css", exact: true })
+        .click();
     }
     await expect(
       page.getByRole("region", { name: "Editing src/index.css", exact: true }),
@@ -33,12 +42,17 @@ for (const source of ["quick open", "editor tab"] as const) {
 }
 
 test("quick open leaves unrelated directories collapsed", async ({ page }) => {
-  const folder = page.getByRole("treeitem", { name: "src folder", exact: true });
+  const folder = page.getByRole("treeitem", {
+    name: "src folder",
+    exact: true,
+  });
   await folder.click();
   await expect(folder).toHaveAttribute("aria-expanded", "false");
   await page.keyboard.press("ControlOrMeta+p");
   await page.getByPlaceholder("Search files...").fill("index.html");
   await page.getByPlaceholder("Search files...").press("Enter");
-  await expect(page.getByRole("region", { name: "Editing index.html", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Editing index.html", exact: true }),
+  ).toBeVisible();
   await expect(folder).toHaveAttribute("aria-expanded", "false");
 });

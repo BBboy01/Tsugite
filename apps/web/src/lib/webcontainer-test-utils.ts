@@ -52,13 +52,17 @@ export function fakeContainer(readyUrl = "http://localhost:4173") {
       calls.spawn.push([command, ...args]);
       if (args[0] === "run") {
         queueMicrotask(() =>
-          (events.get("server-ready") as ((port: number, url: string) => void) | undefined)?.(
-            4173,
-            readyUrl,
-          ),
+          (
+            events.get("server-ready") as
+              ((port: number, url: string) => void) | undefined
+          )?.(4173, readyUrl),
         );
         const exit = Promise.withResolvers<number>();
-        return { ...fakeProcess(), exit: exit.promise, kill: () => exit.resolve(143) };
+        return {
+          ...fakeProcess(),
+          exit: exit.promise,
+          kill: () => exit.resolve(143),
+        };
       }
       return fakeProcess();
     },
@@ -74,10 +78,10 @@ export function fakeContainer(readyUrl = "http://localhost:4173") {
     container,
     calls,
     emitReady() {
-      (events.get("server-ready") as ((port: number, url: string) => void) | undefined)?.(
-        4173,
-        readyUrl,
-      );
+      (
+        events.get("server-ready") as
+          ((port: number, url: string) => void) | undefined
+      )?.(4173, readyUrl);
     },
     emitError(error: Error) {
       (events.get("error") as ((error: Error) => void) | undefined)?.(error);

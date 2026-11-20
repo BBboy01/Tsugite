@@ -15,7 +15,11 @@ export function EditorFollowingOutline() {
         if (gutter) resize.observe(gutter);
       }
       const left = gutter
-        ? Math.max(0, gutter.getBoundingClientRect().right - container.getBoundingClientRect().left)
+        ? Math.max(
+            0,
+            gutter.getBoundingClientRect().right -
+              container.getBoundingClientRect().left,
+          )
         : 0;
       outline.style.left = `${left}px`;
       outline.style.visibility = gutter ? "visible" : "hidden";

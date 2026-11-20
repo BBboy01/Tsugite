@@ -29,11 +29,19 @@ test("JavaScript and TypeScript completions keep the language's for-loop snippet
     const context = new CompletionContext(state, 3, true);
     const sources = state.languageDataAt<CompletionSource>("autocomplete", 3);
     const results = await Promise.all(sources.map((source) => source(context)));
-    const options = results.flatMap((result) => (result as CompletionResult | null)?.options ?? []);
+    const options = results.flatMap(
+      (result) => (result as CompletionResult | null)?.options ?? [],
+    );
 
-    expect(options).toContainEqual(expect.objectContaining({ label: "format" }));
     expect(options).toContainEqual(
-      expect.objectContaining({ label: "for", detail: "loop", apply: expect.any(Function) }),
+      expect.objectContaining({ label: "format" }),
+    );
+    expect(options).toContainEqual(
+      expect.objectContaining({
+        label: "for",
+        detail: "loop",
+        apply: expect.any(Function),
+      }),
     );
   }
 });

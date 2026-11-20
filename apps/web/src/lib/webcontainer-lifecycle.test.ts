@@ -6,7 +6,11 @@ import {
   type RuntimeEvent,
   type RuntimeProcess,
 } from "./webcontainer-runtime";
-import { fakeContainer, fakeProcess, projectFile } from "./webcontainer-test-utils";
+import {
+  fakeContainer,
+  fakeProcess,
+  projectFile,
+} from "./webcontainer-test-utils";
 
 const files = [projectFile("package.json", '{"scripts":{"dev":"vite"}}')];
 
@@ -16,7 +20,8 @@ test("tears down an abandoned boot once without replacing the current container"
   const pendingBoot = Promise.withResolvers<RuntimeContainer>();
   let boots = 0;
   const runtime = new WebContainerRuntime({
-    boot: () => (++boots === 1 ? pendingBoot.promise : Promise.resolve(current.container)),
+    boot: () =>
+      ++boots === 1 ? pendingBoot.promise : Promise.resolve(current.container),
   });
   const first = runtime.start(files, [], () => {});
   const second = runtime.restart(files, [], () => {});
@@ -98,8 +103,16 @@ test("a previous generation's output cannot pollute the restarted preview", asyn
   await writer.write("obsolete output");
   await writer.close();
 
-  expect(events).toContainEqual({ type: "output", level: "log", message: "initial output" });
-  expect(events).not.toContainEqual({ type: "output", level: "log", message: "obsolete output" });
+  expect(events).toContainEqual({
+    type: "output",
+    level: "log",
+    message: "initial output",
+  });
+  expect(events).not.toContainEqual({
+    type: "output",
+    level: "log",
+    message: "obsolete output",
+  });
   runtime.dispose();
 });
 
@@ -186,7 +199,9 @@ test("reports output stream failures without an unhandled rejection or failing t
     message: "stream disconnected",
   });
   expect(events).toContainEqual({ type: "state", state: "ready" });
-  expect(events.some((event) => event.type === "state" && event.state === "error")).toBe(false);
+  expect(
+    events.some((event) => event.type === "state" && event.state === "error"),
+  ).toBe(false);
   runtime.dispose();
 });
 
@@ -197,7 +212,9 @@ for (const failure of ["spawn", "early exit"]) {
       if (failure === "spawn") throw new Error("start-failed");
       return fakeProcess(1);
     };
-    const runtime = new WebContainerRuntime({ boot: async () => fake.container });
+    const runtime = new WebContainerRuntime({
+      boot: async () => fake.container,
+    });
     const events: RuntimeEvent[] = [];
     await runtime.start(files, [], (event) => events.push(event), {
       packageManager: "pnpm",
@@ -205,7 +222,11 @@ for (const failure of ["spawn", "early exit"]) {
       autoStartPreview: true,
     });
     const failedEvents = events.slice();
-    expect(events.at(-1)).toEqual({ type: "state", state: "error", error: "start-failed" });
+    expect(events.at(-1)).toEqual({
+      type: "state",
+      state: "error",
+      error: "start-failed",
+    });
     fake.emitReady();
     fake.emitError(new Error("obsolete preview error"));
 

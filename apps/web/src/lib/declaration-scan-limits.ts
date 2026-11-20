@@ -15,4 +15,6 @@ export const DECLARATION_SCAN_LIMITS = {
   sourceRequestBytes: 32 * 1024 * 1024,
 } as const;
 
-export type DeclarationScanLimits = { [Key in keyof typeof DECLARATION_SCAN_LIMITS]: number };
+export type DeclarationScanLimits = {
+  [Key in keyof typeof DECLARATION_SCAN_LIMITS]: number;
+};

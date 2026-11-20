@@ -22,7 +22,10 @@ import {
   type WorkerRequest,
 } from "./typescript-worker-protocol";
 
-export type { TypeScriptWorkerMetrics, TypeScriptWorkerStatus } from "./typescript-worker-metrics";
+export type {
+  TypeScriptWorkerMetrics,
+  TypeScriptWorkerStatus,
+} from "./typescript-worker-metrics";
 
 export type IntelligenceWorker = {
   postMessage(request: WorkerRequest): void;
@@ -63,7 +66,8 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   ) {
     this.lifecycle = new TypeScriptWorkerLifecycle(options.onMetrics);
     this.publish(files);
-    if (!this.disabled && !this.rejectedSnapshot && !options.lazyStart) this.start();
+    if (!this.disabled && !this.rejectedSnapshot && !options.lazyStart)
+      this.start();
   }
   get workspaceVersion(): number {
     return this.version;
@@ -79,7 +83,8 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     return this.disabled ?? this.rejectedSnapshot;
   }
   getStatusSnapshot = () => this.lifecycle.getStatusSnapshot();
-  getMetricsSnapshot = (): TypeScriptWorkerMetrics => this.lifecycle.getMetricsSnapshot();
+  getMetricsSnapshot = (): TypeScriptWorkerMetrics =>
+    this.lifecycle.getMetricsSnapshot();
   subscribeStatus = (listener: () => void): (() => void) =>
     this.lifecycle.subscribeStatus(listener);
   subscribeWorkspace = (listener: () => void): (() => void) => {
@@ -89,7 +94,9 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   private notifyWorkspace(): void {
     this.workspaceListeners.forEach((listener) => listener());
   }
-  private publish(files: readonly IntelligenceFile[]): IntelligenceResult<number> {
+  private publish(
+    files: readonly IntelligenceFile[],
+  ): IntelligenceResult<number> {
     const sources = files.filter((file) => isIntelligencePath(file.path));
     const invalid = validateWorkspaceFiles(sources);
     if (invalid) {
@@ -135,7 +142,9 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     } else if (recovered) this.notifyWorkspace();
     return { status: "ok", value: this.version };
   }
-  syncWorkspace(files: readonly IntelligenceFile[]): Promise<IntelligenceResult<number>> {
+  syncWorkspace(
+    files: readonly IntelligenceFile[],
+  ): Promise<IntelligenceResult<number>> {
     if (this.disposed) return Promise.resolve({ status: "disposed" });
     const result = this.publish(files);
     if (result.status === "ok") this.ensureStarted();
@@ -144,18 +153,31 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   updateFile(file: IntelligenceFile): Promise<IntelligenceResult<null>> {
     if (this.disposed) return Promise.resolve({ status: "disposed" });
     if (this.rejectedSnapshot)
-      return Promise.resolve({ status: "error", message: this.rejectedSnapshot });
-    const files = [...this.files.values()].filter((item) => item.path !== file.path);
+      return Promise.resolve({
+        status: "error",
+        message: this.rejectedSnapshot,
+      });
+    const files = [...this.files.values()].filter(
+      (item) => item.path !== file.path,
+    );
     files.push({ ...file, version: 0 });
     const result = this.publish(files);
     if (result.status === "ok") this.ensureStarted();
-    return Promise.resolve(result.status === "ok" ? { status: "ok", value: null } : result);
+    return Promise.resolve(
+      result.status === "ok" ? { status: "ok", value: null } : result,
+    );
   }
   hover(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["hover"]>>>("hover", query);
+    return this.query<Awaited<ReturnType<EditorIntelligence["hover"]>>>(
+      "hover",
+      query,
+    );
   }
   completion(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["completion"]>>>("completion", query);
+    return this.query<Awaited<ReturnType<EditorIntelligence["completion"]>>>(
+      "completion",
+      query,
+    );
   }
   signatureHelp(query: IntelligenceQuery) {
     return this.query<Awaited<ReturnType<EditorIntelligence["signatureHelp"]>>>(
@@ -164,25 +186,32 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     );
   }
   diagnostics(query: IntelligenceDiagnosticQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["diagnostics"]>>>("diagnostics", query);
+    return this.query<Awaited<ReturnType<EditorIntelligence["diagnostics"]>>>(
+      "diagnostics",
+      query,
+    );
   }
   definition(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["definition"]>>>("definition", query);
+    return this.query<Awaited<ReturnType<EditorIntelligence["definition"]>>>(
+      "definition",
+      query,
+    );
   }
   typeDefinition(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["typeDefinition"]>>>(
-      "typeDefinition",
-      query,
-    );
+    return this.query<
+      Awaited<ReturnType<EditorIntelligence["typeDefinition"]>>
+    >("typeDefinition", query);
   }
   implementation(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["implementation"]>>>(
-      "implementation",
-      query,
-    );
+    return this.query<
+      Awaited<ReturnType<EditorIntelligence["implementation"]>>
+    >("implementation", query);
   }
   references(query: IntelligenceQuery) {
-    return this.query<Awaited<ReturnType<EditorIntelligence["references"]>>>("references", query);
+    return this.query<Awaited<ReturnType<EditorIntelligence["references"]>>>(
+      "references",
+      query,
+    );
   }
   private query<R extends IntelligenceResult<unknown>>(
     method: QueryMethod,
@@ -195,22 +224,34 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
         message: this.disabled ?? this.rejectedSnapshot!,
       } as R);
     const invalidPath = validateQueryPath(query.path);
-    if (invalidPath) return Promise.resolve({ status: "error", message: invalidPath } as R);
+    if (invalidPath)
+      return Promise.resolve({ status: "error", message: invalidPath } as R);
     if (query.revision !== undefined && query.revision !== this.version)
       return Promise.resolve({ status: "cancelled" } as R);
     this.ensureStarted();
-    if (this.disabled) return Promise.resolve({ status: "error", message: this.disabled } as R);
+    if (this.disabled)
+      return Promise.resolve({ status: "error", message: this.disabled } as R);
     if (this.pending.size >= WORKER_QUEUE_LIMIT)
-      return Promise.resolve({ status: "error", message: "TypeScript worker queue is full" } as R);
+      return Promise.resolve({
+        status: "error",
+        message: "TypeScript worker queue is full",
+      } as R);
     const envelope = this.envelope();
     return new Promise<IntelligenceResult<unknown>>((resolve) => {
       const timer = setTimeout(
         () => {
           this.pending.delete(envelope.requestId);
           resolve({ status: "timeout" });
-          this.post({ ...this.envelope(), kind: "cancel", target: envelope.requestId });
+          this.post({
+            ...this.envelope(),
+            kind: "cancel",
+            target: envelope.requestId,
+          });
         },
-        Math.min(QUERY_TIMEOUT_MS, Math.max(0, query.timeoutMs ?? QUERY_TIMEOUT_MS)),
+        Math.min(
+          QUERY_TIMEOUT_MS,
+          Math.max(0, query.timeoutMs ?? QUERY_TIMEOUT_MS),
+        ),
       );
       this.pending.set(envelope.requestId, {
         ...envelope,
@@ -227,11 +268,19 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     for (const pending of this.pending.values())
       if (pending.callerId === requestId) {
         this.finish(pending, { status: "cancelled" });
-        this.post({ ...this.envelope(), kind: "cancel", target: pending.requestId });
+        this.post({
+          ...this.envelope(),
+          kind: "cancel",
+          target: pending.requestId,
+        });
       }
   }
   private envelope(): WorkerEnvelope {
-    return { epoch: this.epoch, requestId: `${++this.counter}`, workspaceVersion: this.version };
+    return {
+      epoch: this.epoch,
+      requestId: `${++this.counter}`,
+      workspaceVersion: this.version,
+    };
   }
   private restoreNavigationSources(
     method: QueryMethod | undefined,
@@ -239,7 +288,12 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   ): IntelligenceResult<unknown> {
     if (
       !method ||
-      !["definition", "typeDefinition", "implementation", "references"].includes(method) ||
+      ![
+        "definition",
+        "typeDefinition",
+        "implementation",
+        "references",
+      ].includes(method) ||
       reply.result.status !== "ok" ||
       !Array.isArray(reply.result.value) ||
       !reply.sourceSnapshots
@@ -251,7 +305,10 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
         if (!location || typeof location !== "object") return location;
         const item = location as Record<string, unknown>;
         const path = item.path;
-        if (typeof path !== "string" || typeof reply.sourceSnapshots?.[path] !== "string")
+        if (
+          typeof path !== "string" ||
+          typeof reply.sourceSnapshots?.[path] !== "string"
+        )
           return location;
         return { ...item, source: reply.sourceSnapshots[path] };
       }),
@@ -266,7 +323,9 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     try {
       const worker =
         this.options.createWorker?.() ??
-        new Worker(new URL("./typescript.worker.ts", import.meta.url), { type: "module" });
+        new Worker(new URL("./typescript.worker.ts", import.meta.url), {
+          type: "module",
+        });
       this.worker = worker;
       worker.onmessage = ({ data }: MessageEvent<WorkerReply>) => {
         if (data.epoch !== this.epoch || this.disposed) return;
@@ -275,7 +334,8 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
           if (data.workspaceVersion !== pending.workspaceVersion) return;
           this.finish(
             pending,
-            pending.workspaceVersion !== this.version && pending.kind === "query"
+            pending.workspaceVersion !== this.version &&
+              pending.kind === "query"
               ? { status: "cancelled" }
               : this.restoreNavigationSources(pending.method, data),
           );
@@ -284,7 +344,8 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
               this.lifecycle.setStatus("ready");
               this.notifyWorkspace();
             } else this.fail();
-          } else if (pending.kind === "update" && data.result.status !== "ok") this.fail();
+          } else if (pending.kind === "update" && data.result.status !== "ok")
+            this.fail();
         }
       };
       worker.onerror = (event) => {
@@ -300,14 +361,17 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
         timer,
         resolve() {},
       });
-      this.post({ ...envelope, kind: "initialize", files: [...this.files.values()] });
+      this.post({
+        ...envelope,
+        kind: "initialize",
+        files: [...this.files.values()],
+      });
     } catch {
       this.fail();
     }
   }
   private post(message: WorkerRequest): void {
     try {
-      // oxlint-disable-next-line unicorn/require-post-message-target-origin -- Dedicated Worker transport.
       this.worker?.postMessage(message);
     } catch {
       this.fail();
@@ -333,7 +397,10 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
   }
   private stop(): void {
     if (!this.worker) return;
-    this.worker.onmessage = this.worker.onerror = this.worker.onmessageerror = null;
+    this.worker.onmessage =
+      this.worker.onerror =
+      this.worker.onmessageerror =
+        null;
     this.worker.terminate();
     this.worker = undefined;
   }

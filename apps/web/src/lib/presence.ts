@@ -1,6 +1,9 @@
 import type { PresenceMember } from "@iris/shared";
 
-export function isPresenceCurrentUser(memberId: string, currentUserId: string): boolean {
+export function isPresenceCurrentUser(
+  memberId: string,
+  currentUserId: string,
+): boolean {
   return memberId === currentUserId;
 }
 
@@ -10,7 +13,8 @@ export function getFileCollaboratorCount(
   selectedPath: string,
 ): number {
   return members.filter(
-    (member) => member.userId !== currentUserId && member.selectedPath === selectedPath,
+    (member) =>
+      member.userId !== currentUserId && member.selectedPath === selectedPath,
   ).length;
 }
 

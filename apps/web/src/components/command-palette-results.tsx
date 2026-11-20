@@ -57,13 +57,19 @@ export function CommandPaletteResults({
                 </span>
               ) : null}
               {command.selected ? (
-                <Check size={16} aria-hidden="true" className="shrink-0 text-[var(--accent)]" />
+                <Check
+                  size={16}
+                  aria-hidden="true"
+                  className="shrink-0 text-[var(--accent)]"
+                />
               ) : null}
             </button>
           );
         })
       ) : (
-        <p className="px-3 py-8 text-center text-sm text-[var(--muted)]">{t("command.empty")}</p>
+        <p className="px-3 py-8 text-center text-sm text-[var(--muted)]">
+          {t("command.empty")}
+        </p>
       )}
     </div>
   );
@@ -72,13 +78,17 @@ export function CommandPaletteResults({
 function highlightCommandLabel(label: string, query: string) {
   const normalizedQuery = query.trim();
   if (!normalizedQuery) return label;
-  const start = label.toLocaleLowerCase().indexOf(normalizedQuery.toLocaleLowerCase());
+  const start = label
+    .toLocaleLowerCase()
+    .indexOf(normalizedQuery.toLocaleLowerCase());
   if (start < 0) return label;
   const end = start + normalizedQuery.length;
   return (
     <>
       {label.slice(0, start)}
-      <mark className="bg-transparent text-[var(--accent-deep)]">{label.slice(start, end)}</mark>
+      <mark className="bg-transparent text-[var(--accent-deep)]">
+        {label.slice(start, end)}
+      </mark>
       {label.slice(end)}
     </>
   );

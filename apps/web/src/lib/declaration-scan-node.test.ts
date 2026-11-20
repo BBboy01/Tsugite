@@ -3,16 +3,30 @@ import * as fs from "node:fs/promises";
 import { constants } from "node:fs";
 import * as path from "node:path";
 import { tmpdir } from "node:os";
-import { scanNodeDeclarations, type DeclarationScanEnvironment } from "./declaration-scan-node";
+import {
+  scanNodeDeclarations,
+  type DeclarationScanEnvironment,
+} from "./declaration-scan-node";
 import { createDeclarationReferenceReader } from "./declaration-scan-references";
-import { DECLARATION_SCAN_LIMITS, type DeclarationScanLimits } from "./declaration-scan-limits";
+import {
+  DECLARATION_SCAN_LIMITS,
+  type DeclarationScanLimits,
+} from "./declaration-scan-limits";
 
-async function fixture(run: (environment: DeclarationScanEnvironment) => Promise<void>) {
+async function fixture(
+  run: (environment: DeclarationScanEnvironment) => Promise<void>,
+) {
   const cwd = await fs.mkdtemp(path.join(tmpdir(), "iris-typed-scan-"));
   try {
     await fs.mkdir(path.join(cwd, "node_modules/pkg"), { recursive: true });
-    await fs.writeFile(path.join(cwd, "package.json"), '{"dependencies":{"pkg":"1"}}');
-    await fs.writeFile(path.join(cwd, "node_modules/pkg/index.d.ts"), "export interface Value {}");
+    await fs.writeFile(
+      path.join(cwd, "package.json"),
+      '{"dependencies":{"pkg":"1"}}',
+    );
+    await fs.writeFile(
+      path.join(cwd, "node_modules/pkg/index.d.ts"),
+      "export interface Value {}",
+    );
     await run({ fs, constants, path, buffer: Buffer, cwd, now: Date.now });
   } finally {
     await fs.rm(cwd, { recursive: true, force: true });
@@ -60,9 +74,9 @@ test("small injected limits bound files, bytes, metadata, entries and serialized
 test("Node deadline is enforced from the same injected limit used by the host", async () => {
   await fixture(async (environment) => {
     let tick = 0;
-    await expect(scan({ ...environment, now: () => tick++ }, { deadlineMs: 1 })).rejects.toThrow(
-      "deadline",
-    );
+    await expect(
+      scan({ ...environment, now: () => tick++ }, { deadlineMs: 1 }),
+    ).rejects.toThrow("deadline");
   });
 });
 
@@ -77,9 +91,9 @@ test("Node source requests validate shared file, byte and encoded request limits
       const sourceArgument = Buffer.from(
         JSON.stringify([{ path: "app.ts", text: "const value = 1;" }]),
       ).toString("base64");
-      await expect(scan({ ...environment, sourceArgument }, limits)).rejects.toThrow(
-        "source request",
-      );
+      await expect(
+        scan({ ...environment, sourceArgument }, limits),
+      ).rejects.toThrow("source request");
     }
   });
 });
@@ -101,7 +115,10 @@ test("environment paths are rejected before the filesystem can open their target
         };
       },
     });
-    await fs.symlink(".env.d.ts", path.join(environment.cwd, "node_modules/pkg/alias.d.ts"));
+    await fs.symlink(
+      ".env.d.ts",
+      path.join(environment.cwd, "node_modules/pkg/alias.d.ts"),
+    );
     await expect(scan({ ...environment, fs: fileSystem })).rejects.toThrow(
       "Invalid declaration path",
     );

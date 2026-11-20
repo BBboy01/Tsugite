@@ -2,9 +2,12 @@ type TextFile = { path: string; text: string };
 
 function padUtf8To(text: string, targetBytes: number) {
   const byteLength = new TextEncoder().encode(text).byteLength;
-  if (byteLength > targetBytes) throw new Error("Fixture prefix exceeds its byte budget");
+  if (byteLength > targetBytes)
+    throw new Error("Fixture prefix exceeds its byte budget");
   const paddingBytes = targetBytes - byteLength;
-  return paddingBytes === 0 ? text : `${text}\n//${"x".repeat(paddingBytes - 3)}`;
+  return paddingBytes === 0
+    ? text
+    : `${text}\n//${"x".repeat(paddingBytes - 3)}`;
 }
 
 export function createMaximumBudgetFixtures(graph: readonly TextFile[]) {
@@ -28,7 +31,10 @@ export function createMaximumBudgetFixtures(graph: readonly TextFile[]) {
   });
   const sourceRemainder =
     16 * 1024 * 1024 -
-    sources.reduce((total, file) => total + new TextEncoder().encode(file.text).byteLength, 0);
+    sources.reduce(
+      (total, file) => total + new TextEncoder().encode(file.text).byteLength,
+      0,
+    );
   if (sourceRemainder > 0) {
     sources[3]!.text = padUtf8To(sources[3]!.text, 32 * 1024 + sourceRemainder);
   }
@@ -61,14 +67,22 @@ export function createMaximumBudgetFixtures(graph: readonly TextFile[]) {
   const declarationPadding = 8 * 1024 * 1024 - declarationPrefixBytes;
   const declarationFiles = declarations.map((file) => ({ ...file }));
   const paddedDeclarationCount = fixtureCount + 1;
-  const declarationTarget = Math.floor(declarationPadding / paddedDeclarationCount);
+  const declarationTarget = Math.floor(
+    declarationPadding / paddedDeclarationCount,
+  );
   let declarationRemainder = declarationPadding % paddedDeclarationCount;
   for (const file of declarationFiles) {
-    if (!file.path.includes("@iris/shared/types/") || !file.path.endsWith(".d.ts")) continue;
+    if (
+      !file.path.includes("@iris/shared/types/") ||
+      !file.path.endsWith(".d.ts")
+    )
+      continue;
     const extra = declarationRemainder > 0 ? 1 : 0;
     file.text = padUtf8To(
       file.text,
-      new TextEncoder().encode(file.text).byteLength + declarationTarget + extra,
+      new TextEncoder().encode(file.text).byteLength +
+        declarationTarget +
+        extra,
     );
     declarationRemainder -= extra;
   }

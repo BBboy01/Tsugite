@@ -9,8 +9,7 @@ export type PreviewScript = {
 };
 
 export type PreviewScriptResult =
-  | PreviewScript
-  | { error: "invalid-package-json" | "missing-preview-script" };
+  PreviewScript | { error: "invalid-package-json" | "missing-preview-script" };
 
 const BROKEN_ROLLDOWN_VERSION = "1.2.9";
 const WEBCONTAINER_ROLLDOWN_VERSION = "1.2.8";
@@ -19,7 +18,10 @@ const PLUGIN_REACT_6_MAJOR_VERSION = "6";
 const STARTER_VITE_VERSION = "7.3.7";
 const STARTER_PLUGIN_REACT_VERSION = "5.2.0";
 
-export function buildFileSystemTree(files: ProjectFile[], folders: string[]): FileSystemTree {
+export function buildFileSystemTree(
+  files: ProjectFile[],
+  folders: string[],
+): FileSystemTree {
   const tree: FileSystemTree = {};
 
   for (const folder of folders) {
@@ -82,7 +84,10 @@ export function buildPreviewFileSystemTree(
   }
 
   const field = packageManager === "npm" ? "overrides" : "resolutions";
-  const selector = packageManager === "npm" ? `rolldown@${BROKEN_ROLLDOWN_VERSION}` : "rolldown";
+  const selector =
+    packageManager === "npm"
+      ? `rolldown@${BROKEN_ROLLDOWN_VERSION}`
+      : "rolldown";
   const current = packageJson[field];
   if (current !== undefined && !isRecord(current)) return tree;
   if (isRecord(current) && hasRolldownOverride(current)) return tree;
@@ -105,9 +110,11 @@ export function selectPreviewScript(
     return { error: "invalid-package-json" };
   }
 
-  if (!parsed || typeof parsed !== "object") return { error: "invalid-package-json" };
+  if (!parsed || typeof parsed !== "object")
+    return { error: "invalid-package-json" };
   const scripts = (parsed as { scripts?: unknown }).scripts;
-  if (!scripts || typeof scripts !== "object") return { error: "missing-preview-script" };
+  if (!scripts || typeof scripts !== "object")
+    return { error: "missing-preview-script" };
 
   if (isScript(scripts, "dev")) {
     return { command: packageManager, args: ["run", "dev"], script: "dev" };
@@ -136,7 +143,9 @@ function normalizeRelativePath(path: string): string {
   const normalized = path.trim().replace(/^\/+/, "");
   if (
     !normalized ||
-    normalized.split("/").some((segment) => !segment || segment === "." || segment === "..")
+    normalized
+      .split("/")
+      .some((segment) => !segment || segment === "." || segment === "..")
   ) {
     throw new Error("File path must be a relative non-empty path");
   }
@@ -157,7 +166,9 @@ function parsePackageJson(source: string): Record<string, unknown> | undefined {
   }
 }
 
-function packageJsonFile(packageJson: Record<string, unknown>): FileSystemTree[string] {
+function packageJsonFile(
+  packageJson: Record<string, unknown>,
+): FileSystemTree[string] {
   return { file: { contents: `${JSON.stringify(packageJson, null, 2)}\n` } };
 }
 
@@ -202,7 +213,8 @@ function migrateStarterForPreview(
     ...packageJson,
     devDependencies: migratedDevDependencies,
   };
-  migratedDevDependencies["@vitejs/plugin-react"] = STARTER_PLUGIN_REACT_VERSION;
+  migratedDevDependencies["@vitejs/plugin-react"] =
+    STARTER_PLUGIN_REACT_VERSION;
   migratedDevDependencies.vite = STARTER_VITE_VERSION;
   for (const field of [
     "dependencies",
@@ -213,7 +225,8 @@ function migrateStarterForPreview(
     const dependencies = migratedPackageJson[field];
     if (!isRecord(dependencies)) continue;
     for (const name of Object.keys(dependencies)) {
-      if (name === "rolldown" || name.startsWith("@rolldown/binding-")) delete dependencies[name];
+      if (name === "rolldown" || name.startsWith("@rolldown/binding-"))
+        delete dependencies[name];
     }
   }
   delete migratedPackageJson.overrides;
@@ -242,7 +255,9 @@ function isStarterPackage(packageJson: Record<string, unknown>): boolean {
     ["5", PLUGIN_REACT_6_MAJOR_VERSION].includes(
       majorVersion(devDependencies["@vitejs/plugin-react"]) ?? "",
     ) &&
-    ["7", VITE_8_MAJOR_VERSION].includes(majorVersion(devDependencies.vite) ?? "")
+    ["7", VITE_8_MAJOR_VERSION].includes(
+      majorVersion(devDependencies.vite) ?? "",
+    )
   );
 }
 

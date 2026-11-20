@@ -5,16 +5,23 @@ import type { PackageManager, ProjectSettings } from "@iris/shared";
 import { languageOptions, type LanguageCode } from "../lib/i18n";
 import { FontFamilyPicker, FontSizeSlider } from "./editor-settings-controls";
 import { ThemePicker } from "./theme-picker";
-import { RuntimeActions, SettingSelect, SettingSwitch } from "./settings-controls";
+import {
+  RuntimeActions,
+  SettingSelect,
+  SettingSwitch,
+} from "./settings-controls";
 import { KeyboardSettings } from "./settings-keyboard";
 import { SettingSharingLabel } from "./setting-sharing-label";
 import type { SettingsSection } from "./settings-types";
 const packageManagers: PackageManager[] = ["pnpm", "npm", "yarn"];
 
-export function SettingsContent(props: SettingsDialogProps & { section: SettingsSection }) {
+export function SettingsContent(
+  props: SettingsDialogProps & { section: SettingsSection },
+) {
   const { section, settings, onChange, onLanguageChange } = props;
   const { i18n, t } = useTranslation();
-  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
+  const settingLabel = (id: string) =>
+    t(getSettingDefinition(id)?.labelKey ?? id);
   const settingDescription = (id: string) => {
     const key = getSettingDefinition(id)?.descriptionKey;
     return key ? t(key) : "";
@@ -43,7 +50,9 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             <SettingSharingLabel settingId="theme" />
             <ThemePicker
               value={settings.theme}
-              onChange={(value) => onChange("theme", value as ProjectSettings["theme"])}
+              onChange={(value) =>
+                onChange("theme", value as ProjectSettings["theme"])
+              }
             />
           </div>
         </div>
@@ -80,22 +89,31 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             label={settingLabel("relativeLineNumbers")}
             description={settingDescription("relativeLineNumbers")}
             checked={settings.relativeLineNumbers}
-            onCheckedChange={(checked) => onChange("relativeLineNumbers", checked)}
+            onCheckedChange={(checked) =>
+              onChange("relativeLineNumbers", checked)
+            }
           />
           <SettingSelect
             settingId="normalCursorStyle"
             label={settingLabel("normalCursorStyle")}
             value={settings.normalCursorStyle}
             onChange={(value) =>
-              onChange("normalCursorStyle", value as ProjectSettings["normalCursorStyle"])
+              onChange(
+                "normalCursorStyle",
+                value as ProjectSettings["normalCursorStyle"],
+              )
             }
           >
             <option value="block">{t("settings.cursor.block")}</option>
             <option value="line">{t("settings.cursor.line")}</option>
             <option value="underline">{t("settings.cursor.underline")}</option>
-            <option value="block-blink">{t("settings.cursor.blockBlink")}</option>
+            <option value="block-blink">
+              {t("settings.cursor.blockBlink")}
+            </option>
             <option value="line-blink">{t("settings.cursor.lineBlink")}</option>
-            <option value="underline-blink">{t("settings.cursor.underlineBlink")}</option>
+            <option value="underline-blink">
+              {t("settings.cursor.underlineBlink")}
+            </option>
           </SettingSelect>
         </div>
       )}
@@ -107,7 +125,9 @@ export function SettingsContent(props: SettingsDialogProps & { section: Settings
             settingId="packageManager"
             label={settingLabel("packageManager")}
             value={settings.packageManager}
-            onChange={(value) => onChange("packageManager", value as PackageManager)}
+            onChange={(value) =>
+              onChange("packageManager", value as PackageManager)
+            }
           >
             {packageManagers.map((manager) => (
               <option key={manager} value={manager}>

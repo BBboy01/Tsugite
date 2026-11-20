@@ -88,7 +88,10 @@ export function createProjectDoc(): LoroDoc {
     createFile(doc, file.path, file.language, file.source);
   }
 
-  if (files.size !== DEFAULT_FILES.length || filePaths.size !== DEFAULT_FILES.length) {
+  if (
+    files.size !== DEFAULT_FILES.length ||
+    filePaths.size !== DEFAULT_FILES.length
+  ) {
     throw new Error("Project bootstrap did not create the expected files");
   }
 
@@ -126,7 +129,11 @@ export function createFile(
   };
 }
 
-export function renameFile(doc: LoroDoc, fileId: string, nextPath: string): ProjectFile {
+export function renameFile(
+  doc: LoroDoc,
+  fileId: string,
+  nextPath: string,
+): ProjectFile {
   const normalizedPath = normalizePath(nextPath);
   const files = doc.getMap("files");
   const filePaths = doc.getMap("filePaths");
@@ -157,7 +164,11 @@ export function createFolder(doc: LoroDoc, path: string): string {
   return normalizedPath;
 }
 
-export function renameFolder(doc: LoroDoc, path: string, nextPath: string): string {
+export function renameFolder(
+  doc: LoroDoc,
+  path: string,
+  nextPath: string,
+): string {
   const normalizedPath = normalizePath(path);
   const normalizedNextPath = normalizePath(nextPath);
   if (!hasFolderPath(doc, normalizedPath)) {
@@ -169,18 +180,30 @@ export function renameFolder(doc: LoroDoc, path: string, nextPath: string): stri
   }
   assertPathAvailable(doc, normalizedNextPath);
 
-  const files = listFiles(doc).filter((file) => file.path.startsWith(`${normalizedPath}/`));
+  const files = listFiles(doc).filter((file) =>
+    file.path.startsWith(`${normalizedPath}/`),
+  );
   const folders = doc.getMap("folders");
   for (const folderPath of folders.keys()) {
-    if (folderPath === normalizedPath || folderPath.startsWith(`${normalizedPath}/`)) {
+    if (
+      folderPath === normalizedPath ||
+      folderPath.startsWith(`${normalizedPath}/`)
+    ) {
       folders.delete(folderPath);
-      folders.set(replacePathPrefix(folderPath, normalizedPath, normalizedNextPath), true);
+      folders.set(
+        replacePathPrefix(folderPath, normalizedPath, normalizedNextPath),
+        true,
+      );
     }
   }
   folders.set(normalizedNextPath, true);
 
   for (const file of files) {
-    renameFile(doc, file.id, replacePathPrefix(file.path, normalizedPath, normalizedNextPath));
+    renameFile(
+      doc,
+      file.id,
+      replacePathPrefix(file.path, normalizedPath, normalizedNextPath),
+    );
   }
   ensureParentFolders(doc, normalizedNextPath);
   return normalizedNextPath;
@@ -189,7 +212,12 @@ export function renameFolder(doc: LoroDoc, path: string, nextPath: string): stri
 export function copyFile(doc: LoroDoc, fileId: string): ProjectFile {
   const file = getFileById(doc, fileId);
   if (!file) throw new Error("File does not exist");
-  return createFile(doc, getCopyPath(doc, file.path), file.language, file.text.toString());
+  return createFile(
+    doc,
+    getCopyPath(doc, file.path),
+    file.language,
+    file.text.toString(),
+  );
 }
 
 export function deleteFile(doc: LoroDoc, fileId: string): void {
@@ -208,7 +236,10 @@ export function deleteFolder(doc: LoroDoc, path: string): void {
   }
   const folders = doc.getMap("folders");
   for (const folderPath of folders.keys()) {
-    if (folderPath === normalizedPath || folderPath.startsWith(`${normalizedPath}/`)) {
+    if (
+      folderPath === normalizedPath ||
+      folderPath.startsWith(`${normalizedPath}/`)
+    ) {
       folders.delete(folderPath);
     }
   }
@@ -244,12 +275,19 @@ export function listFiles(doc: LoroDoc): ProjectFile[] {
     .toSorted((left, right) => left.path.localeCompare(right.path));
 }
 
-export function getFileByPath(doc: LoroDoc, path: string): ProjectFile | undefined {
-  const fileId = doc.getMap("filePaths").get(normalizePath(path)) as string | undefined;
+export function getFileByPath(
+  doc: LoroDoc,
+  path: string,
+): ProjectFile | undefined {
+  const fileId = doc.getMap("filePaths").get(normalizePath(path)) as
+    string | undefined;
   return fileId ? readFile(doc, fileId) : undefined;
 }
 
-export function getFileById(doc: LoroDoc, fileId: string): ProjectFile | undefined {
+export function getFileById(
+  doc: LoroDoc,
+  fileId: string,
+): ProjectFile | undefined {
   const files = doc.getMap("files");
   return files.get(fileId) ? readFile(doc, fileId) : undefined;
 }
@@ -260,7 +298,9 @@ export function readSettings(doc: LoroDoc): ProjectSettings {
   const packageManager = settings.get("packageManager");
   return {
     theme: isWorkspaceTheme(theme) ? theme : DEFAULT_SETTINGS.theme,
-    fontFamily: String(settings.get("fontFamily") ?? DEFAULT_SETTINGS.fontFamily),
+    fontFamily: String(
+      settings.get("fontFamily") ?? DEFAULT_SETTINGS.fontFamily,
+    ),
     fontSize: readFontSize(settings.get("fontSize")),
     wordWrap: settings.get("wordWrap") === true,
     relativeLineNumbers: settings.get("relativeLineNumbers") === true,
@@ -270,7 +310,9 @@ export function readSettings(doc: LoroDoc): ProjectSettings {
       settings.get("normalCursorStyle") === "block-blink" ||
       settings.get("normalCursorStyle") === "line-blink" ||
       settings.get("normalCursorStyle") === "underline-blink"
-        ? (settings.get("normalCursorStyle") as ProjectSettings["normalCursorStyle"])
+        ? (settings.get(
+            "normalCursorStyle",
+          ) as ProjectSettings["normalCursorStyle"])
         : DEFAULT_SETTINGS.normalCursorStyle,
     packageManager: isPackageManager(packageManager)
       ? packageManager
@@ -281,11 +323,17 @@ export function readSettings(doc: LoroDoc): ProjectSettings {
 }
 
 function isWorkspaceTheme(value: unknown): value is WorkspaceTheme {
-  return typeof value === "string" && WORKSPACE_THEME_IDS.includes(value as WorkspaceTheme);
+  return (
+    typeof value === "string" &&
+    WORKSPACE_THEME_IDS.includes(value as WorkspaceTheme)
+  );
 }
 
 function readFontSize(value: unknown): number {
-  return typeof value === "number" && Number.isFinite(value) && value >= 10 && value <= 24
+  return typeof value === "number" &&
+    Number.isFinite(value) &&
+    value >= 10 &&
+    value <= 24
     ? value
     : DEFAULT_SETTINGS.fontSize;
 }
@@ -301,7 +349,8 @@ export function setSharedSetting(
 function readFile(doc: LoroDoc, fileId: string): ProjectFile {
   const metadata = doc.getMap("files").ensureMergeableMap(fileId);
   const path = String(metadata.get("path") ?? fileId);
-  const language = metadata.get("language") === "javascript" ? "javascript" : "typescript";
+  const language =
+    metadata.get("language") === "javascript" ? "javascript" : "typescript";
 
   return {
     id: fileId,
@@ -312,7 +361,11 @@ function readFile(doc: LoroDoc, fileId: string): ProjectFile {
   };
 }
 
-function assertPathAvailable(doc: LoroDoc, path: string, allowedFileId?: string): void {
+function assertPathAvailable(
+  doc: LoroDoc,
+  path: string,
+  allowedFileId?: string,
+): void {
   const filePaths = doc.getMap("filePaths");
   const existingFileId = filePaths.get(path) as string | undefined;
   if (existingFileId && existingFileId !== allowedFileId) {
@@ -336,7 +389,9 @@ function normalizePath(path: string): string {
   const normalized = path.trim().replace(/^\/+/, "");
   if (
     !normalized ||
-    normalized.split("/").some((segment) => !segment || segment === "." || segment === "..")
+    normalized
+      .split("/")
+      .some((segment) => !segment || segment === "." || segment === "..")
   ) {
     throw new Error("File path must be a relative non-empty path");
   }
@@ -355,14 +410,21 @@ function ensureParentFolders(doc: LoroDoc, path: string): void {
   }
 }
 
-function ensureFolderAncestors(folderPaths: Set<string>, filePath: string): void {
+function ensureFolderAncestors(
+  folderPaths: Set<string>,
+  filePath: string,
+): void {
   const segments = filePath.split("/").slice(0, -1);
   for (let index = 1; index <= segments.length; index += 1) {
     folderPaths.add(segments.slice(0, index).join("/"));
   }
 }
 
-function replacePathPrefix(path: string, previousPrefix: string, nextPrefix: string): string {
+function replacePathPrefix(
+  path: string,
+  previousPrefix: string,
+  nextPrefix: string,
+): string {
   return `${nextPrefix}${path.slice(previousPrefix.length)}`;
 }
 
@@ -371,11 +433,15 @@ function getCopyPath(doc: LoroDoc, path: string): string {
   const directory = lastSlash === -1 ? "" : path.slice(0, lastSlash + 1);
   const filename = lastSlash === -1 ? path : path.slice(lastSlash + 1);
   const extensionIndex = filename.lastIndexOf(".");
-  const stem = extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
+  const stem =
+    extensionIndex > 0 ? filename.slice(0, extensionIndex) : filename;
   const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : "";
   let copyIndex = 1;
   let candidate = `${directory}${stem} copy${extension}`;
-  while (doc.getMap("filePaths").get(candidate) || hasFolderPath(doc, candidate)) {
+  while (
+    doc.getMap("filePaths").get(candidate) ||
+    hasFolderPath(doc, candidate)
+  ) {
     copyIndex += 1;
     candidate = `${directory}${stem} copy ${copyIndex}${extension}`;
   }

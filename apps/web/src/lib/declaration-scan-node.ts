@@ -4,7 +4,10 @@ import type { IntelligenceFile } from "./editor-intelligence";
 
 export type DeclarationScanEnvironment = {
   fs: typeof import("node:fs/promises");
-  constants: Pick<typeof import("node:fs").constants, "O_RDONLY" | "O_NOFOLLOW">;
+  constants: Pick<
+    typeof import("node:fs").constants,
+    "O_RDONLY" | "O_NOFOLLOW"
+  >;
   path: typeof import("node:path");
   buffer: typeof Buffer;
   cwd: string;
@@ -18,7 +21,11 @@ export async function scanNodeDeclarations(
   createReferences: typeof createDeclarationReferenceReader,
 ): Promise<IntelligenceFile[]> {
   type PackageLocation = { real: string; virtual: string };
-  type PackageRequest = { name: string; importer?: PackageLocation; ancestry: string[] };
+  type PackageRequest = {
+    name: string;
+    importer?: PackageLocation;
+    ancestry: string[];
+  };
   const { fs, constants, path, buffer, now } = environment;
   const deadline = now() + limits.deadlineMs;
   const files: IntelligenceFile[] = [];
@@ -34,7 +41,8 @@ export async function scanNodeDeclarations(
   const modules = path.join(root, "node_modules");
 
   function check(): void {
-    if (now() >= deadline) throw new Error("Declaration read deadline exceeded");
+    if (now() >= deadline)
+      throw new Error("Declaration read deadline exceeded");
   }
 
   function inside(base: string, target: string): boolean {
@@ -48,11 +56,15 @@ export async function scanNodeDeclarations(
       value.length <= limits.pathLength &&
       !/[\\:?#]/.test(value) &&
       ![...value].some(
-        (character) => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
+        (character) =>
+          character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127,
       ) &&
       value
         .split("/")
-        .every((part) => part && part !== "." && part !== ".." && !part.startsWith(".env"))
+        .every(
+          (part) =>
+            part && part !== "." && part !== ".." && !part.startsWith(".env"),
+        )
     );
   }
 
@@ -76,8 +88,12 @@ export async function scanNodeDeclarations(
       throw new Error("Declaration path outside workspace node_modules");
     const initial = await fs.lstat(candidate);
     if (initial.isSymbolicLink()) {
-      const target = path.resolve(path.dirname(candidate), await fs.readlink(candidate));
-      if (!inside(base, target)) throw new Error("Declaration path outside workspace node_modules");
+      const target = path.resolve(
+        path.dirname(candidate),
+        await fs.readlink(candidate),
+      );
+      if (!inside(base, target))
+        throw new Error("Declaration path outside workspace node_modules");
       if (target.split(path.sep).some((part) => part.startsWith(".env")))
         throw new Error("Invalid declaration path");
     }
@@ -89,7 +105,8 @@ export async function scanNodeDeclarations(
         throw new Error("Invalid declaration symlink target", { cause: error });
       throw error;
     }
-    if (!inside(base, real)) throw new Error("Declaration path outside workspace node_modules");
+    if (!inside(base, real))
+      throw new Error("Declaration path outside workspace node_modules");
     if (real.split(path.sep).some((part) => part.startsWith(".env")))
       throw new Error("Invalid declaration path");
     const stat = await fs.lstat(real);
@@ -117,16 +134,25 @@ export async function scanNodeDeclarations(
   ): Promise<Record<string, unknown> | string | undefined> {
     const { real, stat } = await inspect(candidate, base);
     if (!stat.isFile()) throw new Error("Invalid declaration file kind");
-    if (metadata ? path.basename(real) !== "package.json" : !/\.d\.(?:ts|mts|cts)$/.test(real)) {
+    if (
+      metadata
+        ? path.basename(real) !== "package.json"
+        : !/\.d\.(?:ts|mts|cts)$/.test(real)
+    ) {
       throw new Error("Invalid declaration file kind");
     }
     const cap = metadata ? limits.metadataBytes : limits.fileBytes;
-    if (stat.size > cap) throw new Error("TypeScript declaration byte limit exceeded");
+    if (stat.size > cap)
+      throw new Error("TypeScript declaration byte limit exceeded");
     if (filePaths.has(virtual)) return;
-    if (files.length >= limits.files) throw new Error("TypeScript declaration file limit exceeded");
+    if (files.length >= limits.files)
+      throw new Error("TypeScript declaration file limit exceeded");
     if (bytes + stat.size > limits.totalBytes)
       throw new Error("TypeScript declaration workspace limit exceeded");
-    const handle = await fs.open(real, constants.O_RDONLY | constants.O_NOFOLLOW);
+    const handle = await fs.open(
+      real,
+      constants.O_RDONLY | constants.O_NOFOLLOW,
+    );
     let text: string;
     try {
       const current = await handle.stat();
@@ -136,7 +162,12 @@ export async function scanNodeDeclarations(
       let offset = 0;
       while (offset < contents.length) {
         check();
-        const result = await handle.read(contents, offset, contents.length - offset, offset);
+        const result = await handle.read(
+          contents,
+          offset,
+          contents.length - offset,
+          offset,
+        );
         if (!result.bytesRead) break;
         offset += result.bytesRead;
       }
@@ -148,7 +179,8 @@ export async function scanNodeDeclarations(
     }
     check();
     const size = buffer.byteLength(text);
-    if (size > cap) throw new Error("TypeScript declaration byte limit exceeded");
+    if (size > cap)
+      throw new Error("TypeScript declaration byte limit exceeded");
     if (bytes + size > limits.totalBytes)
       throw new Error("TypeScript declaration workspace limit exceeded");
     let value: Record<string, unknown> | undefined;
@@ -158,7 +190,10 @@ export async function scanNodeDeclarations(
         throw new Error("Invalid TypeScript package metadata");
       value = parsed as Record<string, unknown>;
       for (const field of ["types", "typings"]) {
-        if (typeof value[field] === "string" && !safeParts(value[field].replace(/^\.\//, ""))) {
+        if (
+          typeof value[field] === "string" &&
+          !safeParts(value[field].replace(/^\.\//, ""))
+        ) {
           throw new Error("Invalid declaration type entry");
         }
       }
@@ -169,17 +204,31 @@ export async function scanNodeDeclarations(
     return metadata ? value : text;
   }
 
-  const references = createReferences(packageName, check, limits.entries, ambientModules);
+  const references = createReferences(
+    packageName,
+    check,
+    limits.entries,
+    ambientModules,
+  );
 
   function companionName(name: string): string {
     check();
-    return "@types/" + (name.startsWith("@") ? name.slice(1).replace("/", "__") : name);
+    return (
+      "@types/" +
+      (name.startsWith("@") ? name.slice(1).replace("/", "__") : name)
+    );
   }
 
-  function request(name: string, importer?: PackageLocation, ancestry: string[] = []): void {
+  function request(
+    name: string,
+    importer?: PackageLocation,
+    ancestry: string[] = [],
+  ): void {
     queue.push({ name: packageName(name, true), importer, ancestry });
-    if (!name.startsWith("@types/")) queue.push({ name: companionName(name), importer, ancestry });
-    if (queue.length > limits.entries) throw new Error("Declaration entry limit exceeded");
+    if (!name.startsWith("@types/"))
+      queue.push({ name: companionName(name), importer, ancestry });
+    if (queue.length > limits.entries)
+      throw new Error("Declaration entry limit exceeded");
   }
 
   async function resolvePackage(
@@ -192,14 +241,20 @@ export async function scanNodeDeclarations(
       if (inside(modules, candidate)) {
         try {
           const found = await inspect(candidate, modules);
-          if (!found.stat.isDirectory()) throw new Error("Invalid declaration package kind");
+          if (!found.stat.isDirectory())
+            throw new Error("Invalid declaration package kind");
           const virtual =
             directory === root
               ? "node_modules/" + name
               : importer!.virtual + "/node_modules/" + name;
           return { real: found.real, virtual };
         } catch (error) {
-          if (!error || typeof error !== "object" || !("code" in error) || error.code !== "ENOENT")
+          if (
+            !error ||
+            typeof error !== "object" ||
+            !("code" in error) ||
+            error.code !== "ENOENT"
+          )
             throw error;
         }
       }
@@ -216,14 +271,20 @@ export async function scanNodeDeclarations(
   ): Promise<void> {
     check();
     const found = await inspect(directory, modules);
-    if (seen.has(found.real)) throw new Error("Declaration directory symlink cycle");
+    if (seen.has(found.real))
+      throw new Error("Declaration directory symlink cycle");
     const nextSeen = new Set(seen);
     nextSeen.add(found.real);
     const iterator = await fs.opendir(found.real);
     for await (const entry of iterator) {
       check();
-      if (++entries > limits.entries) throw new Error("Declaration entry limit exceeded");
-      if (entry.name === "node_modules" || entry.name.startsWith(".env") || entry.name === ".git")
+      if (++entries > limits.entries)
+        throw new Error("Declaration entry limit exceeded");
+      if (
+        entry.name === "node_modules" ||
+        entry.name.startsWith(".env") ||
+        entry.name === ".git"
+      )
         continue;
       const declaration = /\.d\.(?:ts|mts|cts)$/.test(entry.name);
       const metadata = entry.name === "package.json";
@@ -231,12 +292,15 @@ export async function scanNodeDeclarations(
       const candidate = path.join(found.real, entry.name);
       const target = await inspect(candidate, modules);
       const filePath = virtual + "/" + entry.name;
-      if (!safeParts(filePath)) throw new Error("Invalid TypeScript declaration path");
-      if (target.stat.isDirectory()) await walk(target.real, filePath, names, nextSeen);
+      if (!safeParts(filePath))
+        throw new Error("Invalid TypeScript declaration path");
+      if (target.stat.isDirectory())
+        await walk(target.real, filePath, names, nextSeen);
       else if (metadata) await read(target.real, filePath, modules, true);
       else if (declaration) {
         const text = await read(target.real, filePath, modules, false);
-        if (text !== undefined) for (const name of references(text)) names.add(name);
+        if (text !== undefined)
+          for (const name of references(text)) names.add(name);
       }
     }
   }
@@ -248,10 +312,23 @@ export async function scanNodeDeclarations(
     "typescript",
     "vite",
   ]);
-  const metadata = await read(path.join(root, "package.json"), "package.json", root, true);
-  for (const field of ["dependencies", "devDependencies", "optionalDependencies"]) {
+  const metadata = await read(
+    path.join(root, "package.json"),
+    "package.json",
+    root,
+    true,
+  );
+  for (const field of [
+    "dependencies",
+    "devDependencies",
+    "optionalDependencies",
+  ]) {
     const dependencies = metadata?.[field];
-    if (dependencies && typeof dependencies === "object" && !Array.isArray(dependencies)) {
+    if (
+      dependencies &&
+      typeof dependencies === "object" &&
+      !Array.isArray(dependencies)
+    ) {
       for (const name of Object.keys(dependencies)) {
         if (field === "devDependencies" && toolingPackages.has(name)) continue;
         request(name);
@@ -262,7 +339,9 @@ export async function scanNodeDeclarations(
   if (sourceArgument) {
     if (buffer.byteLength(sourceArgument) > limits.sourceRequestBytes)
       throw new Error("Declaration source request limit exceeded");
-    const sources: unknown = JSON.parse(buffer.from(sourceArgument, "base64").toString("utf8"));
+    const sources: unknown = JSON.parse(
+      buffer.from(sourceArgument, "base64").toString("utf8"),
+    );
     if (!Array.isArray(sources) || sources.length > limits.sourceFiles)
       throw new Error("Invalid declaration source request");
     let sourceBytes = 0;
@@ -277,14 +356,18 @@ export async function scanNodeDeclarations(
         throw new Error("Invalid declaration source request");
       const size = buffer.byteLength(source.text);
       sourceBytes += size;
-      if (size > limits.sourceFileBytes || sourceBytes > limits.sourceTotalBytes)
+      if (
+        size > limits.sourceFileBytes ||
+        sourceBytes > limits.sourceTotalBytes
+      )
         throw new Error("Declaration source request limit exceeded");
       const imports = references(
         source.text,
         source.path === "vite.config.ts" ? undefined : sourceImports,
       );
       for (const name of imports) {
-        if (source.path === "vite.config.ts" && toolingPackages.has(name)) continue;
+        if (source.path === "vite.config.ts" && toolingPackages.has(name))
+          continue;
         request(name);
       }
     }
@@ -296,7 +379,8 @@ export async function scanNodeDeclarations(
     if (!resolved || task.ancestry.includes(resolved.real)) continue;
     const existing = packageCopies.get(resolved.real);
     if (existing?.has(resolved.virtual)) continue;
-    if (!existing) packageCopies.set(resolved.real, new Set([resolved.virtual]));
+    if (!existing)
+      packageCopies.set(resolved.real, new Set([resolved.virtual]));
     else existing.add(resolved.virtual);
     const names = new Set<string>();
     const before = files.length;
@@ -319,11 +403,18 @@ export async function scanNodeDeclarations(
           specifier.endsWith(pattern.slice(star + 1)))
       );
     });
-    if (!ambient && !typedPackages.has(name) && !typedPackages.has(companionName(name)))
+    if (
+      !ambient &&
+      !typedPackages.has(name) &&
+      !typedPackages.has(companionName(name))
+    )
       throw new Error("TypeScript declarations missing: " + name);
   }
   check();
-  if (buffer.byteLength(JSON.stringify({ status: "ok", files })) > limits.outputBytes)
+  if (
+    buffer.byteLength(JSON.stringify({ status: "ok", files })) >
+    limits.outputBytes
+  )
     throw new Error("TypeScript declaration output limit exceeded");
   return files;
 }

@@ -5,8 +5,12 @@ import { loadTypeScriptStandardLibrary } from "./typescript-standard-library";
 import { createEditorTypeScriptEnvironment } from "./typescript-environment";
 
 const readInstalled = (name: string) =>
-  readFile(new URL(`../../../../node_modules/${name}`, import.meta.url), "utf8");
-const readStandardLibrary = (name: string) => readInstalled(`typescript-legacy/lib/${name}`);
+  readFile(
+    new URL(`../../../../node_modules/${name}`, import.meta.url),
+    "utf8",
+  );
+const readStandardLibrary = (name: string) =>
+  readInstalled(`typescript-legacy/lib/${name}`);
 
 test("loads official standard libraries and their transitive dependencies without duplicates", async () => {
   const files = await loadTypeScriptStandardLibrary(readStandardLibrary);
@@ -17,9 +21,16 @@ test("loads official standard libraries and their transitive dependencies withou
   expect(new Set(paths).size).toBe(paths.length);
   const source =
     "const result = Promise.resolve([1, 2].map(String));\ndocument.body.textContent = result.toString();";
-  const environment = createEditorTypeScriptEnvironment("app.ts", source, [], files);
+  const environment = createEditorTypeScriptEnvironment(
+    "app.ts",
+    source,
+    [],
+    files,
+  );
   try {
-    expect(environment.languageService.getSemanticDiagnostics("/app.ts")).toHaveLength(0);
+    expect(
+      environment.languageService.getSemanticDiagnostics("/app.ts"),
+    ).toHaveLength(0);
     const info = environment.languageService.getQuickInfoAtPosition(
       "/app.ts",
       source.indexOf("result"),
@@ -41,12 +52,16 @@ test("fails explicitly when a required official declaration asset is unavailable
 });
 
 test("compiler host resolves third-party package type entries", () => {
-  const source = 'import { answer } from "typed-pkg";\nconst value: string = answer;';
+  const source =
+    'import { answer } from "typed-pkg";\nconst value: string = answer;';
   const environment = createEditorTypeScriptEnvironment(
     "src/app.ts",
     source,
     [
-      { path: "node_modules/typed-pkg/package.json", text: '{"types":"types/index.d.ts"}' },
+      {
+        path: "node_modules/typed-pkg/package.json",
+        text: '{"types":"types/index.d.ts"}',
+      },
       {
         path: "node_modules/typed-pkg/types/index.d.ts",
         text: 'export declare const answer: "correct";',
@@ -59,8 +74,12 @@ test("compiler host resolves third-party package type entries", () => {
       "/src/app.ts",
       source.lastIndexOf("answer"),
     );
-    expect(info?.displayParts?.map((part) => part.text).join("")).toContain('"correct"');
-    expect(environment.languageService.getSemanticDiagnostics("/src/app.ts")).toHaveLength(0);
+    expect(info?.displayParts?.map((part) => part.text).join("")).toContain(
+      '"correct"',
+    );
+    expect(
+      environment.languageService.getSemanticDiagnostics("/src/app.ts"),
+    ).toHaveLength(0);
   } finally {
     environment.languageService.dispose();
   }
@@ -76,7 +95,9 @@ test("compiler host resolves installed React declarations and checks real JSX pr
     "csstype/index.d.ts",
   ];
   const require = createRequire(import.meta.url);
-  const reactRequire = createRequire(require.resolve("@types/react/package.json"));
+  const reactRequire = createRequire(
+    require.resolve("@types/react/package.json"),
+  );
   const files = await Promise.all(
     paths.map(async (name) => ({
       path: `node_modules/${name}`,
@@ -87,14 +108,23 @@ test("compiler host resolves installed React declarations and checks real JSX pr
   );
   const source =
     'import * as React from "react";\nexport const App = () => { const [count] = React.useState(1); return <button type="button">{count.toFixed()}</button>; };';
-  const environment = createEditorTypeScriptEnvironment("src/app.tsx", source, files, libraries);
+  const environment = createEditorTypeScriptEnvironment(
+    "src/app.tsx",
+    source,
+    files,
+    libraries,
+  );
   try {
-    expect(environment.languageService.getSemanticDiagnostics("/src/app.tsx")).toHaveLength(0);
+    expect(
+      environment.languageService.getSemanticDiagnostics("/src/app.tsx"),
+    ).toHaveLength(0);
     const info = environment.languageService.getQuickInfoAtPosition(
       "/src/app.tsx",
       source.lastIndexOf("count"),
     );
-    expect(info?.displayParts?.map((part) => part.text).join("")).toContain("count: number");
+    expect(info?.displayParts?.map((part) => part.text).join("")).toContain(
+      "count: number",
+    );
     environment.updateFile(
       "/src/app.tsx",
       source.replace('type="button"', 'type="not-a-button-type"'),

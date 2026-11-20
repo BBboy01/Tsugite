@@ -30,13 +30,22 @@ type FontFamilyPickerProps = {
   onChange: (value: string) => void;
 };
 
-export function FontFamilyPicker({ label, value, theme, onChange }: FontFamilyPickerProps) {
+export function FontFamilyPicker({
+  label,
+  value,
+  theme,
+  onChange,
+}: FontFamilyPickerProps) {
   const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { contains } = useFilter({ sensitivity: "base" });
   const fonts = useMemo(
-    () => filterEditorFonts("", value).map((font) => ({ label: font, value: font })),
+    () =>
+      filterEditorFonts("", value).map((font) => ({
+        label: font,
+        value: font,
+      })),
     [value],
   );
 
@@ -98,7 +107,10 @@ export function FontFamilyPicker({ label, value, theme, onChange }: FontFamilyPi
                     textValue={font.label}
                     className="py-2 pr-8 pl-2 text-[11px] normal-case tracking-normal text-iris-ink focus:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] focus:text-[var(--accent-deep)] data-focused:bg-[color-mix(in_srgb,var(--accent)_10%,transparent)] data-focused:text-[var(--accent-deep)]"
                   >
-                    <span className="truncate" style={{ fontFamily: font.value }}>
+                    <span
+                      className="truncate"
+                      style={{ fontFamily: font.value }}
+                    >
                       {font.label}
                     </span>
                   </SelectItem>
@@ -118,7 +130,11 @@ type FontSizeSliderProps = {
   onChange: (value: number) => void;
 };
 
-export function FontSizeSlider({ label, value, onChange }: FontSizeSliderProps) {
+export function FontSizeSlider({
+  label,
+  value,
+  onChange,
+}: FontSizeSliderProps) {
   return (
     <div className="grid grid-cols-[max-content_minmax(0,1fr)_max-content] items-center gap-x-3 gap-y-1 font-iris-mono text-[10px] uppercase tracking-[0.08em] text-iris-muted">
       <span className="shrink-0">{label}</span>

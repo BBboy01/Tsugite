@@ -18,7 +18,11 @@ import {
   type PresenceMember,
 } from "@iris/shared";
 
-export { AVATAR_COLORS, createGuestIdentity, getIdentity } from "./room-presence";
+export {
+  AVATAR_COLORS,
+  createGuestIdentity,
+  getIdentity,
+} from "./room-presence";
 export type { RoomIdentity } from "./room-presence";
 
 export type RoomClientOptions = {
@@ -33,7 +37,8 @@ export type { ConnectionStatus } from "./room-transport";
 
 export type { RoomClientEvent } from "./room-events";
 
-const IMPORT_ERROR = "Unable to apply room data. Reconnecting; local changes remain in this tab.";
+const IMPORT_ERROR =
+  "Unable to apply room data. Reconnecting; local changes remain in this tab.";
 
 export class RoomClient implements DraftSyncPort {
   readonly roomId: string;
@@ -55,17 +60,25 @@ export class RoomClient implements DraftSyncPort {
     this.roomId = options.roomId;
     this.identity = options.identity;
     const socketFactory =
-      options.socketFactory ?? ((url) => new WebSocket(url) as unknown as RoomSocket);
+      options.socketFactory ??
+      ((url) => new WebSocket(url) as unknown as RoomSocket);
     this.socketUrl = options.url ?? this.resolveSocketUrl();
     this.transport = new RoomTransport({ url: this.socketUrl, socketFactory });
-    this.subscriptions.push(this.transport.subscribe((event) => this.handleTransportEvent(event)));
+    this.subscriptions.push(
+      this.transport.subscribe((event) => this.handleTransportEvent(event)),
+    );
     this.document = new RoomDocument((bytes) => this.outbox.update(bytes));
-    this.subscriptions.push(this.document.subscribe((event) => this.handleDocumentEvent(event)));
+    this.subscriptions.push(
+      this.document.subscribe((event) => this.handleDocumentEvent(event)),
+    );
     this.presence = new RoomPresence(this.identity, (message) => {
-      if (this.transport.status === "live") this.outbox.updatePresence(encodeJsonMessage(message));
+      if (this.transport.status === "live")
+        this.outbox.updatePresence(encodeJsonMessage(message));
     });
     this.subscriptions.push(
-      this.presence.subscribe((members) => this.emit({ type: "presence", members })),
+      this.presence.subscribe((members) =>
+        this.emit({ type: "presence", members }),
+      ),
     );
   }
 
@@ -78,7 +91,8 @@ export class RoomClient implements DraftSyncPort {
   }
 
   get status(): ConnectionStatus {
-    if (this.importError && this.transport.status !== "offline") return "reconnecting";
+    if (this.importError && this.transport.status !== "offline")
+      return "reconnecting";
     return this.transport.status;
   }
 
@@ -98,7 +112,10 @@ export class RoomClient implements DraftSyncPort {
     return this.socketUrl;
   }
 
-  restorePendingDraft(snapshot: Uint8Array, updates: readonly Uint8Array[]): void {
+  restorePendingDraft(
+    snapshot: Uint8Array,
+    updates: readonly Uint8Array[],
+  ): void {
     if (this.disposed) throw new Error("Room session disposed");
     this.document.restorePendingDraft(snapshot, updates);
   }
@@ -136,7 +153,10 @@ export class RoomClient implements DraftSyncPort {
     this.listeners.clear();
   }
 
-  sendPresence(selectedPath?: string, cursor?: { anchor: number; head: number } | null): void {
+  sendPresence(
+    selectedPath?: string,
+    cursor?: { anchor: number; head: number } | null,
+  ): void {
     this.presence.send(selectedPath, cursor);
   }
 
@@ -255,11 +275,14 @@ export class RoomClient implements DraftSyncPort {
   }
 
   private resolveSocketUrl(): string {
-    if (typeof window === "undefined") return `ws://127.0.0.1:3001/ws/${this.roomId}`;
+    if (typeof window === "undefined")
+      return `ws://127.0.0.1:3001/ws/${this.roomId}`;
     const configured = import.meta.env.VITE_WS_URL as string | undefined;
     if (configured) return `${configured.replace(/\/$/, "")}/${this.roomId}`;
     const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
-    const host = import.meta.env.DEV ? `${window.location.hostname}:3001` : window.location.host;
+    const host = import.meta.env.DEV
+      ? `${window.location.hostname}:3001`
+      : window.location.host;
     return `${protocol}//${host}/ws/${this.roomId}`;
   }
 

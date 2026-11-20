@@ -39,7 +39,9 @@ test("validates a pending draft before importing it", () => {
   document.doc.commit();
   const before = document.doc.export({ mode: "snapshot" });
 
-  expect(() => document.restorePendingDraft(new Uint8Array([1, 2, 3]), [])).toThrow();
+  expect(() =>
+    document.restorePendingDraft(new Uint8Array([1, 2, 3]), []),
+  ).toThrow();
   expect(document.doc.export({ mode: "snapshot" })).toEqual(before);
 });
 
@@ -58,7 +60,9 @@ for (const corruption of ["header", "checksum", "truncated"] as const) {
     invalid[corruption === "header" ? 0 : invalid.length - 1] ^= 0xff;
 
     expect(() =>
-      document.importRemote(corruption === "truncated" ? snapshot.slice(0, -1) : invalid),
+      document.importRemote(
+        corruption === "truncated" ? snapshot.slice(0, -1) : invalid,
+      ),
     ).not.toThrow();
     expect(events).toEqual([{ type: "import-error" }]);
     expect(document.hasReceivedSnapshot).toBe(false);

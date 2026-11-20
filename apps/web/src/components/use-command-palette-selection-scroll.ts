@@ -13,7 +13,8 @@ export function useCommandPaletteSelectionScroll(
   useEffect(() => {
     const selectedCommand = commands[selectedIndex];
     const commandList = commandListRef.current;
-    const command = selectedCommand && commandRefs.current.get(selectedCommand.id);
+    const command =
+      selectedCommand && commandRefs.current.get(selectedCommand.id);
     if (!commandList || !command) {
       return;
     }

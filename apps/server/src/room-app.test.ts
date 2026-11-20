@@ -16,7 +16,10 @@ afterEach(async () => {
 function setup(options?: Parameters<typeof createRoomApp>[1]) {
   const { db, sqlite } = createRoomDatabase(":memory:");
   const rooms = new RoomService(new RoomRepository(db));
-  const app = createRoomApp(rooms, options).listen({ port: 0, hostname: "127.0.0.1" });
+  const app = createRoomApp(rooms, options).listen({
+    port: 0,
+    hostname: "127.0.0.1",
+  });
   const sockets: WebSocket[] = [];
   cleanup.push(async () => {
     for (const socket of sockets) socket.close();
@@ -30,7 +33,9 @@ function setup(options?: Parameters<typeof createRoomApp>[1]) {
     ws.binaryType = "arraybuffer";
     const messages: Array<string | ArrayBuffer> = [];
     ws.addEventListener("message", (event) => messages.push(event.data));
-    const closed = new Promise<CloseEvent>((resolve) => ws.addEventListener("close", resolve));
+    const closed = new Promise<CloseEvent>((resolve) =>
+      ws.addEventListener("close", resolve),
+    );
     await new Promise<void>((resolve, reject) => {
       ws.addEventListener("open", () => resolve());
       ws.addEventListener("error", reject);
@@ -41,7 +46,14 @@ function setup(options?: Parameters<typeof createRoomApp>[1]) {
 }
 
 function join(ws: WebSocket, userId = "one") {
-  ws.send(JSON.stringify({ type: "join", userId, displayName: userId, color: "#d88961" }));
+  ws.send(
+    JSON.stringify({
+      type: "join",
+      userId,
+      displayName: userId,
+      color: "#d88961",
+    }),
+  );
 }
 
 async function waitFor(assertion: () => boolean) {
@@ -58,14 +70,18 @@ test("real WebSocket clients receive snapshots, binary edits and presence", asyn
   const second = await connect();
   join(first.ws);
   join(second.ws, "two");
-  await waitFor(() => first.messages.length >= 3 && second.messages.length >= 3);
+  await waitFor(
+    () => first.messages.length >= 3 && second.messages.length >= 3,
+  );
   const doc = new LoroDoc();
   doc.import(new Uint8Array(first.messages[1] as ArrayBuffer));
   const from = doc.version();
   setSharedSetting(doc, "theme", "nord");
   first.ws.send(new Uint8Array(doc.export({ mode: "update", from })));
   await waitFor(
-    () => second.messages.filter((message) => message instanceof ArrayBuffer).length === 2,
+    () =>
+      second.messages.filter((message) => message instanceof ArrayBuffer)
+        .length === 2,
   );
   const replica = new LoroDoc();
   for (const message of second.messages) {

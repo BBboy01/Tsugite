@@ -9,7 +9,9 @@ export type PreviewSourceError = {
   location?: PreviewSyntaxLocation;
 };
 
-export function getLatestPreviewError(outputs: readonly PreviewOutput[]): string | undefined {
+export function getLatestPreviewError(
+  outputs: readonly PreviewOutput[],
+): string | undefined {
   return outputs.findLast((output) => output.level === "error")?.message;
 }
 
@@ -18,7 +20,8 @@ export function getPreviewSourceLocation(
   path: string,
   source: string,
 ): EditorLocation | undefined {
-  if (!error?.location || error.path !== path || error.source !== source) return undefined;
+  if (!error?.location || error.path !== path || error.source !== source)
+    return undefined;
   const { line, column, offset } = error.location;
   if (offset > source.length) return undefined;
   return { path, source, from: offset, to: offset, line, column };
@@ -30,7 +33,9 @@ export function getPreviewRecoveryActions(
   hasRuntime: boolean,
 ): RuntimeAction[] {
   if (syntaxError || !hasRuntime) return [];
-  if (error === "install-failed" || error === "start-failed") return ["restart", "reinstall"];
-  if (!error || error === "runtime-unavailable" || error === "server-exited") return ["restart"];
+  if (error === "install-failed" || error === "start-failed")
+    return ["restart", "reinstall"];
+  if (!error || error === "runtime-unavailable" || error === "server-exited")
+    return ["restart"];
   return [];
 }

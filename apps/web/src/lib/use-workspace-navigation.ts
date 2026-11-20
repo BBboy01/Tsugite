@@ -27,12 +27,23 @@ export function useWorkspaceNavigation({
   beforeSelect,
 }: WorkspaceNavigationOptions) {
   const tabSession = useMemo(() => new EditorTabSession(roomId), [roomId]);
-  const filesByPath = useMemo(() => new Map(files.map((file) => [file.path, file])), [files]);
-  const selectedFile = useMemo(() => filesByPath.get(selectedPath), [filesByPath, selectedPath]);
+  const filesByPath = useMemo(
+    () => new Map(files.map((file) => [file.path, file])),
+    [files],
+  );
+  const selectedFile = useMemo(
+    () => filesByPath.get(selectedPath),
+    [filesByPath, selectedPath],
+  );
   const previewFile =
-    selectedFile ?? files.find((file) => file.path === "src/main.tsx") ?? files[0];
+    selectedFile ??
+    files.find((file) => file.path === "src/main.tsx") ??
+    files[0];
   const openFiles = useMemo(
-    () => openTabPaths.map((path) => filesByPath.get(path)).filter(Boolean) as ProjectFile[],
+    () =>
+      openTabPaths
+        .map((path) => filesByPath.get(path))
+        .filter(Boolean) as ProjectFile[],
     [filesByPath, openTabPaths],
   );
 
@@ -50,7 +61,14 @@ export function useWorkspaceNavigation({
         openTabPaths: next.openTabPaths,
       });
     }
-  }, [dispatchWorkspace, files, hasReceivedSnapshot, openTabPaths, selectedPath, tabSession]);
+  }, [
+    dispatchWorkspace,
+    files,
+    hasReceivedSnapshot,
+    openTabPaths,
+    selectedPath,
+    tabSession,
+  ]);
 
   const selectFile = useCallback(
     (path: string) => {
@@ -81,13 +99,24 @@ export function useWorkspaceNavigation({
 
   const handleCloseTabs = useCallback(
     (path: string, mode: EditorTabCloseMode) => {
-      const result = closeEditorTabs([...openTabPaths], path, selectedPath, mode);
+      const result = closeEditorTabs(
+        [...openTabPaths],
+        path,
+        selectedPath,
+        mode,
+      );
       const selectionChanged = result.nextPath !== selectedPath;
       if (selectionChanged) beforeSelect?.();
       dispatchWorkspace({ type: "close-tabs", path, mode });
       if (selectionChanged) requestSelectionFocus();
     },
-    [beforeSelect, dispatchWorkspace, openTabPaths, requestSelectionFocus, selectedPath],
+    [
+      beforeSelect,
+      dispatchWorkspace,
+      openTabPaths,
+      requestSelectionFocus,
+      selectedPath,
+    ],
   );
 
   const handleReorderTabs = useCallback(

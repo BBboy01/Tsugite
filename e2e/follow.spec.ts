@@ -28,12 +28,22 @@ test("follows a collaborator's file and cursor until a local action", async ({
     firstPage.goto(room, { waitUntil: "domcontentloaded" }),
     secondPage.goto(room, { waitUntil: "domcontentloaded" }),
   ]);
-  await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await expect(firstPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(secondPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
 
-  await firstPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
-  await secondPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
-  await secondPage.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
+  await firstPage
+    .getByRole("treeitem", { name: "index.html", exact: true })
+    .click();
+  await secondPage
+    .getByRole("treeitem", { name: "index.html", exact: true })
+    .click();
+  await secondPage
+    .getByRole("treeitem", { name: "main.tsx", exact: true })
+    .click();
   await secondPage
     .locator(".cm-line")
     .filter({ hasText: /^createRoot\(document/ })
@@ -47,59 +57,98 @@ test("follows a collaborator's file and cursor until a local action", async ({
   await onlineMembers.click();
   await firstPage.getByRole("button", { name: "Jun", exact: true }).click();
 
-  await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
-  await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);
+  await expect(
+    firstPage.locator('section[aria-label="Editing src/main.tsx"]'),
+  ).toBeVisible();
+  await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(
+    /createRoot/,
+  );
   const followedEditor = firstPage.locator("[data-editor-following='true']");
   await expect(followedEditor).toBeVisible();
   await expect
-    .poll(() => followedEditor.evaluate((element) => getComputedStyle(element).borderTopColor))
+    .poll(() =>
+      followedEditor.evaluate(
+        (element) => getComputedStyle(element).borderTopColor,
+      ),
+    )
     .not.toBe("rgba(0, 0, 0, 0)");
   await expect
-    .poll(() => followedEditor.evaluate((element) => getComputedStyle(element).boxShadow))
+    .poll(() =>
+      followedEditor.evaluate((element) => getComputedStyle(element).boxShadow),
+    )
     .not.toBe("none");
   const followLayout = await followedEditor.evaluate((element) => ({
     editorRight: element.parentElement?.getBoundingClientRect().right ?? 0,
     gutterRight:
-      element.parentElement?.querySelector(".cm-gutters")?.getBoundingClientRect().right ?? 0,
+      element.parentElement
+        ?.querySelector(".cm-gutters")
+        ?.getBoundingClientRect().right ?? 0,
     indicatorLeft: element.getBoundingClientRect().left,
     indicatorRight: element.getBoundingClientRect().right,
     bottomGap: window.innerHeight - element.getBoundingClientRect().bottom,
     documentClientHeight: document.documentElement.clientHeight,
     documentScrollHeight: document.documentElement.scrollHeight,
   }));
-  expect(followLayout.indicatorLeft).toBeGreaterThanOrEqual(followLayout.gutterRight);
-  expect(followLayout.editorRight - followLayout.indicatorRight).toBeLessThanOrEqual(1);
+  expect(followLayout.indicatorLeft).toBeGreaterThanOrEqual(
+    followLayout.gutterRight,
+  );
+  expect(
+    followLayout.editorRight - followLayout.indicatorRight,
+  ).toBeLessThanOrEqual(1);
   expect(followLayout.bottomGap).toBeGreaterThanOrEqual(4);
-  expect(followLayout.documentScrollHeight).toBe(followLayout.documentClientHeight);
+  expect(followLayout.documentScrollHeight).toBe(
+    followLayout.documentClientHeight,
+  );
 
   await firstPage
     .locator(".cm-line")
     .filter({ hasText: /^createRoot\(document/ })
     .click();
-  await expect(firstPage.locator("[data-following-member='e2e-follow-second']")).toHaveCount(0);
-  await expect(firstPage.locator("[data-editor-following='true']")).toHaveCount(0);
+  await expect(
+    firstPage.locator("[data-following-member='e2e-follow-second']"),
+  ).toHaveCount(0);
+  await expect(firstPage.locator("[data-editor-following='true']")).toHaveCount(
+    0,
+  );
 
   await secondPage.keyboard.press("ArrowDown");
-  await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(/createRoot/);
+  await expect(firstPage.locator(".cm-activeLine").first()).toHaveText(
+    /createRoot/,
+  );
 
-  await firstPage.getByRole("treeitem", { name: "index.html", exact: true }).click();
-  await expect(firstPage.locator("[data-following-member='e2e-follow-second']")).toHaveCount(0);
-  await expect(firstPage.locator('section[aria-label="Editing index.html"]')).toBeVisible();
+  await firstPage
+    .getByRole("treeitem", { name: "index.html", exact: true })
+    .click();
+  await expect(
+    firstPage.locator("[data-following-member='e2e-follow-second']"),
+  ).toHaveCount(0);
+  await expect(
+    firstPage.locator('section[aria-label="Editing index.html"]'),
+  ).toBeVisible();
 
   await secondPage.keyboard.press("ArrowDown");
-  await expect(firstPage.locator('section[aria-label="Editing index.html"]')).toBeVisible();
+  await expect(
+    firstPage.locator('section[aria-label="Editing index.html"]'),
+  ).toBeVisible();
 
   await secondPage.locator(".cm-content").focus();
   await secondPage.keyboard.press("ControlOrMeta+End");
-  await secondPage.keyboard.insertText("\n" + "// expanded gutter\n".repeat(1500));
+  await secondPage.keyboard.insertText(
+    "\n" + "// expanded gutter\n".repeat(1500),
+  );
   await onlineMembers.click();
   await firstPage.getByRole("button", { name: "Jun", exact: true }).click();
-  await expect(firstPage.locator('section[aria-label="Editing src/main.tsx"]')).toBeVisible();
+  await expect(
+    firstPage.locator('section[aria-label="Editing src/main.tsx"]'),
+  ).toBeVisible();
   await expect(firstPage.locator(".cm-lineNumbers")).toContainText("1500");
 
   await secondPage.getByRole("button", { name: "Open settings" }).click();
   await secondPage.getByRole("button", { name: "Editor", exact: true }).click();
-  await secondPage.locator('[data-setting-id="fontSize"]').getByRole("slider").focus();
+  await secondPage
+    .locator('[data-setting-id="fontSize"]')
+    .getByRole("slider")
+    .focus();
   await secondPage.keyboard.press("End");
   await secondPage.keyboard.press("Escape");
 
@@ -109,13 +158,17 @@ test("follows a collaborator's file and cursor until a local action", async ({
   ]) {
     await firstPage.setViewportSize(viewport);
     if (viewport.width < 760) {
-      await expect(firstPage.locator(".workspace-layout > div")).not.toHaveClass(/\bgrid\b/);
+      await expect(
+        firstPage.locator(".workspace-layout > div"),
+      ).not.toHaveClass(/\bgrid\b/);
     }
     await expect(followedEditor).toBeVisible();
     await expect
       .poll(() =>
         firstPage.evaluate(() => {
-          const indicator = document.querySelector("[data-editor-following='true']");
+          const indicator = document.querySelector(
+            "[data-editor-following='true']",
+          );
           const gutter = indicator?.parentElement?.querySelector(".cm-gutters");
           const indicatorBounds = indicator?.getBoundingClientRect();
           const gutterBounds = gutter?.getBoundingClientRect();
@@ -127,7 +180,9 @@ test("follows a collaborator's file and cursor until a local action", async ({
     await expect
       .poll(() =>
         firstPage.evaluate(
-          () => document.documentElement.scrollHeight - document.documentElement.clientHeight,
+          () =>
+            document.documentElement.scrollHeight -
+            document.documentElement.clientHeight,
         ),
       )
       .toBe(0);

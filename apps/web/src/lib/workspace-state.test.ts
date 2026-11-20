@@ -11,7 +11,10 @@ const initial: WorkspaceState = {
 };
 
 test("activating a file opens it, selects it, and exits follow mode", () => {
-  const next = reduceWorkspaceState(initial, { type: "activate-file", path: "src/main.tsx" });
+  const next = reduceWorkspaceState(initial, {
+    type: "activate-file",
+    path: "src/main.tsx",
+  });
 
   expect(next).toEqual({
     ...initial,
@@ -22,7 +25,10 @@ test("activating a file opens it, selects it, and exits follow mode", () => {
 });
 
 test("selecting a followed file keeps follow mode active", () => {
-  const next = reduceWorkspaceState(initial, { type: "select-file", path: "src/main.tsx" });
+  const next = reduceWorkspaceState(initial, {
+    type: "select-file",
+    path: "src/main.tsx",
+  });
 
   expect(next.selectedPath).toBe("src/main.tsx");
   expect(next.openTabPaths).toEqual(["src/App.tsx", "src/main.tsx"]);
@@ -35,7 +41,10 @@ test("closing the active tab picks the right neighbor and exits follow mode", ()
     selectedPath: "src/main.tsx",
     openTabPaths: ["src/App.tsx", "src/main.tsx", "src/index.css"],
   };
-  const next = reduceWorkspaceState(state, { type: "close-tab", path: "src/main.tsx" });
+  const next = reduceWorkspaceState(state, {
+    type: "close-tab",
+    path: "src/main.tsx",
+  });
 
   expect(next.selectedPath).toBe("src/index.css");
   expect(next.openTabPaths).toEqual(["src/App.tsx", "src/index.css"]);
@@ -63,8 +72,14 @@ test.each([
   ["duplicating a tab", ["b.ts", "a.ts", "a.ts"]],
   ["leaving the order unchanged", ["a.ts", "b.ts", "c.ts"]],
 ] satisfies [string, string[]][])("ignores a tab reorder %s", (_, paths) => {
-  const state = { ...initial, selectedPath: "b.ts", openTabPaths: ["a.ts", "b.ts", "c.ts"] };
-  expect(reduceWorkspaceState(state, { type: "reorder-tabs", paths })).toBe(state);
+  const state = {
+    ...initial,
+    selectedPath: "b.ts",
+    openTabPaths: ["a.ts", "b.ts", "c.ts"],
+  };
+  expect(reduceWorkspaceState(state, { type: "reorder-tabs", paths })).toBe(
+    state,
+  );
 });
 
 test("closing other tabs uses the target tab and exits follow mode", () => {
@@ -116,8 +131,16 @@ test.each([
 ] satisfies ["others" | "right", string, string, string[], string][])(
   "closing %s from %s while editing %s selects a surviving neighbor",
   (mode, path, selectedPath, expectedPaths, expectedSelection) => {
-    const state = { ...initial, selectedPath, openTabPaths: ["a.ts", "b.ts", "c.ts"] };
-    const next = reduceWorkspaceState(state, { type: "close-tabs", path, mode });
+    const state = {
+      ...initial,
+      selectedPath,
+      openTabPaths: ["a.ts", "b.ts", "c.ts"],
+    };
+    const next = reduceWorkspaceState(state, {
+      type: "close-tabs",
+      path,
+      mode,
+    });
 
     expect(next.openTabPaths).toEqual(expectedPaths);
     expect(next.selectedPath).toBe(expectedSelection);
@@ -139,11 +162,18 @@ test("closing all tabs clears the active file even when the target has disappear
   });
 });
 
-test.each(["others", "right"] as const)("ignores closing %s from a missing target", (mode) => {
-  expect(reduceWorkspaceState(initial, { type: "close-tabs", path: "missing.ts", mode })).toBe(
-    initial,
-  );
-});
+test.each(["others", "right"] as const)(
+  "ignores closing %s from a missing target",
+  (mode) => {
+    expect(
+      reduceWorkspaceState(initial, {
+        type: "close-tabs",
+        path: "missing.ts",
+        mode,
+      }),
+    ).toBe(initial);
+  },
+);
 
 test("updates selected file and open tabs as one navigation transition", () => {
   const next = reduceWorkspaceState(initial, {
@@ -158,11 +188,26 @@ test("updates selected file and open tabs as one navigation transition", () => {
 });
 
 test("panel and dialog commands are deterministic", () => {
-  let state = reduceWorkspaceState(initial, { type: "set-mobile-panel", panel: "files" });
-  state = reduceWorkspaceState(state, { type: "set-file-search-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-command-palette-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-settings-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-mobile-panel", panel: "files" });
+  let state = reduceWorkspaceState(initial, {
+    type: "set-mobile-panel",
+    panel: "files",
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-file-search-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-command-palette-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-settings-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-mobile-panel",
+    panel: "files",
+  });
 
   expect(state).toMatchObject({
     mobilePanel: null,
@@ -171,18 +216,39 @@ test("panel and dialog commands are deterministic", () => {
 });
 
 test("keeps only the most recently opened workspace dialog active", () => {
-  let state = reduceWorkspaceState(initial, { type: "set-file-search-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-command-palette-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-settings-open", open: true });
+  let state = reduceWorkspaceState(initial, {
+    type: "set-file-search-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-command-palette-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-settings-open",
+    open: true,
+  });
 
-  state = reduceWorkspaceState(state, { type: "set-file-search-open", open: false });
+  state = reduceWorkspaceState(state, {
+    type: "set-file-search-open",
+    open: false,
+  });
   expect(state.activeDialog).toBe("settings");
 });
 
 test("closing the palette after opening file search leaves file search active", () => {
-  let state = reduceWorkspaceState(initial, { type: "set-command-palette-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-file-search-open", open: true });
-  state = reduceWorkspaceState(state, { type: "set-command-palette-open", open: false });
+  let state = reduceWorkspaceState(initial, {
+    type: "set-command-palette-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-file-search-open",
+    open: true,
+  });
+  state = reduceWorkspaceState(state, {
+    type: "set-command-palette-open",
+    open: false,
+  });
 
   expect(state.activeDialog).toBe("fileSearch");
 });

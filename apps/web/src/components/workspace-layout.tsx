@@ -44,9 +44,14 @@ export function WorkspaceLayout({
   const containerRef = useRef<HTMLDivElement>(null);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
   const [containerWidth, setContainerWidth] = useState(1280);
-  const [preferredWidths, setPreferredWidths] = useState<WorkspacePanelWidths>(readStoredWidths);
+  const [preferredWidths, setPreferredWidths] =
+    useState<WorkspacePanelWidths>(readStoredWidths);
   const panelNodes = useMemo(
-    () => ({ files, editor, preview }) satisfies Record<WorkspacePanelId, ReactNode>,
+    () =>
+      ({ files, editor, preview }) satisfies Record<
+        WorkspacePanelId,
+        ReactNode
+      >,
     [editor, files, preview],
   );
   const desktop = containerWidth > 760;
@@ -56,7 +61,11 @@ export function WorkspaceLayout({
     files: filesShown,
     preview: true,
   };
-  const panelWidths = constrainWorkspacePanelWidths(preferredWidths, resizableWidth, visibleSides);
+  const panelWidths = constrainWorkspacePanelWidths(
+    preferredWidths,
+    resizableWidth,
+    visibleSides,
+  );
   const desktopColumns = buildDesktopColumns({
     filesShown,
     widths: panelWidths,
@@ -65,7 +74,9 @@ export function WorkspaceLayout({
   useEffect(() => {
     const element = containerRef.current;
     if (!element) return;
-    const observer = new ResizeObserver(([entry]) => setContainerWidth(entry.contentRect.width));
+    const observer = new ResizeObserver(([entry]) =>
+      setContainerWidth(entry.contentRect.width),
+    );
     observer.observe(element);
     return () => observer.disconnect();
   }, []);
@@ -95,7 +106,10 @@ export function WorkspaceLayout({
     if (side === "files") onFilesWidthChange(nextWidths.files);
   };
 
-  const startResize = (side: WorkspaceResizeSide, event: ReactPointerEvent<HTMLDivElement>) => {
+  const startResize = (
+    side: WorkspaceResizeSide,
+    event: ReactPointerEvent<HTMLDivElement>,
+  ) => {
     if (event.button !== 0) return;
     event.preventDefault();
     resizeCleanupRef.current?.();
@@ -106,7 +120,10 @@ export function WorkspaceLayout({
 
     const handlePointerMove = (pointerEvent: PointerEvent) => {
       const delta = pointerEvent.clientX - startX;
-      const nextValue = side === "files" ? startWidths.files + delta : startWidths.preview - delta;
+      const nextValue =
+        side === "files"
+          ? startWidths.files + delta
+          : startWidths.preview - delta;
       updateWidth(side, nextValue);
     };
     const cleanup = () => {
@@ -141,7 +158,10 @@ export function WorkspaceLayout({
   );
 
   return (
-    <div ref={containerRef} className="workspace-layout h-full min-h-0 min-w-0 overflow-hidden">
+    <div
+      ref={containerRef}
+      className="workspace-layout h-full min-h-0 min-w-0 overflow-hidden"
+    >
       {desktop ? (
         <div
           className="workspace-layout-grid relative grid h-full min-h-0 min-w-0 overflow-hidden"
@@ -162,7 +182,10 @@ export function WorkspaceLayout({
               {renderPanel("files")}
             </div>
           </div>
-          <div data-panel="editor" className="relative min-h-0 min-w-0 overflow-hidden">
+          <div
+            data-panel="editor"
+            className="relative min-h-0 min-w-0 overflow-hidden"
+          >
             {renderPanel("editor")}
           </div>
           <div data-panel="preview" className="min-h-0 min-w-0 overflow-hidden">
@@ -177,7 +200,9 @@ export function WorkspaceLayout({
               label={t("panel.resizeFiles")}
               onPointerDown={(event) => startResize("files", event)}
               onKeyDown={(event) => handleResizeKeyDown("files", event)}
-              onReset={() => updateWidth("files", DEFAULT_WORKSPACE_PANEL_WIDTHS.files)}
+              onReset={() =>
+                updateWidth("files", DEFAULT_WORKSPACE_PANEL_WIDTHS.files)
+              }
             />
           ) : null}
           <ResizeHandle
@@ -188,12 +213,17 @@ export function WorkspaceLayout({
             label={t("panel.resizePreview")}
             onPointerDown={(event) => startResize("preview", event)}
             onKeyDown={(event) => handleResizeKeyDown("preview", event)}
-            onReset={() => updateWidth("preview", DEFAULT_WORKSPACE_PANEL_WIDTHS.preview)}
+            onReset={() =>
+              updateWidth("preview", DEFAULT_WORKSPACE_PANEL_WIDTHS.preview)
+            }
           />
         </div>
       ) : (
         <div className="relative h-full min-h-0 min-w-0">
-          <div data-panel="editor" className="relative h-full min-h-0 min-w-0 overflow-hidden">
+          <div
+            data-panel="editor"
+            className="relative h-full min-h-0 min-w-0 overflow-hidden"
+          >
             {renderPanel("editor")}
           </div>
           {files}
@@ -209,7 +239,10 @@ type DesktopColumnsOptions = {
   widths: WorkspacePanelWidths;
 };
 
-function buildDesktopColumns({ filesShown, widths }: DesktopColumnsOptions): string {
+function buildDesktopColumns({
+  filesShown,
+  widths,
+}: DesktopColumnsOptions): string {
   return `${filesShown ? widths.files : 0}px minmax(0, 1fr) ${widths.preview}px`;
 }
 
@@ -235,7 +268,9 @@ function ResizeHandle({
   onReset,
 }: ResizeHandleProps) {
   const style =
-    side === "files" ? ({ left: offset } as CSSProperties) : ({ right: offset } as CSSProperties);
+    side === "files"
+      ? ({ left: offset } as CSSProperties)
+      : ({ right: offset } as CSSProperties);
 
   return (
     <div
@@ -260,9 +295,12 @@ function ResizeHandle({
 }
 
 function readStoredWidths(): WorkspacePanelWidths {
-  if (typeof window === "undefined") return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
+  if (typeof window === "undefined")
+    return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
   try {
-    return readWorkspacePanelWidths(JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null"));
+    return readWorkspacePanelWidths(
+      JSON.parse(window.localStorage.getItem(STORAGE_KEY) ?? "null"),
+    );
   } catch {
     return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
   }

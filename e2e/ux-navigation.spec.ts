@@ -9,7 +9,8 @@ async function openSearch(page: Page) {
 async function isWithinScrollport(item: Locator) {
   return item.evaluate((element) => {
     const container =
-      element.closest('[role="listbox"], [role="tablist"]') ?? element.parentElement;
+      element.closest('[role="listbox"], [role="tablist"]') ??
+      element.parentElement;
     if (!container) return false;
     const bounds = element.getBoundingClientRect();
     const viewport = container.getBoundingClientRect();
@@ -39,15 +40,22 @@ async function getTextContrast(element: Locator, pseudoElement?: string) {
     const alpha = foreground[3]! / 255;
     const composite = foreground
       .slice(0, 3)
-      .map((channel, index) => channel! * alpha + background[index]! * (1 - alpha));
+      .map(
+        (channel, index) => channel! * alpha + background[index]! * (1 - alpha),
+      );
     const coefficients = [0.2126, 0.7152, 0.0722];
     const luminance = (channels: number[]) =>
       channels
         .map((channel) => {
           const normalized = channel / 255;
-          return normalized <= 0.04045 ? normalized / 12.92 : ((normalized + 0.055) / 1.055) ** 2.4;
+          return normalized <= 0.04045
+            ? normalized / 12.92
+            : ((normalized + 0.055) / 1.055) ** 2.4;
         })
-        .reduce((sum, channel, index) => sum + channel * coefficients[index]!, 0);
+        .reduce(
+          (sum, channel, index) => sum + channel * coefficients[index]!,
+          0,
+        );
     const foregroundLuminance = luminance(composite);
     const backgroundLuminance = luminance(background.slice(0, 3));
     return (
@@ -58,7 +66,9 @@ async function getTextContrast(element: Locator, pseudoElement?: string) {
 }
 
 async function getFontSize(element: Locator) {
-  return element.evaluate((node) => Number.parseFloat(getComputedStyle(node).fontSize));
+  return element.evaluate((node) =>
+    Number.parseFloat(getComputedStyle(node).fontSize),
+  );
 }
 
 test.beforeEach(async ({ page }) => {
@@ -100,7 +110,9 @@ test("keeps keyboard-selected file results visible and wraps both navigation bin
   );
 });
 
-test("recovers file selection after navigating an empty result list", async ({ page }) => {
+test("recovers file selection after navigating an empty result list", async ({
+  page,
+}) => {
   await openSearch(page);
   const input = page.getByPlaceholder("Search files...");
   await input.fill("no-such-project-file-xyz");
@@ -113,10 +125,14 @@ test("recovers file selection after navigating an empty result list", async ({ p
   const result = page.getByRole("option", { name: "src/main.tsx" });
   await expect(result).toHaveAttribute("aria-selected", "true");
   await input.press("Enter");
-  await expect(page.getByRole("region", { name: "Editing src/main.tsx" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Editing src/main.tsx" }),
+  ).toBeVisible();
 });
 
-test("replaces the command palette when opening settings or file search", async ({ page }) => {
+test("replaces the command palette when opening settings or file search", async ({
+  page,
+}) => {
   const editor = page.locator(".cm-content");
   await editor.focus();
   await page.keyboard.press("ControlOrMeta+k");
@@ -138,7 +154,9 @@ test("replaces the command palette when opening settings or file search", async 
   await expect(page.getByPlaceholder("Search files...")).toBeVisible();
 });
 
-test("names the command palette search input for assistive technology", async ({ page }) => {
+test("names the command palette search input for assistive technology", async ({
+  page,
+}) => {
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+k");
 
@@ -159,13 +177,20 @@ test("keeps inactive search text and placeholders at 4.5:1 contrast", async ({
 
   const palette = page.getByRole("dialog");
   const paletteSearch = page.getByPlaceholder("Search commands...");
-  expect(await getTextContrast(palette.getByRole("button").nth(1))).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(palette.getByRole("button").nth(1)),
+  ).toBeGreaterThanOrEqual(4.5);
   expect(
     await getTextContrast(
-      palette.getByRole("button", { name: "Open settings" }).locator("span").last(),
+      palette
+        .getByRole("button", { name: "Open settings" })
+        .locator("span")
+        .last(),
     ),
   ).toBeGreaterThanOrEqual(4.5);
-  expect(await getTextContrast(paletteSearch, "::placeholder")).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(paletteSearch, "::placeholder"),
+  ).toBeGreaterThanOrEqual(4.5);
 
   await page.keyboard.press("Escape");
   await openSearch(page);
@@ -173,7 +198,10 @@ test("keeps inactive search text and placeholders at 4.5:1 contrast", async ({
 
   const fileDialog = page.getByRole("dialog");
   const fileSearch = page.getByPlaceholder("Search files...");
-  const lightFile = fileDialog.getByRole("option", { name: "src/index.css", exact: true });
+  const lightFile = fileDialog.getByRole("option", {
+    name: "src/index.css",
+    exact: true,
+  });
   await expect(lightFile).toHaveAttribute("aria-selected", "false");
   await page.screenshot({ path: testInfo.outputPath("file-search-light.png") });
   expect
@@ -182,7 +210,9 @@ test("keeps inactive search text and placeholders at 4.5:1 contrast", async ({
   expect
     .soft(await getTextContrast(lightFile.locator("[data-file-directory]")))
     .toBeGreaterThanOrEqual(4.5);
-  expect(await getTextContrast(fileSearch, "::placeholder")).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(fileSearch, "::placeholder"),
+  ).toBeGreaterThanOrEqual(4.5);
 
   await page.keyboard.press("Escape");
   await editor.focus();
@@ -200,19 +230,29 @@ test("keeps inactive search text and placeholders at 4.5:1 contrast", async ({
   await page.mouse.move(0, 0);
   const darkPalette = page.getByRole("dialog");
   const darkPaletteSearch = page.getByPlaceholder("Search commands...");
-  expect(await getTextContrast(darkPalette.getByRole("button").nth(1))).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(darkPalette.getByRole("button").nth(1)),
+  ).toBeGreaterThanOrEqual(4.5);
   expect(
     await getTextContrast(
-      darkPalette.getByRole("button", { name: "Open settings" }).locator("span").last(),
+      darkPalette
+        .getByRole("button", { name: "Open settings" })
+        .locator("span")
+        .last(),
     ),
   ).toBeGreaterThanOrEqual(4.5);
-  expect(await getTextContrast(darkPaletteSearch, "::placeholder")).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(darkPaletteSearch, "::placeholder"),
+  ).toBeGreaterThanOrEqual(4.5);
   await darkPaletteSearch.fill("Open file");
   await darkPaletteSearch.press("Enter");
   const darkFileDialog = page.getByRole("dialog");
   const darkFileSearch = page.getByPlaceholder("Search files...");
   await expect(darkFileSearch).toBeVisible();
-  const darkFile = darkFileDialog.getByRole("option", { name: "src/index.css", exact: true });
+  const darkFile = darkFileDialog.getByRole("option", {
+    name: "src/index.css",
+    exact: true,
+  });
   await expect(darkFile).toHaveAttribute("aria-selected", "false");
   await page.screenshot({ path: testInfo.outputPath("file-search-dark.png") });
   expect
@@ -221,10 +261,14 @@ test("keeps inactive search text and placeholders at 4.5:1 contrast", async ({
   expect
     .soft(await getTextContrast(darkFile.locator("[data-file-directory]")))
     .toBeGreaterThanOrEqual(4.5);
-  expect(await getTextContrast(darkFileSearch, "::placeholder")).toBeGreaterThanOrEqual(4.5);
+  expect(
+    await getTextContrast(darkFileSearch, "::placeholder"),
+  ).toBeGreaterThanOrEqual(4.5);
 });
 
-test("uses mobile-friendly font sizes in workspace search inputs", async ({ page }) => {
+test("uses mobile-friendly font sizes in workspace search inputs", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 844 });
   const editor = page.locator(".cm-content");
 
@@ -263,7 +307,11 @@ test("keeps workspace dialogs inside a 320px viewport", async ({ page }) => {
     expect(bounds.left).toBeGreaterThanOrEqual(0);
     expect(bounds.right).toBeLessThanOrEqual(320);
     await expect
-      .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth))
+      .poll(() =>
+        page.evaluate(
+          () => document.documentElement.scrollWidth <= window.innerWidth,
+        ),
+      )
       .toBe(true);
   };
 
@@ -286,7 +334,13 @@ test("keeps workspace dialogs inside a 320px viewport", async ({ page }) => {
 test("navigates open tabs with arrows, Home and End while keeping the focused tab visible", async ({
   page,
 }) => {
-  for (const name of ["index.html", "package.json", "main.tsx", "index.css", "tsconfig.json"]) {
+  for (const name of [
+    "index.html",
+    "package.json",
+    "main.tsx",
+    "index.css",
+    "tsconfig.json",
+  ]) {
     await page.getByRole("treeitem", { name, exact: true }).click();
   }
   const tabs = page.getByRole("tab");
@@ -301,7 +355,9 @@ test("navigates open tabs with arrows, Home and End while keeping the focused ta
   await expect(first).toBeFocused();
   await first.press("End");
   await expect(last).toBeFocused();
-  await expect(page.getByRole("tablist").locator('[role="tab"][tabindex="0"]')).toHaveCount(1);
+  await expect(
+    page.getByRole("tablist").locator('[role="tab"][tabindex="0"]'),
+  ).toHaveCount(1);
   await expect.poll(() => isWithinScrollport(last)).toBe(true);
   await last.press("Home");
   await expect(first).toHaveAttribute("aria-selected", "false");
@@ -314,14 +370,24 @@ test("navigates open tabs with arrows, Home and End while keeping the focused ta
   await expect(last).toHaveAttribute("aria-selected", "true");
 });
 
-test("reveals the active tab after selecting an offscreen file from search", async ({ page }) => {
-  for (const name of ["index.html", "package.json", "main.tsx", "index.css", "tsconfig.json"]) {
+test("reveals the active tab after selecting an offscreen file from search", async ({
+  page,
+}) => {
+  for (const name of [
+    "index.html",
+    "package.json",
+    "main.tsx",
+    "index.css",
+    "tsconfig.json",
+  ]) {
     await page.getByRole("treeitem", { name, exact: true }).click();
   }
   await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
   const tablist = page.getByRole("tablist");
   await expect
-    .poll(() => tablist.evaluate((element) => element.scrollWidth > element.clientWidth))
+    .poll(() =>
+      tablist.evaluate((element) => element.scrollWidth > element.clientWidth),
+    )
     .toBe(true);
   await tablist.evaluate((element) => {
     element.scrollLeft = 0;

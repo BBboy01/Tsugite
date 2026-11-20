@@ -49,7 +49,9 @@ export function InlineTreeInput({
         autoComplete="off"
         spellCheck={false}
       />
-      {error && <span className="text-[9px] leading-tight text-[#b7645d]">{error}</span>}
+      {error && (
+        <span className="text-[9px] leading-tight text-[#b7645d]">{error}</span>
+      )}
     </div>
   );
 }
@@ -110,10 +112,15 @@ export function DeletePopover({
           id={descriptionId}
           className="m-0 break-words font-iris-mono text-[10px] leading-tight text-iris-muted"
         >
-          {t(isFolder ? "files.deleteFolderDescription" : "files.deleteFileDescription", {
-            path,
-            count,
-          })}
+          {t(
+            isFolder
+              ? "files.deleteFolderDescription"
+              : "files.deleteFileDescription",
+            {
+              path,
+              count,
+            },
+          )}
         </p>
         {error && (
           <p
@@ -148,7 +155,8 @@ export function DeletePopover({
 
 export function countFiles(nodes: FileTreeNode[]): number {
   return nodes.reduce(
-    (count, node) => count + (node.kind === "file" ? 1 : countFiles(node.children)),
+    (count, node) =>
+      count + (node.kind === "file" ? 1 : countFiles(node.children)),
     0,
   );
 }

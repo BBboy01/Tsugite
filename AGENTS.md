@@ -12,12 +12,12 @@ Keep cross-runtime contracts in `packages/shared/`. Web and server protocol chan
 
 ## Setup and Development
 
-Use the Bun version pinned in `.bun-version`. Install dependencies with `bun install --frozen-lockfile`. Run the server and web app in separate terminals with `bun run dev:server` and `bun run dev:web`.
+Use the exact Bun npm build pinned in `.bun-version`; install it with `npm install --global "bun@$(cat .bun-version)"`. Install dependencies with `bun install --frozen-lockfile`. Run the server and web app in separate terminals with `bun run dev:server` and `bun run dev:web`.
 
 Useful checks:
 
 - `bun run test` runs unit and integration tests.
-- `bun run lint` runs Oxlint and TypeScript checks.
+- `bun run lint` runs Bun's built-in lint and TypeScript checks.
 - `bun run format:check` checks formatting.
 - `bun run build` creates the production web bundle.
 - `bun run test:e2e` runs Playwright UI and preview workflows.
@@ -26,9 +26,9 @@ Browser CI runs a smoke suite on `main` and the full suite for release candidate
 
 ## Style and Tests
 
-Use two-space indentation and the existing TypeScript and React patterns. Name React components in PascalCase and hooks as `useXxx` (for example, `useWorkspaceController`); keep module filenames in kebab-case. Put unit tests beside their modules as `*.test.ts(x)` and browser tests in `e2e/*.spec.ts`. Format with Oxfmt and lint with Oxlint; while iterating, scope checks to changed files. Add regression tests for bug fixes and exercise keyboard/focus behavior for editor UI changes. CI uploads LCOV coverage to Codecov; no percentage threshold is configured.
+Use two-space indentation and the existing TypeScript and React patterns. Name React components in PascalCase and hooks as `useXxx` (for example, `useWorkspaceController`); keep module filenames in kebab-case. Put unit tests beside their modules as `*.test.ts(x)` and browser tests in `e2e/*.spec.ts`. Format with `bun fmt` defaults and lint with `bun lint --no-script`; while iterating, pass only changed files to `bun fmt`, `bun lint --no-script`, and `bun check`. Add regression tests for bug fixes and exercise keyboard/focus behavior for editor UI changes. CI uploads LCOV coverage to Codecov; no percentage threshold is configured.
 
-For documentation changes, check the modified Markdown files explicitly with Oxfmt; the root formatting script and staged-file hooks do not include Markdown. Keep commands, links, resource limits, and CI descriptions aligned with their source files.
+For documentation changes, check the modified Markdown files explicitly with `bun fmt --check`. The root formatting script and staged-file hooks also include Markdown. Keep commands, links, resource limits, and CI descriptions aligned with their source files.
 
 ## Database Changes
 

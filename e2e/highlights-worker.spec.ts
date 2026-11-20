@@ -15,33 +15,56 @@ test("highlights edited and scrolled code in a worker without replacing the edit
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
   await expect
-    .poll(() => page.workers().some((worker) => worker.url().includes("highlights.worker")))
+    .poll(() =>
+      page
+        .workers()
+        .some((worker) => worker.url().includes("highlights.worker")),
+    )
     .toBe(true);
   await page
     .locator(".cm-editor")
-    .evaluate((element) => element.setAttribute("data-test-instance", "original"));
+    .evaluate((element) =>
+      element.setAttribute("data-test-instance", "original"),
+    );
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText(
-    Array.from({ length: 500 }, (_, index) => `const value${index} = ${index};`).join("\n"),
+    Array.from(
+      { length: 500 },
+      (_, index) => `const value${index} = ${index};`,
+    ).join("\n"),
   );
   await page.keyboard.press("ControlOrMeta+End");
-  const lastLine = editor.locator(".cm-line").filter({ hasText: "const value499 = 499;" });
+  const lastLine = editor
+    .locator(".cm-line")
+    .filter({ hasText: "const value499 = 499;" });
   await expect(lastLine.locator("span[style*='color:']").first()).toBeVisible();
   await page.keyboard.press("ControlOrMeta+Home");
-  const firstLine = editor.locator(".cm-line").filter({ hasText: /^const value0 = 0;$/ });
-  await expect(firstLine.locator("span[style*='color:']").first()).toBeVisible();
+  const firstLine = editor
+    .locator(".cm-line")
+    .filter({ hasText: /^const value0 = 0;$/ });
+  await expect(
+    firstLine.locator("span[style*='color:']").first(),
+  ).toBeVisible();
   await page.keyboard.insertText("// rapid\n");
   await page.keyboard.press("ControlOrMeta+z");
-  await expect(firstLine.locator("span[style*='color:']").first()).toBeVisible();
-  await expect(page.locator(".cm-editor")).toHaveAttribute("data-test-instance", "original");
+  await expect(
+    firstLine.locator("span[style*='color:']").first(),
+  ).toBeVisible();
+  await expect(page.locator(".cm-editor")).toHaveAttribute(
+    "data-test-instance",
+    "original",
+  );
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test("keeps the highlight worker warm while switching files", async ({ page }) => {
+test("keeps the highlight worker warm while switching files", async ({
+  page,
+}) => {
   const highlightWorkers: string[] = [];
   page.on("worker", (worker) => {
-    if (worker.url().includes("highlights.worker")) highlightWorkers.push(worker.url());
+    if (worker.url().includes("highlights.worker"))
+      highlightWorkers.push(worker.url());
   });
 
   await page.goto(`/room/highlight-switch-${crypto.randomUUID()}`);
@@ -66,7 +89,8 @@ test("a blocked highlight worker leaves native highlighting and editing availabl
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
-        if (String(url).includes("highlights.worker")) throw new Error("highlight worker blocked");
+        if (String(url).includes("highlights.worker"))
+          throw new Error("highlight worker blocked");
         super(url, options);
       }
     };
@@ -79,14 +103,23 @@ test("a blocked highlight worker leaves native highlighting and editing availabl
   await expect(editor).toHaveText("const stillEditable = 42;");
   const keyword = editor.getByText("const", { exact: true });
   await expect(keyword).toBeVisible();
-  const bodyColor = await editor.evaluate((element) => getComputedStyle(element).color);
+  const bodyColor = await editor.evaluate(
+    (element) => getComputedStyle(element).color,
+  );
   await expect(keyword).not.toHaveCSS("color", bodyColor);
-  await expect(editor.getByText("42", { exact: true })).not.toHaveCSS("color", bodyColor);
-  await page.screenshot({ path: testInfo.outputPath("highlight-worker-fallback.png") });
+  await expect(editor.getByText("42", { exact: true })).not.toHaveCSS(
+    "color",
+    bodyColor,
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("highlight-worker-fallback.png"),
+  });
   expect(errors).toEqual([]);
 });
 
-test("a nonresponsive highlight worker reveals the editable native fallback", async ({ page }) => {
+test("a nonresponsive highlight worker reveals the editable native fallback", async ({
+  page,
+}) => {
   await page.addInitScript(() => {
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
@@ -109,7 +142,9 @@ test("a nonresponsive highlight worker reveals the editable native fallback", as
   await page.goto(`/room/highlight-worker-stall-${crypto.randomUUID()}`);
   const editorScroller = page.locator(".cm-scroller");
   await expect(editorScroller).toHaveCSS("opacity", "1");
-  await expect(page.locator('[data-editor-content-ready="true"]')).toBeVisible({ timeout: 5000 });
+  await expect(page.locator('[data-editor-content-ready="true"]')).toBeVisible({
+    timeout: 5000,
+  });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
   await page.keyboard.insertText("// editable after timeout");
@@ -123,7 +158,8 @@ test("fallback syntax colors follow the selected theme across editor remounts", 
     const OriginalWorker = window.Worker;
     window.Worker = class extends OriginalWorker {
       constructor(url: string | URL, options?: WorkerOptions) {
-        if (String(url).includes("highlights.worker")) throw new Error("highlight worker blocked");
+        if (String(url).includes("highlights.worker"))
+          throw new Error("highlight worker blocked");
         super(url, options);
       }
     };
@@ -136,10 +172,9 @@ test("fallback syntax colors follow the selected theme across editor remounts", 
   await expect(page.locator("main")).toHaveClass(/theme-dracula/);
 
   const expectThemeKeyword = async () => {
-    await expect(page.locator(".cm-line").first().getByText("import", { exact: true })).toHaveCSS(
-      "color",
-      "rgb(189, 147, 249)",
-    );
+    await expect(
+      page.locator(".cm-line").first().getByText("import", { exact: true }),
+    ).toHaveCSS("color", "rgb(189, 147, 249)");
   };
   await expectThemeKeyword();
 
@@ -156,7 +191,9 @@ test("fallback syntax colors follow the selected theme across editor remounts", 
   await expectThemeKeyword();
 });
 
-test("refresh does not reveal the default theme before the room snapshot", async ({ page }) => {
+test("refresh does not reveal the default theme before the room snapshot", async ({
+  page,
+}) => {
   await page.goto(`/room/theme-snapshot-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-content")).toBeFocused();
   await page.keyboard.press("ControlOrMeta+k");
@@ -168,7 +205,9 @@ test("refresh does not reveal the default theme before the room snapshot", async
     const OriginalWebSocket = window.WebSocket;
     window.WebSocket = class extends OriginalWebSocket {
       override set onmessage(listener: ((event: MessageEvent) => void) | null) {
-        super.onmessage = listener ? (event) => setTimeout(() => listener(event), 900) : null;
+        super.onmessage = listener
+          ? (event) => setTimeout(() => listener(event), 900)
+          : null;
       }
 
       override get onmessage() {
@@ -178,7 +217,9 @@ test("refresh does not reveal the default theme before the room snapshot", async
   });
   await page.reload({ waitUntil: "domcontentloaded" });
   await expect(page.locator("main")).toBeVisible();
-  expect(await page.locator("main").getAttribute("class")).toContain("theme-dracula");
+  expect(await page.locator("main").getAttribute("class")).toContain(
+    "theme-dracula",
+  );
   await expect(page.locator("main")).toHaveClass(/theme-dracula/);
 });
 
@@ -201,8 +242,12 @@ test("a first-time visitor does not see a room's default theme before its snapsh
       localStorage.setItem("iris.language", "en");
       const OriginalWebSocket = window.WebSocket;
       window.WebSocket = class extends OriginalWebSocket {
-        override set onmessage(listener: ((event: MessageEvent) => void) | null) {
-          super.onmessage = listener ? (event) => setTimeout(() => listener(event), 900) : null;
+        override set onmessage(
+          listener: ((event: MessageEvent) => void) | null,
+        ) {
+          super.onmessage = listener
+            ? (event) => setTimeout(() => listener(event), 900)
+            : null;
         }
 
         override get onmessage() {

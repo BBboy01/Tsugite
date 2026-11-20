@@ -1,9 +1,20 @@
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import { Code2, Keyboard, Palette, Rocket } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { getSettingsByScope } from "../lib/settings-registry";
 import type { SettingsSection, NavigationEntry } from "./settings-types";
-const sectionScopes: SettingsSection[] = ["workspace", "editor", "keyboard", "runtime"];
+const sectionScopes: SettingsSection[] = [
+  "workspace",
+  "editor",
+  "keyboard",
+  "runtime",
+];
 
 export function useSettingsNavigation() {
   const { t } = useTranslation();
@@ -14,7 +25,11 @@ export function useSettingsNavigation() {
   const sidebarEntryRefs = useRef(new Map<string, HTMLButtonElement>());
   const contentRef = useRef<HTMLDivElement>(null);
 
-  const sections: Array<{ id: SettingsSection; icon: typeof Code2; label: string }> = [
+  const sections: Array<{
+    id: SettingsSection;
+    icon: typeof Code2;
+    label: string;
+  }> = [
     { id: "workspace", icon: Palette, label: t("settings.nav.workspace") },
     { id: "editor", icon: Code2, label: t("settings.nav.editor") },
     { id: "keyboard", icon: Keyboard, label: t("settings.nav.keyboard") },
@@ -46,24 +61,32 @@ export function useSettingsNavigation() {
 
   const visibleEntries = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase();
-    if (!normalized) return navigationEntries.filter((entry) => entry.kind === "section");
+    if (!normalized)
+      return navigationEntries.filter((entry) => entry.kind === "section");
     const matched = navigationEntries.filter(
       (entry) =>
         entry.label.toLocaleLowerCase().includes(normalized) ||
         entry.description.toLocaleLowerCase().includes(normalized),
     );
     const scopes = new Set(
-      matched.map((entry) => (entry.kind === "section" ? entry.id : entry.scope)),
+      matched.map((entry) =>
+        entry.kind === "section" ? entry.id : entry.scope,
+      ),
     );
     return navigationEntries.filter(
       (entry) =>
         scopes.has(entry.kind === "section" ? entry.id : entry.scope) &&
         (entry.kind === "section" ||
-          matched.some((match) => match.kind === "setting" && match.id === entry.id)),
+          matched.some(
+            (match) => match.kind === "setting" && match.id === entry.id,
+          )),
     );
   }, [navigationEntries, query]);
 
-  const activateEntry = (entry: NavigationEntry, behavior: ScrollBehavior = "instant") => {
+  const activateEntry = (
+    entry: NavigationEntry,
+    behavior: ScrollBehavior = "instant",
+  ) => {
     setActiveEntryId(`${entry.kind}:${entry.id}`);
     setSection(entry.kind === "section" ? entry.id : entry.scope);
     if (entry.kind === "setting") {
@@ -78,7 +101,8 @@ export function useSettingsNavigation() {
 
   useEffect(() => {
     const first = query.trim()
-      ? (visibleEntries.find((entry) => entry.kind === "setting") ?? visibleEntries[0])
+      ? (visibleEntries.find((entry) => entry.kind === "setting") ??
+        visibleEntries[0])
       : visibleEntries[0];
     if (first) activateEntry(first);
   }, [query, visibleEntries]);
@@ -86,24 +110,33 @@ export function useSettingsNavigation() {
   const focusVisibleEntry = (offset: number) => {
     const currentIndex = Math.max(
       0,
-      visibleEntries.findIndex((entry) => `${entry.kind}:${entry.id}` === activeEntryId),
+      visibleEntries.findIndex(
+        (entry) => `${entry.kind}:${entry.id}` === activeEntryId,
+      ),
     );
     const next =
-      visibleEntries[(currentIndex + offset + visibleEntries.length) % visibleEntries.length];
+      visibleEntries[
+        (currentIndex + offset + visibleEntries.length) % visibleEntries.length
+      ];
     if (!next) return;
     activateEntry(next);
-    requestAnimationFrame(() => sidebarEntryRefs.current.get(`${next.kind}:${next.id}`)?.focus());
+    requestAnimationFrame(() =>
+      sidebarEntryRefs.current.get(`${next.kind}:${next.id}`)?.focus(),
+    );
   };
 
   const focusContentEdge = (fromStart: boolean) => {
     const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
       'button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex="0"]',
     );
-    const target = focusables?.[fromStart ? 0 : Math.max(0, focusables.length - 1)];
+    const target =
+      focusables?.[fromStart ? 0 : Math.max(0, focusables.length - 1)];
     target?.focus();
   };
 
-  const handleSidebarEntryKeyDown = (event: KeyboardEvent<HTMLButtonElement>) => {
+  const handleSidebarEntryKeyDown = (
+    event: KeyboardEvent<HTMLButtonElement>,
+  ) => {
     if (event.key === "ArrowDown") {
       event.preventDefault();
       focusVisibleEntry(1);

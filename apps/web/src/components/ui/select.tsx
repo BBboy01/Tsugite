@@ -19,17 +19,30 @@ import {
 } from "react-aria-components";
 
 import { cn } from "@/lib/utils";
-import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/input-group";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+} from "@/components/ui/input-group";
 import { ChevronDownIcon, SearchIcon, CheckIcon } from "lucide-react";
 
 function Select<T extends object, M extends "single" | "multiple" = "single">({
   className,
   ...props
 }: SelectProps<T, M>) {
-  return <SelectPrimitive data-slot="select" className={cn("w-fit", className)} {...props} />;
+  return (
+    <SelectPrimitive
+      data-slot="select"
+      className={cn("w-fit", className)}
+      {...props}
+    />
+  );
 }
 
-function SelectGroup<T extends object>({ className, ...props }: SelectGroupProps<T>) {
+function SelectGroup<T extends object>({
+  className,
+  ...props
+}: SelectGroupProps<T>) {
   return (
     <ListBoxSectionPrimitive
       data-slot="select-group"
@@ -39,7 +52,11 @@ function SelectGroup<T extends object>({ className, ...props }: SelectGroupProps
   );
 }
 
-function SelectValue<T extends object>({ className, children, ...props }: SelectValueProps<T>) {
+function SelectValue<T extends object>({
+  className,
+  children,
+  ...props
+}: SelectValueProps<T>) {
   return (
     <SelectValuePrimitive
       data-slot="select-value"
@@ -89,7 +106,10 @@ function SelectContent({
   offset = 4,
   crossOffset = 0,
   ...props
-}: Omit<React.ComponentProps<typeof PopoverPrimitive>, "className" | "children"> & {
+}: Omit<
+  React.ComponentProps<typeof PopoverPrimitive>,
+  "className" | "children"
+> & {
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -113,7 +133,10 @@ function SelectPopover({
   offset = 4,
   crossOffset = 0,
   ...props
-}: Omit<React.ComponentProps<typeof PopoverPrimitive>, "className" | "children"> & {
+}: Omit<
+  React.ComponentProps<typeof PopoverPrimitive>,
+  "className" | "children"
+> & {
   className?: string;
   children?: React.ReactNode;
 }) {
@@ -134,7 +157,10 @@ function SelectPopover({
   );
 }
 
-function SelectList<T extends object>({ className, ...props }: ListBoxProps<T>) {
+function SelectList<T extends object>({
+  className,
+  ...props
+}: ListBoxProps<T>) {
   return (
     <ListBoxPrimitive
       data-slot="select-list"
@@ -173,7 +199,10 @@ function SelectInput({
   );
 }
 
-function SelectLabel({ className, ...props }: React.ComponentProps<typeof HeaderPrimitive>) {
+function SelectLabel({
+  className,
+  ...props
+}: React.ComponentProps<typeof HeaderPrimitive>) {
   return (
     <HeaderPrimitive
       data-slot="select-label"
@@ -203,7 +232,9 @@ function SelectItem({
     >
       {composeRenderProps(children, (itemChildren, { isSelected }) => (
         <>
-          <span className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">{itemChildren}</span>
+          <span className="flex flex-1 shrink-0 gap-2 whitespace-nowrap">
+            {itemChildren}
+          </span>
           <span className="pointer-events-none absolute right-2 flex size-4 items-center justify-center">
             {isSelected ? <CheckIcon className="pointer-events-none" /> : null}
           </span>
@@ -213,7 +244,10 @@ function SelectItem({
   );
 }
 
-function SelectSeparator({ className, ...props }: React.ComponentProps<typeof SeparatorPrimitive>) {
+function SelectSeparator({
+  className,
+  ...props
+}: React.ComponentProps<typeof SeparatorPrimitive>) {
   return (
     <SeparatorPrimitive
       data-slot="select-separator"

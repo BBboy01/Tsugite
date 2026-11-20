@@ -1,9 +1,7 @@
 import type { ProjectFile } from "@iris/shared";
 
 export type FileTreeTarget =
-  | { type: "file"; file: ProjectFile }
-  | { type: "folder"; path: string }
-  | null;
+  { type: "file"; file: ProjectFile } | { type: "folder"; path: string } | null;
 
 export type FileTreeNode =
   | {
@@ -37,9 +35,15 @@ export type VisibleFileTreeRow =
     }
   | { kind: "create"; key: string; depth: number };
 
-export function buildFileTree(files: ProjectFile[], folders: string[]): FileTreeNode[] {
+export function buildFileTree(
+  files: ProjectFile[],
+  folders: string[],
+): FileTreeNode[] {
   const roots: FileTreeNode[] = [];
-  const folderNodes = new Map<string, Extract<FileTreeNode, { kind: "folder" }>>();
+  const folderNodes = new Map<
+    string,
+    Extract<FileTreeNode, { kind: "folder" }>
+  >();
 
   const ensureFolder = (path: string) => {
     if (!path) return;
@@ -49,7 +53,12 @@ export function buildFileTree(files: ProjectFile[], folders: string[]): FileTree
       const folderPath = segments.slice(0, index + 1).join("/");
       let folder = folderNodes.get(folderPath);
       if (!folder) {
-        folder = { kind: "folder", path: folderPath, name: segments[index], children: [] };
+        folder = {
+          kind: "folder",
+          path: folderPath,
+          name: segments[index],
+          children: [],
+        };
         folderNodes.set(folderPath, folder);
         if (parent) parent.children.push(folder);
         else roots.push(folder);
@@ -115,7 +124,8 @@ export function flattenVisibleFileTree(
         positionInSet: index + 1,
         setSize: items.length,
       });
-      if (!collapsedFolders.has(node.path)) visit(node.children, depth + 1, node.path);
+      if (!collapsedFolders.has(node.path))
+        visit(node.children, depth + 1, node.path);
     });
   };
 

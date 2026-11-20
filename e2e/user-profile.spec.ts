@@ -5,7 +5,11 @@ test.beforeEach(async ({ page }) => {
     localStorage.setItem("iris.language", "en");
     localStorage.setItem(
       "iris.identity.v1",
-      JSON.stringify({ userId: "profile-owner", displayName: "Maya", color: "#d88961" }),
+      JSON.stringify({
+        userId: "profile-owner",
+        displayName: "Maya",
+        color: "#d88961",
+      }),
     );
   });
   await page.goto(`/room/profile-${crypto.randomUUID()}`);
@@ -44,7 +48,9 @@ test("changing avatar color refreshes the sidebar and the selected swatch", asyn
   await avatar.click();
   await expect(sage.locator("svg")).toBeVisible();
   await expect(
-    page.getByRole("button", { name: "Terracotta", exact: true }).locator("svg"),
+    page
+      .getByRole("button", { name: "Terracotta", exact: true })
+      .locator("svg"),
   ).toHaveCount(0);
   await page.screenshot({ path: testInfo.outputPath("updated-color.png") });
 });

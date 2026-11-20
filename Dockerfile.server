@@ -1,4 +1,4 @@
-FROM oven/bun:1.4.5-alpine
+FROM oven/bun:canary-alpine@sha256:de06817cbc8af2d42238f21852963e5af662f757661c98c4b59981902b05e708
 
 WORKDIR /app
 COPY package.json bun.lock .bun-version ./

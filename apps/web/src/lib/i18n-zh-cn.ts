@@ -74,11 +74,13 @@ export const simplifiedChineseTranslations = {
   "settings.wordWrap": "文字换行",
   "settings.wordWrapDescription": "将超出编辑器宽度的长行自动换行。",
   "settings.relativeLineNumbers": "相对行号",
-  "settings.relativeLineNumbersDescription": "当前行显示真实行号，其他行显示与当前行的距离。",
+  "settings.relativeLineNumbersDescription":
+    "当前行显示真实行号，其他行显示与当前行的距离。",
   "settings.vimMode": "Vim 模式",
   "settings.vimModeDescription": "在编辑器中使用 Vim 的键盘模式和命令。",
   "settings.systemClipboard": "使用系统剪贴板",
-  "settings.systemClipboardDescription": "让 Vim 的复制和粘贴与浏览器系统剪贴板同步。",
+  "settings.systemClipboardDescription":
+    "让 Vim 的复制和粘贴与浏览器系统剪贴板同步。",
   "settings.language": "语言",
   "settings.close": "关闭设置",
   "settings.search": "搜索设置",
@@ -144,7 +146,8 @@ export const simplifiedChineseTranslations = {
   "settings.autoInstall": "自动安装依赖",
   "settings.autoInstallDescription": "房间启动时运行包管理器安装命令。",
   "settings.autoStartPreview": "自动启动预览",
-  "settings.autoStartPreviewDescription": "依赖准备完成后启动 dev 或 start 脚本。",
+  "settings.autoStartPreviewDescription":
+    "依赖准备完成后启动 dev 或 start 脚本。",
   "settings.runtimeNote": "预览会使用 {{manager}} 执行安装和脚本命令。",
   "settings.runtimeRestart": "重启预览运行时",
   "settings.runtimeRestarting": "正在重启预览运行时…",
@@ -178,11 +181,13 @@ export const simplifiedChineseTranslations = {
   "preview.outputEmpty": "运行输出会显示在这里。",
   "preview.runtime.invalid-package-json": "package.json 无效。",
   "preview.runtime.missing-package-json": "缺少 package.json。",
-  "preview.runtime.missing-preview-script": "请在 package.json 中添加 dev 或 start 脚本。",
+  "preview.runtime.missing-preview-script":
+    "请在 package.json 中添加 dev 或 start 脚本。",
   "preview.runtime.install-failed": "{{manager}} install 失败。",
   "preview.runtime.start-failed": "预览服务器启动失败。",
   "preview.runtime.server-exited": "预览服务器已停止，请重新启动。",
-  "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨源隔离。",
+  "preview.runtime.cross-origin-isolation-required":
+    "WebContainer 需要跨源隔离。",
   "preview.runtime.storage-partitioning-required":
     "Chrome 阻止了 WebContainer 的存储分区。请在 chrome://flags/#third-party-storage-partitioning 中启用存储分区，或允许 *.webcontainer.io 和 *.webcontainer-api.io 使用第三方存储，然后重新加载页面。",
   "preview.runtime.runtime-unavailable": "当前浏览器无法使用 WebContainer。",

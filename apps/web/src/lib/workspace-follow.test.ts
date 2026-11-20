@@ -18,7 +18,10 @@ describe("workspace follow projection", () => {
   });
 
   it("exposes a remote cursor only when its file is active locally", () => {
-    expect(getFollowedSelection(member, "src/App.tsx")).toEqual({ anchor: 12, head: 12 });
+    expect(getFollowedSelection(member, "src/App.tsx")).toEqual({
+      anchor: 12,
+      head: 12,
+    });
     expect(getFollowedSelection(member, "src/other.tsx")).toBeNull();
     expect(getFollowedSelection(undefined, "src/App.tsx")).toBeNull();
   });

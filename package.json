@@ -20,10 +20,10 @@
     "knip": "knip",
     "commitlint": "commitlint",
     "prepare": "simple-git-hooks",
-    "typecheck": "tsc --noEmit",
-    "format": "oxfmt --write package.json knip.json tsconfig.json vite.config.ts playwright.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src e2e",
-    "format:check": "oxfmt --check package.json knip.json tsconfig.json vite.config.ts playwright.config.ts .oxlintrc.json apps/web/index.html apps/web/src apps/server/src packages/shared/src e2e",
-    "lint": "oxlint apps/web/src apps/server/src packages/shared/src e2e playwright.config.ts && tsc --noEmit"
+    "typecheck": "bun --no-env-file check",
+    "format": "bun --no-env-file fmt",
+    "format:check": "bun --no-env-file fmt --check",
+    "lint": "bun --no-env-file lint --no-script && bun --no-env-file run typecheck"
   },
   "dependencies": {
     "@babel/standalone": "8.1.2",
@@ -79,18 +79,15 @@
     "drizzle-kit": "1.0.0-rc.5-ab785fc",
     "knip": "^6.46.1",
     "lint-staged": "^17.6.1",
-    "oxfmt": "0.79.0",
-    "oxlint": "^1.94.0",
     "playwright": "^1.65.1",
     "shadcn": "^4.23.0",
     "simple-git-hooks": "^2.14.0",
     "tailwindcss": "^4.3.5",
-    "typescript": "7.0.2",
     "vite": "8.3.8",
     "vite-plugin-wasm": "^3.6.0"
   },
   "simple-git-hooks": {
-    "pre-commit": "bunx --no-install lint-staged && bun run typecheck",
-    "commit-msg": "bunx --no-install commitlint --edit \"$1\""
+    "pre-commit": "bun --no-env-file x --no-install lint-staged && bun --no-env-file run typecheck",
+    "commit-msg": "bun --no-env-file x --no-install commitlint --edit \"$1\""
   }
 }

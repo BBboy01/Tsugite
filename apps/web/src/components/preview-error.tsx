@@ -41,7 +41,9 @@ export function PreviewError({
           {t("preview.goToSource")}
         </button>
       ) : null}
-      {recoveryActions.length > 0 ? <RuntimeActions t={t} actions={recoveryActions} /> : null}
+      {recoveryActions.length > 0 ? (
+        <RuntimeActions t={t} actions={recoveryActions} />
+      ) : null}
       {onRetry ? (
         <button
           type="button"

@@ -6,7 +6,12 @@ import type { EditorIntelligence } from "./editor-intelligence";
 
 test("real engine serializes incremental edits, deletions, UTF-16 and rejects stale versions", async () => {
   const session = new TypeScriptWorkerSession((files) =>
-    createTypeScriptIntelligence(files[0].path, files[0].text, files, standardLibraries),
+    createTypeScriptIntelligence(
+      files[0].path,
+      files[0].text,
+      files,
+      standardLibraries,
+    ),
   );
   const source = 'const emoji = "😀"; const value = 1; value;';
   const envelope = { epoch: 1, requestId: "init", workspaceVersion: 1 };
@@ -88,7 +93,9 @@ test("real engine serializes incremental edits, deletions, UTF-16 and rejects st
         requestId: "recreate",
         workspaceVersion: 4,
         kind: "update",
-        changes: [{ path: "app.ts", text: "const recreated = true;", version: 1 }],
+        changes: [
+          { path: "app.ts", text: "const recreated = true;", version: 1 },
+        ],
         deleted: [],
       })
     ).result.status,
@@ -155,7 +162,12 @@ test("worker independently refuses unsafe snapshots before creating an engine", 
 
 test("worker independently rejects unsafe query paths", async () => {
   const session = new TypeScriptWorkerSession((files) =>
-    createTypeScriptIntelligence(files[0].path, files[0].text, files, standardLibraries),
+    createTypeScriptIntelligence(
+      files[0].path,
+      files[0].text,
+      files,
+      standardLibraries,
+    ),
   );
   await session.enqueue({
     epoch: 1,
@@ -216,9 +228,9 @@ test("navigation replies deduplicate source snapshots and bound location counts"
   expect(result.result.status).toBe("ok");
   expect(result.sourceSnapshots).toEqual({ "app.ts": source });
   expect(JSON.stringify(result).length).toBeLessThan(80_000);
-  expect((result.result as { value: Record<string, unknown>[] }).value[0]).not.toHaveProperty(
-    "source",
-  );
+  expect(
+    (result.result as { value: Record<string, unknown>[] }).value[0],
+  ).not.toHaveProperty("source");
   compact.dispose();
 
   const oversized = makeSession(10_001);

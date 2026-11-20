@@ -11,7 +11,8 @@ test("workspace changes dispatch one refresh effect after the current update sta
     const transaction = EditorState.create({ doc: "const value = 1;" }).update({
       effects: refreshEditorWorkspace.of(null),
     });
-    if (transaction.effects.some((effect) => effect.is(refreshEditorWorkspace))) effects.push(1);
+    if (transaction.effects.some((effect) => effect.is(refreshEditorWorkspace)))
+      effects.push(1);
   });
   scheduler.notify();
   scheduler.notify();

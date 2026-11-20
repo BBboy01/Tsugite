@@ -1,4 +1,7 @@
-import type { EditorIntelligence, IntelligenceFile } from "./editor-intelligence";
+import type {
+  EditorIntelligence,
+  IntelligenceFile,
+} from "./editor-intelligence";
 import type { RoomTypeScriptSource } from "./room-typescript-source";
 import { validateDeclarationFiles } from "./typescript-declarations";
 import { TypeScriptWorkerClient } from "./typescript-worker-client";
@@ -6,8 +9,7 @@ import { TypeScriptWorkerClient } from "./typescript-worker-client";
 const SNAPSHOT_RECOVERY_DELAY_MS = 100;
 
 export type DeclarationsStatus =
-  | { status: "loading" | "ready" }
-  | { status: "unavailable"; reason: string };
+  { status: "loading" | "ready" } | { status: "unavailable"; reason: string };
 
 export type ProjectDeclarations = Pick<
   RoomTypeScriptIntelligence,
@@ -21,7 +23,9 @@ export type ProjectDeclarations = Pick<
 >;
 
 export type RoomTypeScriptIntelligenceOptions = {
-  createIntelligence?: (files: readonly IntelligenceFile[]) => EditorIntelligence;
+  createIntelligence?: (
+    files: readonly IntelligenceFile[],
+  ) => EditorIntelligence;
   deferSourceSubscription?: boolean;
 };
 
@@ -35,7 +39,9 @@ type StatusAwareIntelligence = EditorIntelligence & {
   subscribeStatus?: (listener: () => void) => () => void;
 };
 
-function createWorkerIntelligence(files: readonly IntelligenceFile[]): EditorIntelligence {
+function createWorkerIntelligence(
+  files: readonly IntelligenceFile[],
+): EditorIntelligence {
   return new TypeScriptWorkerClient(files, { lazyStart: true });
 }
 
@@ -60,13 +66,16 @@ export class RoomTypeScriptIntelligence {
   ) {
     const initial = this.readSources();
     initial.forEach((file) => this.sources.set(file.path, file));
-    this.intelligence = options.createIntelligence?.(initial) ?? createWorkerIntelligence(initial);
+    this.intelligence =
+      options.createIntelligence?.(initial) ??
+      createWorkerIntelligence(initial);
     const statusAware = this.intelligence as StatusAwareIntelligence;
     if (statusAware.getStatusSnapshot && statusAware.subscribeStatus) {
       this.serviceStatus = statusAware.getStatusSnapshot();
       this.unsubscribeServiceStatus = statusAware.subscribeStatus(() => {
         this.serviceStatus = statusAware.getStatusSnapshot!();
-        if (this.serviceStatus.state !== "unavailable") this.cancelSnapshotRecovery();
+        if (this.serviceStatus.state !== "unavailable")
+          this.cancelSnapshotRecovery();
         this.serviceListeners.forEach((listener) => listener());
       });
     }
@@ -84,13 +93,17 @@ export class RoomTypeScriptIntelligence {
       }
       for (const fileId of change.fileIds) {
         const previousPath = this.fileIds.get(fileId);
-        const previous = previousPath ? this.sources.get(previousPath) : undefined;
+        const previous = previousPath
+          ? this.sources.get(previousPath)
+          : undefined;
         const current = this.source.readFile(fileId);
-        if (previousPath && current?.path !== previousPath) this.sources.delete(previousPath);
+        if (previousPath && current?.path !== previousPath)
+          this.sources.delete(previousPath);
         if (!current) {
           if (previousPath) {
             this.sources.delete(previousPath);
-            if (this.isRecoverableSourceSnapshot()) this.scheduleSnapshotRecovery();
+            if (this.isRecoverableSourceSnapshot())
+              this.scheduleSnapshotRecovery();
           }
           continue;
         }
@@ -125,7 +138,9 @@ export class RoomTypeScriptIntelligence {
     await this.publishDeclarations(files, generation);
   }
   loadDeclarations = async (
-    read: (sources: readonly IntelligenceFile[]) => Promise<readonly IntelligenceFile[]>,
+    read: (
+      sources: readonly IntelligenceFile[],
+    ) => Promise<readonly IntelligenceFile[]>,
   ): Promise<void> => {
     if (this.disposed) return;
     const generation = ++this.declarationGeneration;
@@ -156,7 +171,9 @@ export class RoomTypeScriptIntelligence {
     this.declarations.clear();
     await this.intelligence.syncWorkspace(this.readSources());
     if (!this.disposed && generation === this.declarationGeneration)
-      this.setDeclarationStatus(reason ? { status: "unavailable", reason } : { status: "ready" });
+      this.setDeclarationStatus(
+        reason ? { status: "unavailable", reason } : { status: "ready" },
+      );
   };
   getDeclarationsStatus = (): DeclarationsStatus => this.declarationStatus;
   subscribeDeclarations = (listener: () => void): (() => void) => {
@@ -168,7 +185,10 @@ export class RoomTypeScriptIntelligence {
     this.serviceListeners.add(listener);
     return () => this.serviceListeners.delete(listener);
   };
-  private async publishDeclarations(files: readonly IntelligenceFile[], generation: number) {
+  private async publishDeclarations(
+    files: readonly IntelligenceFile[],
+    generation: number,
+  ) {
     const invalid = validateDeclarationFiles(files);
     if (invalid) {
       await this.clearDeclarations(invalid);
@@ -211,7 +231,11 @@ export class RoomTypeScriptIntelligence {
     return this.serviceStatus.reason;
   }
   get budgets() {
-    return { maxFiles: 512, maxFileBytes: 1024 * 1024, maxWorkspaceBytes: 16 * 1024 * 1024 };
+    return {
+      maxFiles: 512,
+      maxFileBytes: 1024 * 1024,
+      maxWorkspaceBytes: 16 * 1024 * 1024,
+    };
   }
   get currentSnapshotRevision(): number {
     return this.snapshotRevision;
@@ -226,14 +250,17 @@ export class RoomTypeScriptIntelligence {
     const sourcePaths = new Set(source.map((file) => file.path));
     return [
       ...source,
-      ...[...this.declarations.values()].filter((file) => !sourcePaths.has(file.path)),
+      ...[...this.declarations.values()].filter(
+        (file) => !sourcePaths.has(file.path),
+      ),
     ];
   }
   private isRecoverableSourceSnapshot(): boolean {
     return (
       this.serviceStatus.state === "unavailable" &&
       (this.serviceStatus.reason === "TypeScript source file limit exceeded" ||
-        this.serviceStatus.reason === "TypeScript source workspace limit exceeded")
+        this.serviceStatus.reason ===
+          "TypeScript source workspace limit exceeded")
     );
   }
   private scheduleSnapshotRecovery(): void {

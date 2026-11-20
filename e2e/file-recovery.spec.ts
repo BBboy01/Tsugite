@@ -6,19 +6,28 @@ async function deleteFile(page: Page, name: string) {
     .getByRole("treeitem", { name, exact: true })
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
-  await page.getByRole("alertdialog").getByRole("button", { name: "Delete", exact: true }).click();
+  await page
+    .getByRole("alertdialog")
+    .getByRole("button", { name: "Delete", exact: true })
+    .click();
 }
 
-test("deletion recovery controls stay inside a narrow viewport", async ({ page }) => {
+test("deletion recovery controls stay inside a narrow viewport", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 720 });
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/recovery-narrow-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-content")).toBeVisible();
-  await page.getByRole("button", { name: "Open files panel", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Open files panel", exact: true })
+    .click();
   await deleteFile(page, "index.css");
   const filesPanel = page.getByRole("complementary", { name: "Project files" });
   await expect(filesPanel).toBeVisible();
-  await expect(filesPanel.getByRole("treeitem", { name: "index.css", exact: true })).toHaveCount(0);
+  await expect(
+    filesPanel.getByRole("treeitem", { name: "index.css", exact: true }),
+  ).toHaveCount(0);
   const undo = page.getByRole("button", { name: "Undo deletion", exact: true });
   const toast = undo.locator("..");
   const box = await toast.boundingBox();
@@ -27,24 +36,31 @@ test("deletion recovery controls stay inside a narrow viewport", async ({ page }
   expect(box!.x + box!.width).toBeLessThanOrEqual(390);
   await undo.click();
   await expect(filesPanel).toBeVisible();
-  await expect(page.getByRole("treeitem", { name: "index.css", exact: true })).toBeVisible();
-  await expect(page.getByRole("tab", { name: "src/App.tsx", exact: true })).toHaveAttribute(
-    "aria-selected",
-    "true",
-  );
+  await expect(
+    page.getByRole("treeitem", { name: "index.css", exact: true }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("tab", { name: "src/App.tsx", exact: true }),
+  ).toHaveAttribute("aria-selected", "true");
 });
 
-test("a new deletion clears the previous recovery conflict", async ({ page }) => {
+test("a new deletion clears the previous recovery conflict", async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/recovery-conflict-${crypto.randomUUID()}`);
   await expect(page.locator(".cm-content")).toBeVisible();
   await deleteFile(page, "index.css");
-  await page.getByRole("treeitem", { name: "src folder", exact: true }).click({ button: "right" });
+  await page
+    .getByRole("treeitem", { name: "src folder", exact: true })
+    .click({ button: "right" });
   await page.getByRole("menuitem", { name: "New file", exact: true }).click();
   const conflictInput = page.locator("[data-item-rename-input]");
   await conflictInput.fill("index.css");
   await conflictInput.press("Enter");
-  await page.getByRole("button", { name: "Undo deletion", exact: true }).click();
+  await page
+    .getByRole("button", { name: "Undo deletion", exact: true })
+    .click();
   const status = page
     .getByRole("button", { name: "Undo deletion", exact: true })
     .locator("..")
@@ -52,11 +68,17 @@ test("a new deletion clears the previous recovery conflict", async ({ page }) =>
   await expect(status).toContainText("Cannot restore");
   await deleteFile(page, "index.css");
   await expect(status).toContainText("Deleted");
-  await page.getByRole("button", { name: "Undo deletion", exact: true }).click();
-  await expect(page.getByRole("treeitem", { name: "index.css", exact: true })).toBeVisible();
+  await page
+    .getByRole("button", { name: "Undo deletion", exact: true })
+    .click();
+  await expect(
+    page.getByRole("treeitem", { name: "index.css", exact: true }),
+  ).toBeVisible();
 });
 
-test("new files start empty and deletion has an independent undo", async ({ page }) => {
+test("new files start empty and deletion has an independent undo", async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/e2e-recovery-${crypto.randomUUID()}`);
   const editor = page.locator(".cm-content");
@@ -77,21 +99,41 @@ test("new files start empty and deletion has an independent undo", async ({ page
   const dialog = page.getByRole("alertdialog");
   await expect(dialog).toContainText("1 file");
   await dialog.getByRole("button", { name: "Cancel", exact: true }).click();
-  await page.getByRole("treeitem", { name: "recovery folder", exact: true }).press("ArrowRight");
-  await expect(page.getByRole("treeitem", { name: "note.json", exact: true })).toBeVisible();
+  await page
+    .getByRole("treeitem", { name: "recovery folder", exact: true })
+    .press("ArrowRight");
+  await expect(
+    page.getByRole("treeitem", { name: "note.json", exact: true }),
+  ).toBeVisible();
   await page
     .getByRole("treeitem", { name: "recovery folder", exact: true })
     .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
   await dialog.getByRole("button", { name: "Delete", exact: true }).click();
-  await expect(page.getByRole("treeitem", { name: "note.json", exact: true })).toHaveCount(0);
-  await page.getByRole("button", { name: "Collapse files panel", exact: true }).focus();
+  await expect(
+    page.getByRole("treeitem", { name: "note.json", exact: true }),
+  ).toHaveCount(0);
+  await page
+    .getByRole("button", { name: "Collapse files panel", exact: true })
+    .focus();
   await page.keyboard.press("Enter");
-  await expect(page.getByRole("complementary", { name: "Project files" })).toBeHidden();
-  await expect(page.getByRole("button", { name: "Undo deletion", exact: true })).toBeVisible();
-  await page.getByRole("button", { name: "Undo deletion", exact: true }).click();
-  await page.getByRole("button", { name: "Expand files panel", exact: true }).click();
-  await page.getByRole("treeitem", { name: "recovery folder", exact: true }).press("ArrowRight");
-  await expect(page.getByRole("treeitem", { name: "note.json", exact: true })).toBeVisible();
+  await expect(
+    page.getByRole("complementary", { name: "Project files" }),
+  ).toBeHidden();
+  await expect(
+    page.getByRole("button", { name: "Undo deletion", exact: true }),
+  ).toBeVisible();
+  await page
+    .getByRole("button", { name: "Undo deletion", exact: true })
+    .click();
+  await page
+    .getByRole("button", { name: "Expand files panel", exact: true })
+    .click();
+  await page
+    .getByRole("treeitem", { name: "recovery folder", exact: true })
+    .press("ArrowRight");
+  await expect(
+    page.getByRole("treeitem", { name: "note.json", exact: true }),
+  ).toBeVisible();
   await expect(editor).toHaveText('{"retained":true}');
 });

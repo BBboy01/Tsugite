@@ -1,0 +1,11 @@
+name: Set up pinned Bun
+description: Install the exact npm build recorded in .bun-version, including canary builds.
+runs:
+  using: composite
+  steps:
+    - name: Install pinned Bun
+      shell: bash
+      run: npm install --global "bun@$(cat .bun-version)"
+    - name: Show Bun revision
+      shell: bash
+      run: bun --revision

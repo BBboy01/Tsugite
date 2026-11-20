@@ -13,7 +13,10 @@ import {
   type PaletteCommand,
   type Submenu,
 } from "@/lib/command-palette-model";
-import { getRandomWorkspaceTheme, isDarkWorkspaceTheme } from "@/lib/workspace-theme";
+import {
+  getRandomWorkspaceTheme,
+  isDarkWorkspaceTheme,
+} from "@/lib/workspace-theme";
 import type { RuntimeAction } from "@/lib/runtime-actions";
 import type { LanguageCode } from "@/lib/i18n";
 import type { KeyBinding } from "@/lib/keymap";
@@ -29,7 +32,10 @@ type CommandPaletteProps = {
   vimMode: boolean;
   onOpenChange: (open: boolean) => void;
   onSelect: (command: ExternalCommandId) => void;
-  onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  onSettingChange: <K extends keyof ProjectSettings>(
+    key: K,
+    value: ProjectSettings[K],
+  ) => void;
   onThemePreview: (theme: WorkspaceTheme | null) => void;
   onVimModeChange: (enabled: boolean) => void;
   onRuntimeAction: (action: RuntimeAction) => void;
@@ -66,12 +72,23 @@ export const CommandPalette = memo(function CommandPalette({
   const visualTheme = previewTheme ?? settings.theme;
   const isDark = isDarkWorkspaceTheme(visualTheme);
 
-  const rootCommands = getRootCommands(settings, vimMode, systemClipboard, t, keymap);
+  const rootCommands = getRootCommands(
+    settings,
+    vimMode,
+    systemClipboard,
+    t,
+    keymap,
+  );
   const submenuLabel = submenu ? getSubmenuLabel(submenu, t) : null;
-  const submenuCommands = submenu ? getSubmenuCommands(submenu, settings, t) : [];
+  const submenuCommands = submenu
+    ? getSubmenuCommands(submenu, settings, t)
+    : [];
 
-  const commands = (submenu ? submenuCommands : rootCommands).filter((command) =>
-    (command.searchText ?? command.label).toLowerCase().includes(query.toLowerCase()),
+  const commands = (submenu ? submenuCommands : rootCommands).filter(
+    (command) =>
+      (command.searchText ?? command.label)
+        .toLowerCase()
+        .includes(query.toLowerCase()),
   );
 
   useEffect(() => {
@@ -88,13 +105,17 @@ export const CommandPalette = memo(function CommandPalette({
   }, [onThemePreview, open]);
 
   useEffect(() => {
-    setSelectedIndex((index) => Math.min(index, Math.max(commands.length - 1, 0)));
+    setSelectedIndex((index) =>
+      Math.min(index, Math.max(commands.length - 1, 0)),
+    );
   }, [commands.length]);
 
   const selectedCommand = commands[selectedIndex];
   useEffect(() => {
     if (!open || submenu !== "theme") return;
-    onThemePreview(selectedCommand?.scope === "theme" ? selectedCommand.id : settings.theme);
+    onThemePreview(
+      selectedCommand?.scope === "theme" ? selectedCommand.id : settings.theme,
+    );
   }, [onThemePreview, open, selectedCommand?.id, settings.theme, submenu]);
 
   const returnToRoot = () => {
@@ -130,7 +151,10 @@ export const CommandPalette = memo(function CommandPalette({
 
   const closePalette = () => handleOpenChange(false);
 
-  const handleEscape = (event: { preventDefault: () => void; stopPropagation?: () => void }) => {
+  const handleEscape = (event: {
+    preventDefault: () => void;
+    stopPropagation?: () => void;
+  }) => {
     if (escapeHandledRef.current) return;
     escapeHandledRef.current = true;
     queueMicrotask(() => {
@@ -233,7 +257,9 @@ export const CommandPalette = memo(function CommandPalette({
       return;
     }
 
-    setSelectedIndex((index) => (index + offset + commands.length) % commands.length);
+    setSelectedIndex(
+      (index) => (index + offset + commands.length) % commands.length,
+    );
   };
 
   return (
@@ -248,7 +274,10 @@ export const CommandPalette = memo(function CommandPalette({
           scaling="100%"
           className={`theme-${visualTheme}`}
         >
-          <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
+          <Dialog.Overlay
+            data-dialog-overlay
+            className="fixed inset-0 z-50 bg-black/30"
+          />
           <Dialog.Content
             aria-describedby={undefined}
             className="fixed left-1/2 top-[18%] z-50 w-[min(32rem,calc(100vw-2rem))] -translate-x-1/2 overflow-hidden rounded-xl border border-iris-divider bg-iris-canvas text-iris-ink shadow-2xl outline-none"
@@ -260,7 +289,9 @@ export const CommandPalette = memo(function CommandPalette({
               if (event.key === "Escape") handleEscape(event);
             }}
           >
-            <Dialog.Title className="sr-only">{t("command.title")}</Dialog.Title>
+            <Dialog.Title className="sr-only">
+              {t("command.title")}
+            </Dialog.Title>
             <CommandPaletteSearch
               inputRef={inputRef}
               query={query}

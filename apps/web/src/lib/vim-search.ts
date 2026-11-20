@@ -20,7 +20,9 @@ function escapeRegex(value: string): string {
 
 function formatSearchQuery(value: string): string {
   const withoutWordBoundaries =
-    value.startsWith("\\b") && value.endsWith("\\b") ? value.slice(2, -2) : value;
+    value.startsWith("\\b") && value.endsWith("\\b")
+      ? value.slice(2, -2)
+      : value;
   return withoutWordBoundaries.replace(/\\([\\.*+?()[\]{}|^$])/g, "$1");
 }
 
@@ -52,13 +54,18 @@ class VimSearchStatusWidget extends WidgetType {
     count.dataset.vimSearchCount = "true";
     count.textContent = `${this.current}/${this.total}`;
     element.append(query, count);
-    element.setAttribute("aria-label", `Search ${label}, match ${this.current} of ${this.total}`);
+    element.setAttribute(
+      "aria-label",
+      `Search ${label}, match ${this.current} of ${this.total}`,
+    );
     return element;
   }
 
   eq(other: VimSearchStatusWidget): boolean {
     return (
-      this.query === other.query && this.current === other.current && this.total === other.total
+      this.query === other.query &&
+      this.current === other.current &&
+      this.total === other.total
     );
   }
 }
@@ -75,9 +82,14 @@ function getSearchMatches(
   return matches;
 }
 
-function getCurrentMatch(view: EditorView, matches: Array<{ from: number; to: number }>): number {
+function getCurrentMatch(
+  view: EditorView,
+  matches: Array<{ from: number; to: number }>,
+): number {
   const position = view.state.selection.main.head;
-  const containing = matches.findIndex(({ from, to }) => position >= from && position <= to);
+  const containing = matches.findIndex(
+    ({ from, to }) => position >= from && position <= to,
+  );
   if (containing >= 0) return containing;
   const following = matches.findIndex(({ from }) => from >= position);
   return following >= 0 ? following : 0;
@@ -103,7 +115,8 @@ export class VimSearchStatus {
     const recount = update.transactions.some((transaction) =>
       transaction.effects.some((effect) => effect.is(vimSearchRecount)),
     );
-    if (!update.docChanged && !queryChanged && !searchNavigated && !recount) return;
+    if (!update.docChanged && !queryChanged && !searchNavigated && !recount)
+      return;
     if (update.docChanged && this.activeMatchFrom !== null) {
       this.activeMatchFrom = update.changes.mapPos(this.activeMatchFrom);
     }
@@ -142,7 +155,9 @@ export class VimSearchStatus {
       return Decoration.none;
     }
 
-    const existingMatch = matches.findIndex(({ from }) => from === this.activeMatchFrom);
+    const existingMatch = matches.findIndex(
+      ({ from }) => from === this.activeMatchFrom,
+    );
     let current = existingMatch;
     if (refreshActiveMatch || this.activeQuery !== query || current < 0) {
       current = getCurrentMatch(this.view, matches);
@@ -154,7 +169,11 @@ export class VimSearchStatus {
     return Decoration.set([
       Decoration.widget({
         side: 1,
-        widget: new VimSearchStatusWidget(query.search, current + 1, matches.length),
+        widget: new VimSearchStatusWidget(
+          query.search,
+          current + 1,
+          matches.length,
+        ),
       }).range(line.to),
     ]);
   }
@@ -181,7 +200,10 @@ function searchVisualSelection(view: EditorView): boolean {
   vimState.query = new RegExp(vimPattern, "i");
   vimState.isReversed = false;
   Vim.getRegisterController().getRegister("/").setText(vimPattern);
-  const query = new SearchQuery({ search: selected, literal: true }) as VimSearchQuery;
+  const query = new SearchQuery({
+    search: selected,
+    literal: true,
+  }) as VimSearchQuery;
   query.forVim = true;
 
   Vim.exitVisualMode(cm as Parameters<typeof Vim.exitVisualMode>[0], false);
@@ -203,7 +225,8 @@ export function attachVimSearch(view: EditorView): () => void {
       (event.key === "n" || event.key === "N");
     if (navigatesSearch) {
       window.setTimeout(() => {
-        if (view.dom.isConnected) view.dispatch({ effects: vimSearchNavigated.of() });
+        if (view.dom.isConnected)
+          view.dispatch({ effects: vimSearchNavigated.of() });
       }, 0);
       return;
     }

@@ -12,7 +12,12 @@ export type RoomIdentity = {
   color: string;
 };
 
-export const AVATAR_COLORS = ["#d88961", "#7389b7", "#5d9f8c", "#bc76a5"] as const;
+export const AVATAR_COLORS = [
+  "#d88961",
+  "#7389b7",
+  "#5d9f8c",
+  "#bc76a5",
+] as const;
 
 const IDENTITY_STORAGE_KEY = "iris.identity.v1";
 
@@ -36,7 +41,10 @@ export class RoomPresence {
     return this.selectedPath !== undefined || this.cursor !== undefined;
   }
 
-  send(selectedPath?: string, cursor?: { anchor: number; head: number } | null): void {
+  send(
+    selectedPath?: string,
+    cursor?: { anchor: number; head: number } | null,
+  ): void {
     if (selectedPath !== undefined) {
       this.selectedPath = selectedPath;
       if (cursor === undefined) this.cursor = null;
@@ -52,13 +60,19 @@ export class RoomPresence {
 
   updateDisplayName(value: string): boolean {
     const displayName = value.trim();
-    if (!displayName || displayName.length > 32 || displayName === this.identity.displayName) {
+    if (
+      !displayName ||
+      displayName.length > 32 ||
+      displayName === this.identity.displayName
+    ) {
       return false;
     }
     this.identity.displayName = displayName;
     persistIdentity(this.identity);
     this.membersValue = this.membersValue.map((member) =>
-      member.userId === this.identity.userId ? { ...member, displayName } : member,
+      member.userId === this.identity.userId
+        ? { ...member, displayName }
+        : member,
     );
     this.emit();
     this.onIdentityChange();
@@ -68,7 +82,8 @@ export class RoomPresence {
 
   updateColor(value: string): boolean {
     const color = value.toLowerCase();
-    if (!/^#[0-9a-f]{6}$/.test(color) || color === this.identity.color) return false;
+    if (!/^#[0-9a-f]{6}$/.test(color) || color === this.identity.color)
+      return false;
     this.identity.color = color;
     persistIdentity(this.identity);
     this.membersValue = this.membersValue.map((member) =>
@@ -81,7 +96,9 @@ export class RoomPresence {
   }
 
   receiveList(message: PresenceListMessage): void {
-    const previousById = new Map(this.membersValue.map((member) => [member.userId, member]));
+    const previousById = new Map(
+      this.membersValue.map((member) => [member.userId, member]),
+    );
     this.membersValue = message.members.map((member) =>
       mergePresenceMember(previousById.get(member.userId), member),
     );
@@ -89,7 +106,9 @@ export class RoomPresence {
   }
 
   receive(member: PresenceMessage): void {
-    const previous = this.membersValue.find((item) => item.userId === member.userId);
+    const previous = this.membersValue.find(
+      (item) => item.userId === member.userId,
+    );
     const nextMember = mergePresenceMember(previous, member);
     this.membersValue = [
       ...this.membersValue.filter((item) => item.userId !== nextMember.userId),
@@ -99,7 +118,9 @@ export class RoomPresence {
   }
 
   remove(message: PresenceRemovedMessage): void {
-    this.membersValue = this.membersValue.filter((item) => item.userId !== message.userId);
+    this.membersValue = this.membersValue.filter(
+      (item) => item.userId !== message.userId,
+    );
     this.emit();
   }
 
@@ -153,7 +174,9 @@ function mergePresenceMember(
     ...previous,
     ...incoming,
     selectedPath:
-      "selectedPath" in incoming ? (incoming.selectedPath ?? undefined) : previous?.selectedPath,
+      "selectedPath" in incoming
+        ? (incoming.selectedPath ?? undefined)
+        : previous?.selectedPath,
     cursor: "cursor" in incoming ? incoming.cursor : previous?.cursor,
   };
 }

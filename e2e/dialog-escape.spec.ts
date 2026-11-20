@@ -32,7 +32,9 @@ for (const [shortcut, placeholder] of [
   ["ControlOrMeta+P", "Search files..."],
   ["ControlOrMeta+K", "Search commands..."],
 ]) {
-  test(`one immediate Escape closes ${placeholder} before focus settles`, async ({ page }) => {
+  test(`one immediate Escape closes ${placeholder} before focus settles`, async ({
+    page,
+  }) => {
     await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
     await page.goto(`/room/e2e-immediate-dialog-escape-${crypto.randomUUID()}`);
     const editor = page.locator(".cm-content");
@@ -46,7 +48,9 @@ for (const [shortcut, placeholder] of [
 }
 
 for (const shortcut of ["Control+P", "ControlOrMeta+Shift+P"]) {
-  test(`one immediate Escape dismisses custom shortcut ${shortcut}`, async ({ page }) => {
+  test(`one immediate Escape dismisses custom shortcut ${shortcut}`, async ({
+    page,
+  }) => {
     await page.addInitScript(() => {
       localStorage.setItem("iris.language", "en");
       localStorage.setItem("tsugite.vim-mode", "true");
@@ -64,7 +68,10 @@ for (const shortcut of ["Control+P", "ControlOrMeta+Shift+P"]) {
     const openings = await page.evaluateHandle(() => {
       const state = { count: 0 };
       document.addEventListener("focusin", (event) => {
-        if (event.target instanceof HTMLInputElement && event.target.closest('[role="dialog"]')) {
+        if (
+          event.target instanceof HTMLInputElement &&
+          event.target.closest('[role="dialog"]')
+        ) {
           state.count++;
         }
       });
@@ -99,13 +106,16 @@ for (const [shortcut, placeholder] of [
       await expect(page.getByPlaceholder(placeholder)).toBeFocused();
       await page.keyboard.press("Escape");
       await expect(page.getByRole("dialog")).toBeHidden();
-      if (await page.getByRole("menu").isVisible()) await page.keyboard.press("Escape");
+      if (await page.getByRole("menu").isVisible())
+        await page.keyboard.press("Escape");
       await expect(editor).toBeFocused();
     }
   });
 }
 
-test("Escape returns from a command submenu before closing the palette", async ({ page }) => {
+test("Escape returns from a command submenu before closing the palette", async ({
+  page,
+}) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
   await page.goto(`/room/e2e-submenu-escape-${crypto.randomUUID()}`);
   const editor = page.locator(".cm-content");
@@ -113,7 +123,9 @@ test("Escape returns from a command submenu before closing the palette", async (
   await page.keyboard.press("ControlOrMeta+K");
   await page.getByPlaceholder("Search commands...").fill("language");
   await page.keyboard.press("Enter");
-  await expect(page.getByPlaceholder("Language: Search commands...")).toBeFocused();
+  await expect(
+    page.getByPlaceholder("Language: Search commands..."),
+  ).toBeFocused();
   await page.keyboard.press("Escape");
   await expect(page.getByPlaceholder("Search commands...")).toBeFocused();
   await expect(page.getByRole("dialog")).toBeVisible();

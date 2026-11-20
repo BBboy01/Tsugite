@@ -6,10 +6,17 @@ import type {
 } from "./editor-intelligence";
 import { validateDeclarationFiles } from "./typescript-declarations";
 
-export const SOURCE_LIMITS = { files: 512, fileBytes: 1024 * 1024, totalBytes: 16 * 1024 * 1024 };
+export const SOURCE_LIMITS = {
+  files: 512,
+  fileBytes: 1024 * 1024,
+  totalBytes: 16 * 1024 * 1024,
+};
 export const WORKER_QUEUE_LIMIT = 32;
 export const QUERY_TIMEOUT_MS = 2000;
-export const NAVIGATION_LIMITS = { locations: 10_000, sourceBytes: 24 * 1024 * 1024 } as const;
+export const NAVIGATION_LIMITS = {
+  locations: 10_000,
+  sourceBytes: 24 * 1024 * 1024,
+} as const;
 export type QueryMethod =
   | "hover"
   | "completion"
@@ -20,12 +27,24 @@ export type QueryMethod =
   | "implementation"
   | "references";
 export type VersionedFile = IntelligenceFile & { version: number };
-export type WorkerEnvelope = { epoch: number; requestId: string; workspaceVersion: number };
+export type WorkerEnvelope = {
+  epoch: number;
+  requestId: string;
+  workspaceVersion: number;
+};
 export type WorkerRequest = WorkerEnvelope &
   (
     | { kind: "initialize"; files: readonly VersionedFile[] }
-    | { kind: "update"; changes: readonly VersionedFile[]; deleted: readonly string[] }
-    | { kind: "query"; method: QueryMethod; query: IntelligenceQuery | IntelligenceDiagnosticQuery }
+    | {
+        kind: "update";
+        changes: readonly VersionedFile[];
+        deleted: readonly string[];
+      }
+    | {
+        kind: "query";
+        method: QueryMethod;
+        query: IntelligenceQuery | IntelligenceDiagnosticQuery;
+      }
     | { kind: "cancel"; target: string }
   );
 export type WorkerReply = WorkerEnvelope & {
@@ -35,7 +54,9 @@ export type WorkerReply = WorkerEnvelope & {
 };
 export const isSourcePath = (path: string) => /\.[cm]?[jt]sx?$/.test(path);
 export const isDeclarationResource = (path: string) =>
-  /\.d\.(?:ts|mts|cts)$/.test(path) || path === "package.json" || path.endsWith("/package.json");
+  /\.d\.(?:ts|mts|cts)$/.test(path) ||
+  path === "package.json" ||
+  path.endsWith("/package.json");
 export const isIntelligencePath = (path: string) =>
   isSourcePath(path) || isDeclarationResource(path);
 export function isSafeSourcePath(path: string): boolean {
@@ -44,19 +65,31 @@ export function isSafeSourcePath(path: string): boolean {
     path.length > 0 &&
     path.length <= 1024 &&
     !/[\\:?#]/.test(path) &&
-    !path.split("").some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127) &&
+    !path
+      .split("")
+      .some((char) => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127) &&
     !path.startsWith("/") &&
     !path.startsWith("__typescript/") &&
     path
       .split("/")
-      .every((part) => part !== "" && part !== "." && part !== ".." && !part.startsWith(".env"))
+      .every(
+        (part) =>
+          part !== "" &&
+          part !== "." &&
+          part !== ".." &&
+          !part.startsWith(".env"),
+      )
   );
 }
 export function validateQueryPath(path: string): string | undefined {
-  if (!isSafeSourcePath(path) || !isSourcePath(path)) return "Invalid TypeScript query path";
+  if (!isSafeSourcePath(path) || !isSourcePath(path))
+    return "Invalid TypeScript query path";
 }
-export function validateSourceFiles(files: readonly IntelligenceFile[]): string | undefined {
-  if (files.length > SOURCE_LIMITS.files) return "TypeScript source file limit exceeded";
+export function validateSourceFiles(
+  files: readonly IntelligenceFile[],
+): string | undefined {
+  if (files.length > SOURCE_LIMITS.files)
+    return "TypeScript source file limit exceeded";
   let total = 0;
   const seen = new Set<string>();
   const encoder = new TextEncoder();
@@ -69,16 +102,23 @@ export function validateSourceFiles(files: readonly IntelligenceFile[]): string 
     )
       return "Invalid TypeScript source path";
     seen.add(file.path);
-    if (typeof file.text !== "string" || file.text.length > SOURCE_LIMITS.fileBytes)
+    if (
+      typeof file.text !== "string" ||
+      file.text.length > SOURCE_LIMITS.fileBytes
+    )
       return "TypeScript source file limit exceeded";
     const bytes = encoder.encode(file.text).byteLength;
-    if (bytes > SOURCE_LIMITS.fileBytes) return "TypeScript source file limit exceeded";
+    if (bytes > SOURCE_LIMITS.fileBytes)
+      return "TypeScript source file limit exceeded";
     total += bytes;
-    if (total > SOURCE_LIMITS.totalBytes) return "TypeScript source workspace limit exceeded";
+    if (total > SOURCE_LIMITS.totalBytes)
+      return "TypeScript source workspace limit exceeded";
   }
 }
 
-export function validateWorkspaceFiles(files: readonly IntelligenceFile[]): string | undefined {
+export function validateWorkspaceFiles(
+  files: readonly IntelligenceFile[],
+): string | undefined {
   const declarations = files.filter((file) => isDeclarationResource(file.path));
   const sources = files.filter((file) => !isDeclarationResource(file.path));
   return validateSourceFiles(sources) ?? validateDeclarationFiles(declarations);

@@ -43,9 +43,11 @@ export function CommandPaletteSearch({
     }
 
     const offset =
-      event.key === "ArrowDown" || ((event.ctrlKey || event.metaKey) && event.key === "n")
+      event.key === "ArrowDown" ||
+      ((event.ctrlKey || event.metaKey) && event.key === "n")
         ? 1
-        : event.key === "ArrowUp" || ((event.ctrlKey || event.metaKey) && event.key === "p")
+        : event.key === "ArrowUp" ||
+            ((event.ctrlKey || event.metaKey) && event.key === "p")
           ? -1
           : 0;
     if (offset !== 0) {
@@ -67,7 +69,11 @@ export function CommandPaletteSearch({
           <ArrowLeft size={16} aria-hidden="true" />
         </button>
       ) : (
-        <Command size={16} aria-hidden="true" className="shrink-0 text-[var(--muted)]" />
+        <Command
+          size={16}
+          aria-hidden="true"
+          className="shrink-0 text-[var(--muted)]"
+        />
       )}
       <input
         ref={inputRef}

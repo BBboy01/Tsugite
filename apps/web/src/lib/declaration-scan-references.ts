@@ -4,7 +4,11 @@ export function createDeclarationReferenceReader(
   entryLimit: number,
   ambientModules: Set<string>,
 ): (text: string, imports?: Map<string, string>) => Set<string> {
-  type Token = { kind: "word" | "string" | "punctuation"; value: string; line: number };
+  type Token = {
+    kind: "word" | "string" | "punctuation";
+    value: string;
+    line: number;
+  };
   const starters = new Set([
     "class",
     "const",
@@ -48,8 +52,10 @@ export function createDeclarationReferenceReader(
     let cursor = start;
     while (cursor < source.length) {
       const char = source[cursor];
-      if (char === "'" || char === '"') cursor = skipQuoted(source, cursor, char);
-      else if (char.charCodeAt(0) === 96) cursor = templateEnd(source, cursor).end;
+      if (char === "'" || char === '"')
+        cursor = skipQuoted(source, cursor, char);
+      else if (char.charCodeAt(0) === 96)
+        cursor = templateEnd(source, cursor).end;
       else if (source.startsWith("//", cursor)) {
         const end = source.indexOf("\n", cursor);
         cursor = end < 0 ? source.length : end + 1;
@@ -68,12 +74,16 @@ export function createDeclarationReferenceReader(
     return source.length;
   }
 
-  function templateEnd(source: string, start: number): { end: number; expressions: string[] } {
+  function templateEnd(
+    source: string,
+    start: number,
+  ): { end: number; expressions: string[] } {
     const expressions: string[] = [];
     let cursor = start + 1;
     while (cursor < source.length) {
       if (source[cursor] === "\\") cursor += 2;
-      else if (source[cursor].charCodeAt(0) === 96) return { end: cursor + 1, expressions };
+      else if (source[cursor].charCodeAt(0) === 96)
+        return { end: cursor + 1, expressions };
       else if (source.startsWith("${", cursor)) {
         const expressionStart = cursor + 2;
         const expressionEnd = templateExpressionEnd(source, expressionStart);
@@ -87,7 +97,10 @@ export function createDeclarationReferenceReader(
   function regexCanStart(previous?: Token): boolean {
     if (!previous) return true;
     if (previous.kind === "word") return regexPrefixWords.has(previous.value);
-    return previous.kind === "punctuation" && "([{:;,=!?&|+-*%^~<>".includes(previous.value);
+    return (
+      previous.kind === "punctuation" &&
+      "([{:;,=!?&|+-*%^~<>".includes(previous.value)
+    );
   }
 
   function skipRegex(source: string, start: number): number {
@@ -111,7 +124,10 @@ export function createDeclarationReferenceReader(
     return cursor;
   }
 
-  return function references(text: string, imports?: Map<string, string>): Set<string> {
+  return function references(
+    text: string,
+    imports?: Map<string, string>,
+  ): Set<string> {
     const names = new Set<string>();
     const values: string[] = [];
     const tokens: Token[] = [];
@@ -129,7 +145,9 @@ export function createDeclarationReferenceReader(
         const end = text.indexOf("\n", index);
         const comment = text.slice(index, end < 0 ? text.length : end);
         const directive =
-          /^\/\/\/\s*<reference\b[^>\n]{0,1024}?\btypes\s*=\s*(["'])([^"']+)\1/.exec(comment);
+          /^\/\/\/\s*<reference\b[^>\n]{0,1024}?\btypes\s*=\s*(["'])([^"']+)\1/.exec(
+            comment,
+          );
         if (directive) values.push(directive[2]);
         index = end < 0 ? text.length : end;
         continue;
@@ -182,8 +200,14 @@ export function createDeclarationReferenceReader(
         check();
         const token = tokens[cursor];
         if (token.kind === "punctuation") {
-          if (token.value === "{" || token.value === "[" || token.value === "(") depth++;
-          else if (token.value === "}" || token.value === "]" || token.value === ")") depth--;
+          if (token.value === "{" || token.value === "[" || token.value === "(")
+            depth++;
+          else if (
+            token.value === "}" ||
+            token.value === "]" ||
+            token.value === ")"
+          )
+            depth--;
           else if (token.value === ";" && depth === 0) return;
         }
         if (
@@ -221,8 +245,12 @@ export function createDeclarationReferenceReader(
       ) {
         values.push(tokens[cursor + 2].value);
       } else if (token.value === "import") {
-        if (tokens[cursor + 1]?.kind === "string") values.push(tokens[cursor + 1].value);
-        else if (tokens[cursor + 1]?.value === "(" && tokens[cursor + 2]?.kind === "string")
+        if (tokens[cursor + 1]?.kind === "string")
+          values.push(tokens[cursor + 1].value);
+        else if (
+          tokens[cursor + 1]?.value === "(" &&
+          tokens[cursor + 2]?.kind === "string"
+        )
           values.push(tokens[cursor + 2].value);
         else addFrom(cursor);
       } else if (token.value === "export") addFrom(cursor);
@@ -238,7 +266,8 @@ export function createDeclarationReferenceReader(
       const name = packageName(value);
       names.add(name);
       if (imports) imports.set(value, name);
-      if (names.size > entryLimit) throw new Error("Declaration entry limit exceeded");
+      if (names.size > entryLimit)
+        throw new Error("Declaration entry limit exceeded");
     }
     return names;
   };

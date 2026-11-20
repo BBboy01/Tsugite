@@ -27,7 +27,13 @@
 :root {
   --files-panel-transition: 260ms cubic-bezier(0.4, 0, 1, 1);
   font-family:
-    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
   color: #343438;
   background: #f5f5f7;
   font-synthesis: none;
@@ -57,7 +63,8 @@
   .live-dot {
     --status-color: #34c759;
     background: var(--status-color);
-    box-shadow: 0 0 0 3px color-mix(in srgb, var(--status-color) 20%, transparent);
+    box-shadow: 0 0 0 3px
+      color-mix(in srgb, var(--status-color) 20%, transparent);
   }
 
   .live-dot[data-status="live"] {
@@ -168,7 +175,9 @@
   }
 
   body .cm-editor.vim-normal[data-normal-cursor-style="block"] .cm-fat-cursor,
-  body .cm-editor.vim-normal[data-normal-cursor-style="block-blink"] .cm-fat-cursor {
+  body
+    .cm-editor.vim-normal[data-normal-cursor-style="block-blink"]
+    .cm-fat-cursor {
     width: 0.65em !important;
     overflow: hidden;
     background-color: var(--accent) !important;
@@ -186,7 +195,8 @@
   }
 
   .cm-editor.vim-normal[data-normal-cursor-style="underline"] .cm-fat-cursor,
-  .cm-editor.vim-normal[data-normal-cursor-style="underline-blink"] .cm-fat-cursor {
+  .cm-editor.vim-normal[data-normal-cursor-style="underline-blink"]
+    .cm-fat-cursor {
     width: 0.65em !important;
     background-color: transparent !important;
     color: transparent !important;
@@ -212,7 +222,8 @@
       animation: none;
     }
 
-    .cm-editor.vim-normal[data-normal-cursor-style$="-blink"] .cm-vimCursorLayer {
+    .cm-editor.vim-normal[data-normal-cursor-style$="-blink"]
+      .cm-vimCursorLayer {
       animation: none !important;
     }
   }
@@ -375,7 +386,8 @@
   color: var(--ink-strong);
 }
 
-[data-header-files-region] button[aria-expanded="true"]:is(:hover, :focus-visible) {
+[data-header-files-region]
+  button[aria-expanded="true"]:is(:hover, :focus-visible) {
   background-color: color-mix(in srgb, var(--accent) 22%, var(--canvas));
 }
 
@@ -415,7 +427,11 @@
 }
 
 .glass-console {
-  background-color: color-mix(in srgb, var(--glass-surface) 88%, var(--canvas)) !important;
+  background-color: color-mix(
+    in srgb,
+    var(--glass-surface) 88%,
+    var(--canvas)
+  ) !important;
   box-shadow: inset 0 1px 0 var(--glass-border);
 }
 
@@ -426,7 +442,14 @@
 }
 
 .settings-dialog-theme
-  :is(button, input, select, [role="radio"], [role="slider"], [role="switch"]):focus-visible {
+  :is(
+    button,
+    input,
+    select,
+    [role="radio"],
+    [role="slider"],
+    [role="switch"]
+  ):focus-visible {
   outline: 2px solid var(--focus-ring-strong);
   outline-offset: 2px;
   box-shadow: 0 0 0 4px var(--focus-halo);

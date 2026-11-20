@@ -42,7 +42,13 @@ export function useWorkspaceFollow({
     ) {
       selectFile(followingMember.selectedPath ?? "");
     }
-  }, [followingMember, followingUserId, selectFile, selectedPath, setFollowingUserId]);
+  }, [
+    followingMember,
+    followingUserId,
+    selectFile,
+    selectedPath,
+    setFollowingUserId,
+  ]);
 
   const handleFollowMember = useCallback(
     (userId: string) => {
@@ -54,7 +60,8 @@ export function useWorkspaceFollow({
       const member = findFollowedMember(members, userId);
       if (!member) return;
       setFollowingUserId(userId);
-      if (member.selectedPath !== undefined) selectFile(member.selectedPath ?? "");
+      if (member.selectedPath !== undefined)
+        selectFile(member.selectedPath ?? "");
     },
     [currentUserId, followingUserId, members, selectFile, setFollowingUserId],
   );

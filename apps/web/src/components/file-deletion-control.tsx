@@ -11,7 +11,11 @@ type FileDeletionControlProps = {
   onClose: () => void;
 };
 
-export function FileDeletionControl({ recovery, theme, onClose }: FileDeletionControlProps) {
+export function FileDeletionControl({
+  recovery,
+  theme,
+  onClose,
+}: FileDeletionControlProps) {
   const { t } = useTranslation();
   const [conflict, setConflict] = useState<FileDeletionRecovery>();
   const buttonClass =

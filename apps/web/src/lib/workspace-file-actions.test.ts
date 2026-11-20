@@ -42,11 +42,18 @@ for (const [path, language] of [
 
 test("explicit deletion undo restores file contents independently of editor history", () => {
   const doc = new LoroDoc();
-  const file = createFile(doc, "src/notes.js", "javascript", "const retained = 1");
+  const file = createFile(
+    doc,
+    "src/notes.js",
+    "javascript",
+    "const retained = 1",
+  );
   const recovery = actions(doc, file.path).handleDelete({ type: "file", file });
   expect(listFiles(doc)).toHaveLength(0);
   expect(recovery?.undo()).toBe(true);
-  expect(getFileByPath(doc, file.path)?.text.toString()).toBe("const retained = 1");
+  expect(getFileByPath(doc, file.path)?.text.toString()).toBe(
+    "const retained = 1",
+  );
   expect(getFileByPath(doc, file.path)?.language).toBe("javascript");
 });
 
@@ -58,12 +65,15 @@ test("file rename emits one plain-data navigation update", () => {
     doc,
     selectedPath: file.path,
     openTabPaths: [file.path, "src/other.ts"],
-    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    setNavigation: (selectedPath, openTabPaths) =>
+      updates.push({ selectedPath, openTabPaths }),
     activateFile: () => {},
     stopFollowing: () => {},
   });
 
-  expect(fileActions.handleRename({ type: "file", file }, "src/renamed.ts")).toBeUndefined();
+  expect(
+    fileActions.handleRename({ type: "file", file }, "src/renamed.ts"),
+  ).toBeUndefined();
   expect(updates).toEqual([
     {
       selectedPath: "src/renamed.ts",
@@ -81,15 +91,16 @@ test("moving a file keeps its Loro identity and updates selected and open paths"
     doc,
     selectedPath: file.path,
     openTabPaths: [file.path],
-    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    setNavigation: (selectedPath, openTabPaths) =>
+      updates.push({ selectedPath, openTabPaths }),
     activateFile: () => {},
     stopFollowing: () => {},
   });
 
   expect(fileActions.handleMove([file.path], "src/ui")).toBeUndefined();
-  expect(listFiles(doc).find((candidate) => candidate.id === file.id)?.path).toBe(
-    "src/ui/App 2.tsx",
-  );
+  expect(
+    listFiles(doc).find((candidate) => candidate.id === file.id)?.path,
+  ).toBe("src/ui/App 2.tsx");
   expect(updates).toEqual([
     { selectedPath: "src/ui/App 2.tsx", openTabPaths: ["src/ui/App 2.tsx"] },
   ]);
@@ -98,7 +109,9 @@ test("moving a file keeps its Loro identity and updates selected and open paths"
 test("moving package.json is rejected", () => {
   const doc = new LoroDoc();
   const file = createFile(doc, "package.json", "typescript");
-  expect(actions(doc).handleMove([file.path], "src")).toBe("This item cannot be moved");
+  expect(actions(doc).handleMove([file.path], "src")).toBe(
+    "This item cannot be moved",
+  );
   expect(listFiles(doc)[0]?.path).toBe("package.json");
 });
 
@@ -112,12 +125,15 @@ test("moving multiple selected files preserves identities and updates navigation
     doc,
     selectedPath: first.path,
     openTabPaths: [first.path, second.path],
-    setNavigation: (selectedPath, openTabPaths) => updates.push({ selectedPath, openTabPaths }),
+    setNavigation: (selectedPath, openTabPaths) =>
+      updates.push({ selectedPath, openTabPaths }),
     activateFile: () => {},
     stopFollowing: () => {},
   });
 
-  expect(fileActions.handleMove([first.path, second.path], "destination")).toBeUndefined();
+  expect(
+    fileActions.handleMove([first.path, second.path], "destination"),
+  ).toBeUndefined();
   expect(listFiles(doc).map(({ id, path }) => ({ id, path }))).toEqual([
     { id: first.id, path: "destination/first.ts" },
     { id: second.id, path: "destination/second.ts" },
@@ -170,15 +186,18 @@ test("undo refuses a remotely recreated path and does not partially restore a de
   remote.commit();
   doc.import(remote.export({ mode: "snapshot" }));
   expect(recovery?.undo()).toBe(false);
-  expect(listFiles(doc).map((file) => [file.path, file.text.toString()])).toEqual([
-    ["src/b.ts", "remote b"],
-  ]);
+  expect(
+    listFiles(doc).map((file) => [file.path, file.text.toString()]),
+  ).toEqual([["src/b.ts", "remote b"]]);
 });
 
 test("undo refuses a parent replaced by a file", () => {
   const doc = new LoroDoc();
   createFile(doc, "parent/src/a.ts", "typescript", "retained");
-  const recovery = actions(doc).handleDelete({ type: "folder", path: "parent" });
+  const recovery = actions(doc).handleDelete({
+    type: "folder",
+    path: "parent",
+  });
   createFile(doc, "parent", "typescript", "remote");
   expect(recovery?.undo()).toBe(false);
   expect(getFileByPath(doc, "parent")?.text.toString()).toBe("remote");
@@ -192,7 +211,10 @@ for (const singleFile of [false, true]) {
     });
     const { doc } = client;
     const sources = singleFile
-      ? ["a" + "\u{1f680}\u4e2d".repeat(90_000), "\u4e2d\u{1f680}".repeat(90_000)]
+      ? [
+          "a" + "\u{1f680}\u4e2d".repeat(90_000),
+          "\u4e2d\u{1f680}".repeat(90_000),
+        ]
       : ["a".repeat(600_000), "b".repeat(600_000)];
     const first = createFile(doc, "src/a.ts", "typescript", sources[0]);
     doc.commit();
@@ -220,7 +242,9 @@ for (const singleFile of [false, true]) {
     expect(getFileByPath(doc, "src/a.ts")?.text.toString()).toBe(expected);
     expect(getFileByPath(remote, "src/a.ts")?.text.toString()).toBe(expected);
     if (!singleFile) {
-      expect(getFileByPath(remote, "src/b.ts")?.text.toString()).toBe(sources[1]);
+      expect(getFileByPath(remote, "src/b.ts")?.text.toString()).toBe(
+        sources[1],
+      );
     }
     expect(recovery?.undo()).toBe(false);
   });

@@ -4,7 +4,9 @@ import { selectedBackground } from "./theme-selection-style";
 function readEditorText(page: Page) {
   return page.locator(".cm-content").evaluate((element) => {
     const clone = element.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll(".cm-remote-cursor-label").forEach((label) => label.remove());
+    clone
+      .querySelectorAll(".cm-remote-cursor-label")
+      .forEach((label) => label.remove());
     return Array.from(clone.querySelectorAll(".cm-line"))
       .map((line) => line.textContent ?? "")
       .join("\n");
@@ -15,8 +17,12 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
 });
 
-test("dismisses file search and command palette by clicking the backdrop", async ({ page }) => {
-  await page.goto(`/room/e2e-dialog-backdrop-${Date.now()}`, { waitUntil: "domcontentloaded" });
+test("dismisses file search and command palette by clicking the backdrop", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-dialog-backdrop-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
 
@@ -37,7 +43,9 @@ test("dismisses file search and command palette by clicking the backdrop", async
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("changes the workspace language from the command palette", async ({ page }) => {
+test("changes the workspace language from the command palette", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-language-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -47,7 +55,9 @@ test("changes the workspace language from the command palette", async ({ page })
   await page.getByRole("button", { name: "Language" }).click();
   await page.getByRole("button", { name: "简体中文" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
-  await expect.poll(() => page.evaluate(() => localStorage.getItem("iris.language"))).toBe("zh-CN");
+  await expect
+    .poll(() => page.evaluate(() => localStorage.getItem("iris.language")))
+    .toBe("zh-CN");
 });
 
 test("previews themes on highlight and restores the committed theme on escape", async ({
@@ -57,7 +67,9 @@ test("previews themes on highlight and restores the committed theme on escape", 
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('[data-status="live"]').first()).toBeVisible({ timeout: 15_000 });
+  await expect(page.locator('[data-status="live"]').first()).toBeVisible({
+    timeout: 15_000,
+  });
   const main = page.locator("main");
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+K");
@@ -76,7 +88,9 @@ test("previews themes on highlight and restores the committed theme on escape", 
   await expect(committedThemeOption).toHaveText(committedThemeLabel ?? "");
   await expect(main).toHaveClass(/theme-dracula/);
   await page.keyboard.press("Escape");
-  await expect(page.getByRole("button", { name: "Choose theme" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Choose theme" }),
+  ).toBeVisible();
   await expect(main).toHaveClass(new RegExp(committedTheme as string));
 
   await page.getByRole("button", { name: "Choose theme" }).click();
@@ -85,8 +99,12 @@ test("previews themes on highlight and restores the committed theme on escape", 
   await expect(main).toHaveClass(/theme-dracula/);
 });
 
-test("uses opaque dialog surfaces for transient search and command dialogs", async ({ page }) => {
-  await page.goto(`/room/e2e-dialog-surfaces-${Date.now()}`, { waitUntil: "domcontentloaded" });
+test("uses opaque dialog surfaces for transient search and command dialogs", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-dialog-surfaces-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
 
@@ -102,7 +120,10 @@ test("uses opaque dialog surfaces for transient search and command dialogs", asy
   await expect(commandPalette).toBeVisible();
   await expect(commandPalette).not.toHaveClass(/glass-dialog/);
   await expect(commandPalette).toHaveCSS("backdrop-filter", "none");
-  await expect(commandPalette).not.toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(commandPalette).not.toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
   await page.keyboard.press("Escape");
 
   await page.keyboard.press("ControlOrMeta+,");
@@ -112,52 +133,83 @@ test("uses opaque dialog surfaces for transient search and command dialogs", asy
   await expect(settings).toHaveCSS("backdrop-filter", "none");
 });
 
-test("opens the command palette and exposes extensible keymap actions", async ({ page }) => {
-  await page.goto(`/room/e2e-command-palette-${Date.now()}`, { waitUntil: "domcontentloaded" });
+test("opens the command palette and exposes extensible keymap actions", async ({
+  page,
+}) => {
+  await page.goto(`/room/e2e-command-palette-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+K");
   await expect(page.getByRole("dialog")).toBeVisible();
   await expect(page.getByRole("button", { name: "Open file" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Open settings" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Use system clipboard" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Open settings" }),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Use system clipboard" }),
+  ).toBeVisible();
   const primaryModifier = await page.evaluate(() =>
     /Mac|iPhone|iPad|iPod/i.test(navigator.platform) ? "Cmd" : "Ctrl",
   );
   await expect(page.getByRole("button", { name: "Open file" })).toContainText(
     `${primaryModifier}-P`,
   );
-  await expect(page.getByRole("button", { name: "Open settings" })).toContainText(
-    `${primaryModifier}-,`,
-  );
+  await expect(
+    page.getByRole("button", { name: "Open settings" }),
+  ).toContainText(`${primaryModifier}-,`);
   await page.keyboard.press("Escape");
   await page.getByRole("button", { name: "Open settings" }).click();
   await page.getByRole("button", { name: "Keyboard" }).click();
-  await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
-  await expect(page.getByLabel("Open settings shortcut")).toHaveValue(`${primaryModifier}-,`);
-  await expect(page.getByLabel("Command palette shortcut")).toHaveValue(`${primaryModifier}-K`);
+  await expect(page.getByLabel("File search shortcut")).toHaveValue(
+    `${primaryModifier}-P`,
+  );
+  await expect(page.getByLabel("Open settings shortcut")).toHaveValue(
+    `${primaryModifier}-,`,
+  );
+  await expect(page.getByLabel("Command palette shortcut")).toHaveValue(
+    `${primaryModifier}-K`,
+  );
   await page.getByLabel("File search shortcut").press("ControlOrMeta+Shift+P");
-  await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-Shift-P`);
-  await page.getByRole("button", { name: "Restore default shortcut" }).first().click();
-  await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
+  await expect(page.getByLabel("File search shortcut")).toHaveValue(
+    `${primaryModifier}-Shift-P`,
+  );
+  await page
+    .getByRole("button", { name: "Restore default shortcut" })
+    .first()
+    .click();
+  await expect(page.getByLabel("File search shortcut")).toHaveValue(
+    `${primaryModifier}-P`,
+  );
   await page.getByLabel("File search shortcut").press("ControlOrMeta+K");
-  await expect(page.getByRole("alert")).toContainText("Command palette shortcut");
-  await expect(page.getByLabel("File search shortcut")).toHaveValue(`${primaryModifier}-P`);
+  await expect(page.getByRole("alert")).toContainText(
+    "Command palette shortcut",
+  );
+  await expect(page.getByLabel("File search shortcut")).toHaveValue(
+    `${primaryModifier}-P`,
+  );
 });
 
-test("exposes and executes runtime actions from the command palette", async ({ page }) => {
+test("exposes and executes runtime actions from the command palette", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-runtime-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+K");
-  await expect(page.getByRole("button", { name: "Restart preview runtime" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Restart preview runtime" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Restart preview runtime" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
 });
 
-test("navigates command palette actions with Ctrl+N and Ctrl+P", async ({ page }) => {
+test("navigates command palette actions with Ctrl+N and Ctrl+P", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-navigation-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -196,7 +248,9 @@ test("navigates command palette actions with arrow keys", async ({ page }) => {
   await expect(secondCommand).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
 });
 
-test("wraps command palette selection from the last item to the first", async ({ page }) => {
+test("wraps command palette selection from the last item to the first", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-wrap-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -211,10 +265,15 @@ test("wraps command palette selection from the last item to the first", async ({
     "background-color",
     await selectedBackground(page, "#007aff"),
   );
-  await expect(commands.last()).toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
+  await expect(commands.last()).toHaveCSS(
+    "background-color",
+    "rgba(0, 0, 0, 0)",
+  );
 });
 
-test("updates workspace settings from command palette actions", async ({ page }) => {
+test("updates workspace settings from command palette actions", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-settings-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -222,7 +281,9 @@ test("updates workspace settings from command palette actions", async ({ page })
   await page.locator(".cm-content").focus();
   await page.keyboard.press("ControlOrMeta+K");
 
-  await expect(page.getByRole("button", { name: "Random theme" })).toBeVisible();
+  await expect(
+    page.getByRole("button", { name: "Random theme" }),
+  ).toBeVisible();
   await page.getByRole("button", { name: "Language" }).click();
   await expect(page.getByRole("button", { name: "English" })).toBeVisible();
   await page.keyboard.press("Escape");
@@ -236,15 +297,17 @@ test("updates workspace settings from command palette actions", async ({ page })
   await expect(page.getByText("No matching commands")).toBeVisible();
   await commandSearch.fill("word wrap");
   await expect(page.getByRole("button", { name: "Word wrap" })).toBeVisible();
-  await expect(page.getByRole("button", { name: "Word wrap" }).locator("mark")).toHaveText(
-    "Word wrap",
-  );
+  await expect(
+    page.getByRole("button", { name: "Word wrap" }).locator("mark"),
+  ).toHaveText("Word wrap");
   await commandSearch.fill("");
   await page.getByRole("button", { name: "Random theme" }).click();
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect
     .poll(() =>
-      page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      page
+        .locator(".cm-content")
+        .evaluate((element) => document.activeElement === element),
     )
     .toBe(true);
   await expect(page.locator("main")).not.toHaveClass(/theme-paper/);
@@ -260,7 +323,9 @@ test("updates workspace settings from command palette actions", async ({ page })
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect
     .poll(() =>
-      page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      page
+        .locator(".cm-content")
+        .evaluate((element) => document.activeElement === element),
     )
     .toBe(true);
   const cursorMarker = "x";
@@ -279,13 +344,17 @@ test("updates workspace settings from command palette actions", async ({ page })
   await expect(page.getByRole("dialog")).toBeHidden();
   await expect
     .poll(() =>
-      page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      page
+        .locator(".cm-content")
+        .evaluate((element) => document.activeElement === element),
     )
     .toBe(true);
   await expect(page.locator("main")).toHaveClass(/theme-dracula/);
 });
 
-test("returns focus to the editor when the command palette is dismissed", async ({ page }) => {
+test("returns focus to the editor when the command palette is dismissed", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-command-palette-focus-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -295,16 +364,22 @@ test("returns focus to the editor when the command palette is dismissed", async 
 
   const dialog = page.getByRole("dialog");
   await expect(dialog).toBeVisible();
-  await page.locator("[data-dialog-overlay]").click({ position: { x: 12, y: 12 } });
+  await page
+    .locator("[data-dialog-overlay]")
+    .click({ position: { x: 12, y: 12 } });
   await expect(dialog).toBeHidden();
   await expect
     .poll(() =>
-      page.locator(".cm-content").evaluate((element) => document.activeElement === element),
+      page
+        .locator(".cm-content")
+        .evaluate((element) => document.activeElement === element),
     )
     .toBe(true);
   await expect
     .poll(() =>
-      page.locator(".cm-editor").evaluate((element) => element.classList.contains("cm-focused")),
+      page
+        .locator(".cm-editor")
+        .evaluate((element) => element.classList.contains("cm-focused")),
     )
     .toBe(true);
 });

@@ -4,7 +4,9 @@ import { createRoomDatabase } from "./db/database";
 import { createRoomApp } from "./room-app";
 
 const port = Number(Bun.env.PORT ?? 3001);
-const { db, sqlite } = createRoomDatabase(Bun.env.DATABASE_PATH ?? "./data/tsugite.sqlite");
+const { db, sqlite } = createRoomDatabase(
+  Bun.env.DATABASE_PATH ?? "./data/tsugite.sqlite",
+);
 const rooms = new RoomService(new RoomRepository(db));
 
 const app = createRoomApp(rooms).listen(port);

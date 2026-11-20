@@ -7,9 +7,16 @@ type WorkspacePanelFrameProps = {
   children: ReactNode;
 };
 
-export function WorkspacePanelFrame({ panel, children }: WorkspacePanelFrameProps) {
+export function WorkspacePanelFrame({
+  panel,
+  children,
+}: WorkspacePanelFrameProps) {
   const surfaceClass =
-    panel === "files" ? "bg-iris-rail" : panel === "preview" ? "bg-iris-preview" : "bg-iris-editor";
+    panel === "files"
+      ? "bg-iris-rail"
+      : panel === "preview"
+        ? "bg-iris-preview"
+        : "bg-iris-editor";
 
   return (
     <div

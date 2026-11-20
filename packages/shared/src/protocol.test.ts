@@ -30,11 +30,17 @@ test("decodes only structurally valid server messages", () => {
   };
 
   expect(
-    decodeServerJsonMessage(JSON.stringify({ type: "presence:list", members: [presence] })),
+    decodeServerJsonMessage(
+      JSON.stringify({ type: "presence:list", members: [presence] }),
+    ),
   ).toEqual({ type: "presence:list", members: [presence] });
   expect(
-    decodeServerJsonMessage(JSON.stringify({ type: "presence:list", members: [null] })),
+    decodeServerJsonMessage(
+      JSON.stringify({ type: "presence:list", members: [null] }),
+    ),
   ).toBeUndefined();
-  expect(decodeServerJsonMessage(JSON.stringify({ ...presence, cursor: {} }))).toBeUndefined();
+  expect(
+    decodeServerJsonMessage(JSON.stringify({ ...presence, cursor: {} })),
+  ).toBeUndefined();
   expect(decodeServerJsonMessage("{")).toBeUndefined();
 });

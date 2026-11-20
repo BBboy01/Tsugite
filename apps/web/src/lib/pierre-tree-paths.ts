@@ -1,4 +1,7 @@
-export function toPierreTreePaths(files: readonly string[], folders: readonly string[]): string[] {
+export function toPierreTreePaths(
+  files: readonly string[],
+  folders: readonly string[],
+): string[] {
   const paths = new Set<string>();
   for (const folder of folders) paths.add(`${folder.replace(/\/+$/, "")}/`);
   for (const file of files) {

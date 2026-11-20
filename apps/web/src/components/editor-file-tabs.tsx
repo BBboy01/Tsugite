@@ -29,7 +29,9 @@ export function EditorFileTabs({
   const [focusedPath, setFocusedPath] = useState<string>();
   const [copyError, setCopyError] = useState(false);
   const paths = tabViewModels.map((tab) => tab.file.path);
-  const tabStopPath = paths.includes(focusedPath ?? "") ? focusedPath : activePath;
+  const tabStopPath = paths.includes(focusedPath ?? "")
+    ? focusedPath
+    : activePath;
   const copyPath = async (path: string) => {
     setCopyError(false);
     try {
@@ -59,7 +61,11 @@ export function EditorFileTabs({
               canCloseRight={index < paths.length - 1}
               onFocus={() => setFocusedPath(tab.file.path)}
               onBlur={(event) => {
-                if (!event.currentTarget.closest('[role="tablist"]')?.contains(event.relatedTarget))
+                if (
+                  !event.currentTarget
+                    .closest('[role="tablist"]')
+                    ?.contains(event.relatedTarget)
+                )
                   setFocusedPath(undefined);
               }}
               onSelect={() => onSelectTab(tab.file.path)}

@@ -2,14 +2,20 @@ import { expect, test } from "bun:test";
 import { faker } from "@faker-js/faker";
 import { LoroDoc } from "loro-crdt";
 
-import { createGuestIdentity, RoomClient, type RoomSocket } from "./room-client";
+import {
+  createGuestIdentity,
+  RoomClient,
+  type RoomSocket,
+} from "./room-client";
 
 class FakeSocket implements RoomSocket {
   binaryType = "";
   readyState = 0;
   sent: Array<string | Uint8Array> = [];
   onopen: (() => void) | null = null;
-  onmessage: ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null = null;
+  onmessage:
+    ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null =
+    null;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
 
@@ -64,7 +70,9 @@ test("queues local updates while offline and flushes after reconnect", () => {
   client.connect();
   socket.open();
 
-  expect(socket.sent.some((message) => message instanceof Uint8Array)).toBe(true);
+  expect(socket.sent.some((message) => message instanceof Uint8Array)).toBe(
+    true,
+  );
 });
 
 test("updates presence and status events", () => {
@@ -103,7 +111,9 @@ test("exposes independently subscribable status, presence, and sync snapshots", 
 
   client.subscribeStatus(() => statuses.push(client.getStatusSnapshot()));
   client.subscribePresence(() => presenceChanges++);
-  client.subscribeSync(() => pendingChanges.push(client.getPendingChangesSnapshot()));
+  client.subscribeSync(() =>
+    pendingChanges.push(client.getPendingChangesSnapshot()),
+  );
   client.connect();
   socket.open();
   client.doc.getText("text").insert(0, "pending");
@@ -137,7 +147,9 @@ test("resends updates when the connection closes before the server acknowledgeme
   sockets[0].open();
   client.doc.getText("text").insert(0, "retained");
   client.doc.commit();
-  const update = sockets[0].sent.find((message) => message instanceof Uint8Array);
+  const update = sockets[0].sent.find(
+    (message) => message instanceof Uint8Array,
+  );
   expect(update).toBeInstanceOf(Uint8Array);
   client.disconnect();
   client.connect();
@@ -162,7 +174,9 @@ test("does not replay updates already acknowledged by the server", () => {
   client.disconnect();
   client.connect();
   sockets[1].open();
-  expect(sockets[1].sent.filter((message) => message instanceof Uint8Array)).toHaveLength(0);
+  expect(
+    sockets[1].sent.filter((message) => message instanceof Uint8Array),
+  ).toHaveLength(0);
   client.disconnect();
 });
 
@@ -243,8 +257,12 @@ test("ignores malformed server messages without breaking the room session", () =
   client.connect();
   socket.open();
 
-  expect(() => socket.message('{"type":"presence:list","members":null}')).not.toThrow();
-  expect(() => socket.message('{"type":"presence:list","members":[null]}')).not.toThrow();
+  expect(() =>
+    socket.message('{"type":"presence:list","members":null}'),
+  ).not.toThrow();
+  expect(() =>
+    socket.message('{"type":"presence:list","members":[null]}'),
+  ).not.toThrow();
   expect(() => socket.message("{")).not.toThrow();
   socket.message(
     JSON.stringify({

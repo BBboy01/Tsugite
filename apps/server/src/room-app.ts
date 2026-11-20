@@ -19,7 +19,10 @@ type RoomAppOptions = {
   messagesPerSecond?: number;
 };
 
-export function createRoomApp(rooms: RoomService, options: RoomAppOptions = {}) {
+export function createRoomApp(
+  rooms: RoomService,
+  options: RoomAppOptions = {},
+) {
   const connections = new Map<
     RoomSocket,
     { timer: ReturnType<typeof setTimeout>; messages: WindowRateLimit }
@@ -34,15 +37,19 @@ export function createRoomApp(rooms: RoomService, options: RoomAppOptions = {}) 
     .use(cors({ origin: true }))
     .get("/health", () => ({ ok: true }))
     .onStop(() => {
-      for (const connection of connections.values()) clearTimeout(connection.timer);
+      for (const connection of connections.values())
+        clearTimeout(connection.timer);
       connections.clear();
     })
     .ws("/ws/:roomId", {
       beforeHandle({ params, status }) {
-        if (!isRoomId(params.roomId)) return status(400, "Invalid room identifier");
+        if (!isRoomId(params.roomId))
+          return status(400, "Invalid room identifier");
       },
       open(ws) {
-        if (connections.size >= (options.maxConnections ?? ROOM_LIMITS.maxClients)) {
+        if (
+          connections.size >= (options.maxConnections ?? ROOM_LIMITS.maxClients)
+        ) {
           ws.close(1013, "Connection capacity reached");
           return;
         }
@@ -68,9 +75,13 @@ export function createRoomApp(rooms: RoomService, options: RoomAppOptions = {}) 
           let accepted = false;
           if (message instanceof Uint8Array) {
             accepted = rooms.update(socket, message);
-            if (accepted) socket.send(encodeJsonMessage({ type: "update:ack" }));
+            if (accepted)
+              socket.send(encodeJsonMessage({ type: "update:ack" }));
           } else {
-            const payload = typeof message === "string" ? decodeJsonMessage(message) : message;
+            const payload =
+              typeof message === "string"
+                ? decodeJsonMessage(message)
+                : message;
             if (isJoinMessage(payload)) {
               accepted = rooms.join(socket, roomId, payload);
               if (accepted) clearTimeout(connection.timer);

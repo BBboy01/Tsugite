@@ -13,10 +13,16 @@ export async function runClipboardAction(
   if (action === "paste") insert = await clipboard.readText();
   else
     await clipboard.writeText(
-      state.selection.ranges.map(({ from, to }) => state.sliceDoc(from, to)).join(state.lineBreak),
+      state.selection.ranges
+        .map(({ from, to }) => state.sliceDoc(from, to))
+        .join(state.lineBreak),
     );
   if (action === "copy") return;
-  if (!isCurrent() || view.state.doc !== state.doc || !view.state.selection.eq(state.selection)) {
+  if (
+    !isCurrent() ||
+    view.state.doc !== state.doc ||
+    !view.state.selection.eq(state.selection)
+  ) {
     throw new Error("staleTarget");
   }
   if (view.state.readOnly) return;

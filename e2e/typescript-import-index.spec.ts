@@ -20,8 +20,13 @@ test("import indexing yields and reuses unchanged files in a code-dense maximum 
       };
     };
     const index = new TypeScriptImportIndex();
-    const text = ('import "pkg";\n' + "void Math.random();\n".repeat(1600)).padEnd(32768, " ");
-    const files = Array.from({ length: 512 }, (_, id) => ({ path: `${id}.ts`, text }));
+    const text = (
+      'import "pkg";\n' + "void Math.random();\n".repeat(1600)
+    ).padEnd(32768, " ");
+    const files = Array.from({ length: 512 }, (_, id) => ({
+      path: `${id}.ts`,
+      text,
+    }));
     let yielded = false;
     let previous = performance.now();
     let longestGapMs = 0;

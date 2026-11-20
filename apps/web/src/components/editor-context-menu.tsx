@@ -1,5 +1,11 @@
 import * as ContextMenu from "@radix-ui/react-context-menu";
-import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { EditorSelection, type EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
@@ -13,7 +19,10 @@ import {
   type NavigationKind,
 } from "../lib/editor-navigation";
 import { runClipboardAction } from "../lib/editor-clipboard";
-import { EditorContextFeedback, type EditorContextError } from "./editor-context-feedback";
+import {
+  EditorContextFeedback,
+  type EditorContextError,
+} from "./editor-context-feedback";
 import type { PeekResult } from "./editor-peek";
 import { editItems, navigationItems } from "./editor-context-actions";
 
@@ -98,7 +107,11 @@ export function EditorContextMenu({
     keepPeekFocus.current = false;
     onNavigate(location);
   };
-  const runNavigation = async (kind: NavigationKind, title: string, preview = false) => {
+  const runNavigation = async (
+    kind: NavigationKind,
+    title: string,
+    preview = false,
+  ) => {
     const view = viewRef.current;
     if (!view || !intelligence || !target) return;
     if (target.view !== view || view.state.doc !== target.state.doc) {
@@ -127,7 +140,8 @@ export function EditorContextMenu({
       );
       if (!valid()) return;
       if (result.status !== "ok" && result.status !== "empty") {
-        if (result.status === "error" || result.status === "timeout") setError("queryFailed");
+        if (result.status === "error" || result.status === "timeout")
+          setError("queryFailed");
         return;
       }
       const locations = result.status === "ok" ? result.value : [];
@@ -158,7 +172,11 @@ export function EditorContextMenu({
           userEvent: "select",
         });
       else
-        await runClipboardAction(view, action, () => mounted.current && viewRef.current === view);
+        await runClipboardAction(
+          view,
+          action,
+          () => mounted.current && viewRef.current === view,
+        );
     } catch (failure) {
       if (mounted.current)
         setError(
@@ -178,7 +196,8 @@ export function EditorContextMenu({
         !navigator.clipboard?.writeText ||
         (id === "cut" && target.state.readOnly)
       );
-    if (id === "paste") return target.state.readOnly || !navigator.clipboard?.readText;
+    if (id === "paste")
+      return target.state.readOnly || !navigator.clipboard?.readText;
     return false;
   };
   return (
@@ -193,18 +212,24 @@ export function EditorContextMenu({
             className="relative flex min-h-0 flex-1 flex-col"
             onMouseDownCapture={(event) => {
               if (event.button === 2)
-                beforeRightClick.current = viewRef.current?.state.selection ?? null;
+                beforeRightClick.current =
+                  viewRef.current?.state.selection ?? null;
             }}
             onContextMenu={(event) => {
               const view = viewRef.current;
-              if (!view || !(event.target instanceof Node) || !view.dom.contains(event.target)) {
+              if (
+                !view ||
+                !(event.target instanceof Node) ||
+                !view.dom.contains(event.target)
+              ) {
                 event.preventDefault();
                 return;
               }
               const position =
                 view.posAtCoords({ x: event.clientX, y: event.clientY }) ??
                 view.state.selection.main.head;
-              const selection = beforeRightClick.current ?? view.state.selection;
+              const selection =
+                beforeRightClick.current ?? view.state.selection;
               beforeRightClick.current = null;
               onLocalInteraction();
               view.dispatch({
@@ -220,7 +245,11 @@ export function EditorContextMenu({
               setTarget({ position, state: view.state, view });
             }}
             onKeyDown={(event) => {
-              if (!(event.key === "ContextMenu" || (event.shiftKey && event.key === "F10"))) return;
+              if (!(
+                event.key === "ContextMenu" ||
+                (event.shiftKey && event.key === "F10")
+              ))
+                return;
               const view = viewRef.current;
               const coords = view?.coordsAtPos(view.state.selection.main.head);
               if (!view || !coords) return;
@@ -252,7 +281,9 @@ export function EditorContextMenu({
             onCloseAutoFocus={(event) => {
               event.preventDefault();
               if (keepPeekFocus.current)
-                surfaceRef.current?.querySelector<HTMLElement>("[data-editor-peek]")?.focus();
+                surfaceRef.current
+                  ?.querySelector<HTMLElement>("[data-editor-peek]")
+                  ?.focus();
               else restoreFocus();
             }}
           >
@@ -262,7 +293,11 @@ export function EditorContextMenu({
                 className={itemClass}
                 disabled={!languageAvailable || !intelligence || !target}
                 onSelect={() => {
-                  void runNavigation(kind, t(`editor.context.${id}`), options.peek);
+                  void runNavigation(
+                    kind,
+                    t(`editor.context.${id}`),
+                    options.peek,
+                  );
                 }}
               >
                 <Icon size={14} aria-hidden="true" />

@@ -19,7 +19,10 @@ test("scopes workspace commands to one atom store", () => {
     activeDialog: null,
   });
 
-  store.set(workspaceCommandAtom, { type: "activate-file", path: "src/main.tsx" });
+  store.set(workspaceCommandAtom, {
+    type: "activate-file",
+    path: "src/main.tsx",
+  });
 
   expect(store.get(workspaceStateAtom)).toMatchObject({
     selectedPath: "src/main.tsx",
@@ -34,7 +37,10 @@ test("scopes workspace commands to one atom store", () => {
 test("separate stores do not leak workspace selection", () => {
   const first = createStore();
   const second = createStore();
-  first.set(workspaceCommandAtom, { type: "activate-file", path: "src/main.tsx" });
+  first.set(workspaceCommandAtom, {
+    type: "activate-file",
+    path: "src/main.tsx",
+  });
 
   expect(first.get(workspaceStateAtom).selectedPath).toBe("src/main.tsx");
   expect(second.get(workspaceStateAtom).selectedPath).toBe("src/App.tsx");
@@ -45,7 +51,10 @@ test("dialog state updates do not notify unrelated workspace selectors", () => {
   let selectedPathUpdates = 0;
   const unsubscribe = store.sub(selectedPathAtom, () => selectedPathUpdates++);
 
-  store.set(workspaceCommandAtom, { type: "set-command-palette-open", open: true });
+  store.set(workspaceCommandAtom, {
+    type: "set-command-palette-open",
+    open: true,
+  });
 
   expect(store.get(commandPaletteOpenAtom)).toBe(true);
   expect(selectedPathUpdates).toBe(0);

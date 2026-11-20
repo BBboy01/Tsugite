@@ -27,7 +27,10 @@ test("yields to the event loop while indexing a code-dense workspace", async () 
   }, 0);
   try {
     const text = 'import "pkg";\n' + "void Math.random();\n".repeat(1600);
-    const files = Array.from({ length: 512 }, (_, id) => ({ path: `${id}.ts`, text }));
+    const files = Array.from({ length: 512 }, (_, id) => ({
+      path: `${id}.ts`,
+      text,
+    }));
     expect(await index.getKey(files)).toBe('["pkg"]');
     expect(yielded).toBe(true);
     expect(await index.getKey(files.slice(1))).toBe('["pkg"]');

@@ -1,16 +1,15 @@
-import { LiveTokenizer, type Lang, type Theme, type LiveTextEdit } from "@pierre/highlights";
+import {
+  LiveTokenizer,
+  type Lang,
+  type Theme,
+  type LiveTextEdit,
+} from "@pierre/highlights";
 import type { WorkspaceTheme } from "@iris/shared";
 
 import { getHighlightsTheme } from "./workspace-theme";
 
 export type HighlightsLanguage =
-  | "typescript"
-  | "javascript"
-  | "tsx"
-  | "jsx"
-  | "html"
-  | "css"
-  | "json";
+  "typescript" | "javascript" | "tsx" | "jsx" | "html" | "css" | "json";
 
 export type HighlightViewport = readonly [startLine: number, endLine: number];
 
@@ -40,7 +39,12 @@ export async function createHighlightsSession(
   renderRange: HighlightViewport,
 ): Promise<HighlightsTokenizerSession> {
   const highlightsTheme = await getHighlightsTheme(theme);
-  return new HighlightsTokenizerSession(source, language, highlightsTheme, renderRange);
+  return new HighlightsTokenizerSession(
+    source,
+    language,
+    highlightsTheme,
+    renderRange,
+  );
 }
 
 export class HighlightsTokenizerSession {
@@ -60,7 +64,10 @@ export class HighlightsTokenizerSession {
     });
   }
 
-  highlight(viewport: HighlightViewport, lineOffsets: readonly number[]): HighlightSpan[] {
+  highlight(
+    viewport: HighlightViewport,
+    lineOffsets: readonly number[],
+  ): HighlightSpan[] {
     this.tokenizer.applyEdits([], { renderRange: viewport });
     this.tokenizer.flush(viewport[1]);
     return this.serialize(viewport, lineOffsets);
@@ -104,7 +111,9 @@ export class HighlightsTokenizerSession {
     for (let line = startLine; line < endLine; line += 1) {
       const lineOffset = lineOffsets[line - startLine];
       if (lineOffset === undefined) {
-        throw new RangeError(`Missing absolute offset for highlighted line ${line}`);
+        throw new RangeError(
+          `Missing absolute offset for highlighted line ${line}`,
+        );
       }
       for (const token of this.tokenizer.getLineTokens(line).tokens) {
         if (token.content.length === 0) continue;

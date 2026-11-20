@@ -4,7 +4,9 @@ import { TypeScriptImportIndex } from "./typescript-import-index";
 import type { RuntimeState } from "./webcontainer-runtime";
 
 type DeclarationRuntime = {
-  readTypeScriptDeclarations(sources?: readonly IntelligenceFile[]): Promise<IntelligenceFile[]>;
+  readTypeScriptDeclarations(
+    sources?: readonly IntelligenceFile[],
+  ): Promise<IntelligenceFile[]>;
 };
 type DeclarationTarget = Pick<
   ProjectDeclarations,
@@ -19,7 +21,11 @@ export class PreviewTypeScriptDeclarations {
   private readonly imports = new TypeScriptImportIndex();
   constructor(private readonly target: DeclarationTarget) {}
 
-  async onRuntimeState(state: RuntimeState, runtime: DeclarationRuntime, error?: string) {
+  async onRuntimeState(
+    state: RuntimeState,
+    runtime: DeclarationRuntime,
+    error?: string,
+  ) {
     if (state === "installing") {
       this.generation++;
       this.refreshGeneration++;
@@ -31,11 +37,16 @@ export class PreviewTypeScriptDeclarations {
       this.ready = true;
       await this.refresh(runtime);
     } else if (state === "error" && !this.ready) {
-      await this.target.clearDeclarations(error ?? "TypeScript declaration runtime unavailable");
+      await this.target.clearDeclarations(
+        error ?? "TypeScript declaration runtime unavailable",
+      );
     }
   }
 
-  async syncSources(runtime: DeclarationRuntime, files: readonly IntelligenceFile[]) {
+  async syncSources(
+    runtime: DeclarationRuntime,
+    files: readonly IntelligenceFile[],
+  ) {
     if (!this.ready) return;
     const generation = ++this.generation;
     const key = await this.imports.getKey(files);
@@ -71,7 +82,11 @@ export class PreviewTypeScriptDeclarations {
         const paths = new Set(files.map(({ path }) => path));
         for (const field of ["dependencies"]) {
           const dependencies = manifest[field];
-          if (!dependencies || typeof dependencies !== "object" || Array.isArray(dependencies))
+          if (
+            !dependencies ||
+            typeof dependencies !== "object" ||
+            Array.isArray(dependencies)
+          )
             continue;
           for (const name of Object.keys(dependencies))
             if (!paths.has(`node_modules/${name}/package.json`))

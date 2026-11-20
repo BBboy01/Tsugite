@@ -23,7 +23,10 @@ function signatureDom(help: IntelligenceSignatureHelp): TooltipView {
   return { dom };
 }
 
-export function typeScriptSignatureHelp(intelligence: EditorIntelligence, path: string) {
+export function typeScriptSignatureHelp(
+  intelligence: EditorIntelligence,
+  path: string,
+) {
   const requests = new LatestIntelligenceRequest();
   let activeRequestId: string | undefined;
   const cancelActive = () => {

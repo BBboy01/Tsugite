@@ -62,7 +62,8 @@ export function isPresencePayload(value: unknown): value is PresencePayload {
     /^#[0-9a-fA-F]{6}$/.test(candidate.color) &&
     (candidate.selectedPath === undefined ||
       candidate.selectedPath === null ||
-      (typeof candidate.selectedPath === "string" && candidate.selectedPath.length <= 240)) &&
+      (typeof candidate.selectedPath === "string" &&
+        candidate.selectedPath.length <= 240)) &&
     (candidate.cursor === undefined ||
       candidate.cursor === null ||
       (Number.isInteger(candidate.cursor.anchor) &&

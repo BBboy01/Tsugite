@@ -5,7 +5,10 @@ import type { ProjectSettings } from "@iris/shared";
 import { editorLineNumbers } from "./editor-basic-setup";
 import type { EditorLanguage } from "./editor-language";
 import { editorTheme } from "./editor-theme";
-import { highlightsHighlight, setHighlightsTheme } from "./highlights-highlighting";
+import {
+  highlightsHighlight,
+  setHighlightsTheme,
+} from "./highlights-highlighting";
 
 export class EditorVisualConfiguration {
   private readonly lineNumbers = new Compartment();
@@ -20,9 +23,13 @@ export class EditorVisualConfiguration {
     private readonly onHighlightReady?: () => void,
   ) {
     this.extensions = {
-      lineNumbers: this.lineNumbers.of(editorLineNumbers(settings.relativeLineNumbers)),
+      lineNumbers: this.lineNumbers.of(
+        editorLineNumbers(settings.relativeLineNumbers),
+      ),
       theme: this.theme.of(editorTheme(settings)),
-      wordWrap: this.wordWrap.of(settings.wordWrap ? EditorView.lineWrapping : []),
+      wordWrap: this.wordWrap.of(
+        settings.wordWrap ? EditorView.lineWrapping : [],
+      ),
       highlighting: this.highlighting.of(
         highlightsHighlight(language, settings.theme, onHighlightReady),
       ),
@@ -40,13 +47,21 @@ export class EditorVisualConfiguration {
       effects.push(this.theme.reconfigure(editorTheme(settings)));
     }
     if (settings.wordWrap !== previous.wordWrap) {
-      effects.push(this.wordWrap.reconfigure(settings.wordWrap ? EditorView.lineWrapping : []));
+      effects.push(
+        this.wordWrap.reconfigure(
+          settings.wordWrap ? EditorView.lineWrapping : [],
+        ),
+      );
     }
     if (settings.theme !== previous.theme) {
       effects.push(setHighlightsTheme.of(settings.theme));
     }
     if (settings.relativeLineNumbers !== previous.relativeLineNumbers) {
-      effects.push(this.lineNumbers.reconfigure(editorLineNumbers(settings.relativeLineNumbers)));
+      effects.push(
+        this.lineNumbers.reconfigure(
+          editorLineNumbers(settings.relativeLineNumbers),
+        ),
+      );
     }
     this.settings = settings;
     return effects;

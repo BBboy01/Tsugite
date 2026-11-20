@@ -13,7 +13,10 @@ import {
   resolvePierreDraftEdit,
   type PierreDraft,
 } from "../lib/pierre-file-tree-actions";
-import { pierreFileTreeCSS, usePierreFileTreeDom } from "./use-pierre-file-tree-dom";
+import {
+  pierreFileTreeCSS,
+  usePierreFileTreeDom,
+} from "./use-pierre-file-tree-dom";
 
 export type PierreFileTreeProps = {
   files: ProjectFile[];
@@ -22,10 +25,16 @@ export type PierreFileTreeProps = {
   theme: ProjectSettings["theme"];
   label: string;
   onSelect: (path: string) => void;
-  onMove: (sourcePaths: readonly string[], targetDirectory: string) => string | undefined;
+  onMove: (
+    sourcePaths: readonly string[],
+    targetDirectory: string,
+  ) => string | undefined;
   onCreateFile: (target: FileTreeTarget, path: string) => string | undefined;
   onCreateFolder: (target: FileTreeTarget, path: string) => string | undefined;
-  onRename: (target: Exclude<FileTreeTarget, null>, path: string) => string | undefined;
+  onRename: (
+    target: Exclude<FileTreeTarget, null>,
+    path: string,
+  ) => string | undefined;
   onCopy: (file: ProjectFile) => void;
   onDelete: (target: Exclude<FileTreeTarget, null>) => void;
 };
@@ -89,14 +98,20 @@ export function usePierreFileTreeController({
   } | null>(null);
   const [deleteError, setDeleteError] = useState<string>();
   const [actionError, setActionError] = useState<string>();
-  const [rootContext, setRootContext] = useState<ContextMenuOpenContext | null>(null);
+  const [rootContext, setRootContext] = useState<ContextMenuOpenContext | null>(
+    null,
+  );
   const modelRef = useRef<ReturnType<typeof useFileTree>["model"] | null>(null);
   const resetTreePaths = (nextPaths: string[]) => {
     modelRef.current?.resetPaths(nextPaths, {
-      initialExpandedPaths: getPierreExpandedPaths(pathsRef.current, nextPaths, (path) => {
-        const item = modelRef.current?.getItem(path);
-        return Boolean(item && "isExpanded" in item && item.isExpanded());
-      }),
+      initialExpandedPaths: getPierreExpandedPaths(
+        pathsRef.current,
+        nextPaths,
+        (path) => {
+          const item = modelRef.current?.getItem(path);
+          return Boolean(item && "isExpanded" in item && item.isExpanded());
+        },
+      ),
     });
   };
   const { model } = useFileTree({
@@ -136,16 +151,23 @@ export function usePierreFileTreeController({
     },
     dragAndDrop: {
       canDrag: (items) => !items.includes("package.json"),
-      canDrop: ({ draggedPaths, target }) => canMovePierrePaths(draggedPaths, target.directoryPath),
+      canDrop: ({ draggedPaths, target }) =>
+        canMovePierrePaths(draggedPaths, target.directoryPath),
       onDropComplete: ({ draggedPaths, target }) => {
-        const error = callbacks.current.onMove(draggedPaths, target.directoryPath ?? "");
+        const error = callbacks.current.onMove(
+          draggedPaths,
+          target.directoryPath ?? "",
+        );
         if (error) {
           resetTreePaths(pathsRef.current);
           setActionError(error);
         }
       },
       onDropError: (_error, { draggedPaths, target }) => {
-        const error = callbacks.current.onMove(draggedPaths, target.directoryPath ?? "");
+        const error = callbacks.current.onMove(
+          draggedPaths,
+          target.directoryPath ?? "",
+        );
         resetTreePaths(pathsRef.current);
         setActionError(error);
       },
@@ -153,8 +175,14 @@ export function usePierreFileTreeController({
     renaming: {
       canRename: ({ path }) => path !== "package.json",
       onRename: ({ sourcePath, destinationPath, isFolder }) => {
-        const target = getPierreTarget(sourcePath, callbacks.current.files, isFolder);
-        const draft = drafts.current.get(sourcePath) ?? drafts.current.get(`${sourcePath}/`);
+        const target = getPierreTarget(
+          sourcePath,
+          callbacks.current.files,
+          isFolder,
+        );
+        const draft =
+          drafts.current.get(sourcePath) ??
+          drafts.current.get(`${sourcePath}/`);
         const error =
           draft?.kind === "file"
             ? callbacks.current.onCreateFile(null, destinationPath)
@@ -189,7 +217,8 @@ export function usePierreFileTreeController({
   useEffect(() => {
     for (const path of folderAncestors(selectedPath)) {
       const directory = model.getItem(`${path}/`);
-      if (directory && "expand" in directory && !directory.isExpanded()) directory.expand();
+      if (directory && "expand" in directory && !directory.isExpanded())
+        directory.expand();
     }
   }, [model, selectedPath]);
 
@@ -233,7 +262,10 @@ export function usePierreFileTreeController({
       setActionError(error);
       return;
     }
-    model.remove(sourcePath, target.type === "folder" ? { recursive: true } : undefined);
+    model.remove(
+      sourcePath,
+      target.type === "folder" ? { recursive: true } : undefined,
+    );
   };
 
   const { finishActiveEdit } = usePierreFileTreeDom({
@@ -247,7 +279,10 @@ export function usePierreFileTreeController({
     onRootContext: setRootContext,
   });
 
-  const startDraftCreation = (action: "new-file" | "new-folder", parent: string) => {
+  const startDraftCreation = (
+    action: "new-file" | "new-folder",
+    parent: string,
+  ) => {
     const pendingPaths = [...drafts.current.keys()];
     if (!finishActiveEdit()) return false;
     const { path: draftPath, ...draft } = createPierreDraft(
@@ -261,7 +296,10 @@ export function usePierreFileTreeController({
     const started = model.startRenaming(draftPath);
     if (!started) {
       drafts.current.delete(draftPath);
-      model.remove(draftPath, action === "new-folder" ? { recursive: true } : undefined);
+      model.remove(
+        draftPath,
+        action === "new-folder" ? { recursive: true } : undefined,
+      );
       setActionError("The new item could not be edited");
       return false;
     }
@@ -273,9 +311,11 @@ export function usePierreFileTreeController({
       ? deletePrompt.target.file.path
       : deletePrompt.target.path
     : "";
-  const deleteFolderPath = deletePrompt?.target.type === "folder" ? deletePrompt.target.path : null;
+  const deleteFolderPath =
+    deletePrompt?.target.type === "folder" ? deletePrompt.target.path : null;
   const deleteCount = deleteFolderPath
-    ? files.filter((file) => file.path.startsWith(`${deleteFolderPath}/`)).length
+    ? files.filter((file) => file.path.startsWith(`${deleteFolderPath}/`))
+        .length
     : 0;
   return {
     wrapperRef,

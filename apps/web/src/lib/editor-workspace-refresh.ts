@@ -33,7 +33,9 @@ export function editorWorkspaceRefresh(intelligence: EditorIntelligence) {
         this.scheduler = createEditorWorkspaceRefreshScheduler(() => {
           this.view.dispatch({ effects: refreshEditorWorkspace.of(null) });
         });
-        this.unsubscribe = intelligence.subscribeWorkspace(this.scheduler.notify);
+        this.unsubscribe = intelligence.subscribeWorkspace(
+          this.scheduler.notify,
+        );
         this.scheduler.notify();
       }
 

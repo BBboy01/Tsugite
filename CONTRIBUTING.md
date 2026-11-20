@@ -35,7 +35,7 @@ docs: clarify Docker deployment
 
 Commit headers, including type and scope, are limited to 100 characters by [commitlint](commitlint.config.mjs). `bun install` installs local hooks: pre-commit runs staged-file lint/format checks followed by the project typecheck; commit-msg validates the message. The hook's full typecheck is separate from scoped checks during iteration. Do not bypass a failing hook without explaining and resolving the failure or an explicitly agreed exception.
 
-Markdown is outside the staged-file lint/format patterns and the root `format:check` script. Check changed documentation explicitly as described in [documentation checks](docs/testing.md#documentation-checks).
+Markdown is included in the staged-file formatting patterns and the root `format:check` script. Check changed documentation explicitly while iterating as described in [documentation checks](docs/testing.md#documentation-checks).
 
 ## Pull requests
 
