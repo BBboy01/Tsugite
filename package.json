@@ -9,6 +9,7 @@
   ],
   "type": "module",
   "scripts": {
+    "dev": "bun --no-env-file scripts/dev.ts",
     "dev:web": "vite --config vite.config.ts",
     "dev:server": "bun run apps/server/src/index.ts",
     "db:generate": "drizzle-kit generate",

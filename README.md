@@ -65,17 +65,14 @@ cd Tsugite
 bun install --frozen-lockfile
 ```
 
-Start the server in one terminal:
+Start the server and web app together:
 
 ```bash
-bun run dev:server
+bun run dev
 ```
 
-Start the web app in another:
-
-```bash
-bun run dev:web
-```
+Press Ctrl+C to stop both processes. To run them separately, use
+`bun run dev:server` and `bun run dev:web` in separate terminals.
 
 Open [http://127.0.0.1:5173/room/demo](http://127.0.0.1:5173/room/demo). The server applies migrations on startup and stores room data in `data/tsugite.sqlite`. Share the room URL with another browser profile or teammate using the same deployment.
 

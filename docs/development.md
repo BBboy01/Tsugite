@@ -30,7 +30,21 @@ bun install --frozen-lockfile
 
 The pinned npm package resolves to `bun --revision` output `1.4.6-canary.1+ca7729d01`. A canary is required because native lint is not enabled in stable Bun 1.4.5. CI, releases, and browser tests use the same npm build through the shared [setup action](../.github/actions/setup-bun/action.yml); the upstream setup action cannot resolve these npm-only canary versions. The Dockerfiles pin matching canary images by digest. Update the npm version and both image digests together, and verify their `bun --revision` output when upgrading.
 
-Start the server and web app in separate terminals, from the repository root:
+Start the server and web app together from the repository root:
+
+```bash
+bun run dev
+```
+
+Bun prefixes each process's output with its script name. Press Ctrl+C to stop
+both processes and let the server flush pending room snapshots. If SQLite is
+temporarily locked, shutdown retries for up to five seconds; allow it to finish
+before closing the terminal. A startup failure stops the other process too.
+The small [launcher](../scripts/dev.ts) forwards SIGINT/SIGTERM as a single
+SIGINT to Bun's parallel runner and waits for it, preserving the server's
+asynchronous shutdown. The server does not use `--watch` or `--hot`.
+
+The individual commands remain available in separate terminals:
 
 ```bash
 bun run dev:server

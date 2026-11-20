@@ -12,7 +12,7 @@ Keep cross-runtime contracts in `packages/shared/`. Web and server protocol chan
 
 ## Setup and Development
 
-Use the exact Bun npm build pinned in `.bun-version`; install it with `npm install --global "bun@$(cat .bun-version)"`. Install dependencies with `bun install --frozen-lockfile`. Run the server and web app in separate terminals with `bun run dev:server` and `bun run dev:web`.
+Use the exact Bun npm build pinned in `.bun-version`; install it with `npm install --global "bun@$(cat .bun-version)"`. Install dependencies with `bun install --frozen-lockfile`. Run the server and web app together with `bun run dev`, or separately with `bun run dev:server` and `bun run dev:web`.
 
 Useful checks:
 
