@@ -47,7 +47,9 @@ test("joins a room with a snapshot and presence list", () => {
   ).toBe(true);
 
   expect(first.messages).toHaveLength(3);
-  expect(first.messages[0]).toBe(JSON.stringify({ type: "ready", roomId: "demo" }));
+  expect(first.messages[0]).toBe(
+    JSON.stringify({ type: "ready", roomId: "demo" }),
+  );
   expect(first.messages[1]).toBeInstanceOf(Uint8Array);
   expect(JSON.parse(String(first.messages[2]))).toEqual({
     type: "presence:list",
@@ -133,7 +135,9 @@ test("keeps the room document when the last member reconnects", () => {
   clientDoc.import(first.messages[1] as Uint8Array);
   setSharedSetting(clientDoc, "theme", "dracula");
   clientDoc.commit();
-  expect(service.update(first.socket, clientDoc.export({ mode: "update" }))).toBe(true);
+  expect(
+    service.update(first.socket, clientDoc.export({ mode: "update" })),
+  ).toBe(true);
   expect(service.leave(first.socket)).toBe(true);
 
   const reconnected = createSocket();

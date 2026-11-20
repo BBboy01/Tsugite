@@ -55,7 +55,10 @@ export function EditorTabContextMenu({
             <ArrowRightToLine width="14" height="14" />
             {t("editor.tabs.closeRight")}
           </ContextMenu.Item>
-          <ContextMenu.Item className={itemClass} onSelect={() => onCloseTabs("all")}>
+          <ContextMenu.Item
+            className={itemClass}
+            onSelect={() => onCloseTabs("all")}
+          >
             <ListX width="14" height="14" />
             {t("editor.tabs.closeAll")}
           </ContextMenu.Item>

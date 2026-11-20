@@ -7,7 +7,8 @@ export function resolveMovePath(
   const name = sourcePath.split("/").at(-1) ?? sourcePath;
   const directory = targetDirectory ? `${targetDirectory}/` : "";
   const candidate = `${directory}${name}`;
-  if (!isPathTaken(candidate, sourcePath, filePaths, folderPaths)) return candidate;
+  if (!isPathTaken(candidate, sourcePath, filePaths, folderPaths))
+    return candidate;
 
   const dot = name.lastIndexOf(".");
   const hasExtension = dot > 0;
@@ -15,7 +16,8 @@ export function resolveMovePath(
   const extension = hasExtension ? name.slice(dot) : "";
   for (let suffix = 2; ; suffix += 1) {
     const nextPath = `${directory}${stem} ${suffix}${extension}`;
-    if (!isPathTaken(nextPath, sourcePath, filePaths, folderPaths)) return nextPath;
+    if (!isPathTaken(nextPath, sourcePath, filePaths, folderPaths))
+      return nextPath;
   }
 }
 
@@ -27,6 +29,8 @@ function isPathTaken(
 ): boolean {
   return (
     (path !== sourcePath && filePaths.includes(path)) ||
-    folderPaths.some((folder) => folder === path || folder.startsWith(`${path}/`))
+    folderPaths.some(
+      (folder) => folder === path || folder.startsWith(`${path}/`),
+    )
   );
 }

@@ -11,7 +11,10 @@ export function PierreFileTreeContextActions({
   onAction,
 }: {
   item: ContextMenuItem | null;
-  context: Pick<ContextMenuOpenContext, "anchorRect" | "close" | "restoreFocus">;
+  context: Pick<
+    ContextMenuOpenContext,
+    "anchorRect" | "close" | "restoreFocus"
+  >;
   theme: ProjectSettings["theme"];
   labels: Record<string, string>;
   onAction: (action: string, anchorRect?: DOMRect) => void;
@@ -20,7 +23,10 @@ export function PierreFileTreeContextActions({
     (action: string) =>
     (event: Event): void => {
       event.preventDefault();
-      onAction(action, (event.currentTarget as HTMLElement).getBoundingClientRect());
+      onAction(
+        action,
+        (event.currentTarget as HTMLElement).getBoundingClientRect(),
+      );
     };
   const trigger = (
     <DropdownMenu.Trigger asChild>
@@ -51,14 +57,20 @@ export function PierreFileTreeContextActions({
         if (!open) context.close();
       }}
     >
-      {typeof document === "undefined" ? trigger : createPortal(trigger, document.body)}
+      {typeof document === "undefined"
+        ? trigger
+        : createPortal(trigger, document.body)}
       <DropdownMenu.Portal>
         <DropdownMenu.Content
           data-file-tree-context-menu-root="true"
           aria-label={item ? `${item.name} actions` : "File tree actions"}
           align="start"
           side="bottom"
-          sideOffset={context.anchorRect.width === 0 && context.anchorRect.height === 0 ? 0 : 4}
+          sideOffset={
+            context.anchorRect.width === 0 && context.anchorRect.height === 0
+              ? 0
+              : 4
+          }
           collisionPadding={8}
           style={{
             backgroundColor: "var(--preview-surface)",
@@ -71,10 +83,16 @@ export function PierreFileTreeContextActions({
             context.restoreFocus();
           }}
         >
-          <DropdownMenu.Item className={contextMenuItemClass} onSelect={selectAction("new-file")}>
+          <DropdownMenu.Item
+            className={contextMenuItemClass}
+            onSelect={selectAction("new-file")}
+          >
             {labels.newFile}
           </DropdownMenu.Item>
-          <DropdownMenu.Item className={contextMenuItemClass} onSelect={selectAction("new-folder")}>
+          <DropdownMenu.Item
+            className={contextMenuItemClass}
+            onSelect={selectAction("new-folder")}
+          >
             {labels.newFolder}
           </DropdownMenu.Item>
           {item && (

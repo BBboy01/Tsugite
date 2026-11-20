@@ -65,20 +65,30 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test("paused preview loads declared package types into the editor worker", async ({ page }) => {
+test("paused preview loads declared package types into the editor worker", async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await controlledRuntime(page);
-  await page.goto(`/room/types-paused-${crypto.randomUUID()}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/room/types-paused-${crypto.randomUUID()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page).toHaveTitle(/Tsugite/i);
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
   await expect(
-    page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
+    page
+      .getByRole("region", { name: "Live preview" })
+      .getByText("paused", { exact: true }),
   ).toBeVisible();
-  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, {
+    timeout: 15_000,
+  });
   await page.keyboard.press("ControlOrMeta+A");
-  await page.keyboard.insertText('import { answer } from "typed-pkg";\nanswer;');
+  await page.keyboard.insertText(
+    'import { answer } from "typed-pkg";\nanswer;',
+  );
   const token = page.locator(".cm-line").filter({ hasText: /^answer;$/ });
   const point = await token.evaluate((element) => {
     const range = document.createRange();
@@ -87,20 +97,34 @@ test("paused preview loads declared package types into the editor worker", async
     return { x: rect.x + 8, y: rect.y + rect.height / 2 };
   });
   await page.mouse.move(point.x, point.y);
-  await expect(page.locator(".cm-tooltip-hover")).toContainText('"declared"', { timeout: 15_000 });
+  await expect(page.locator(".cm-tooltip-hover")).toContainText('"declared"', {
+    timeout: 15_000,
+  });
   await rightClickText(page, "answer;", "answer");
-  await page.getByRole("menuitem", { name: "Go to definition", exact: true }).click();
-  const declarationPeek = page.getByRole("region", { name: "Go to definition" });
-  await expect(declarationPeek).toContainText("node_modules/typed-pkg/index.d.ts");
-  await expect(declarationPeek).toContainText('export declare const answer: "declared";');
-  await expect(declarationPeek.getByRole("button", { name: "Open location" })).toHaveCount(0);
+  await page
+    .getByRole("menuitem", { name: "Go to definition", exact: true })
+    .click();
+  const declarationPeek = page.getByRole("region", {
+    name: "Go to definition",
+  });
+  await expect(declarationPeek).toContainText(
+    "node_modules/typed-pkg/index.d.ts",
+  );
+  await expect(declarationPeek).toContainText(
+    'export declare const answer: "declared";',
+  );
+  await expect(
+    declarationPeek.getByRole("button", { name: "Open location" }),
+  ).toHaveCount(0);
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.screenshot({ path: "/tmp/iris-declaration-ready-desktop.png" });
   await expect(page.locator("vite-error-overlay")).toHaveCount(0);
   expect(errors).toEqual([]);
 });
 
-test("type scan errors do not block edits and recover on restart", async ({ page }) => {
+test("type scan errors do not block edits and recover on restart", async ({
+  page,
+}) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
   await controlledRuntime(page);
@@ -113,10 +137,14 @@ test("type scan errors do not block edits and recover on restart", async ({ page
       { once: true },
     ),
   );
-  await page.goto(`/room/types-failure-${crypto.randomUUID()}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/room/types-failure-${crypto.randomUUID()}`, {
+    waitUntil: "domcontentloaded",
+  });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
-  await expect(page.locator('[data-typescript-declarations-state="unavailable"]')).toHaveCount(1, {
+  await expect(
+    page.locator('[data-typescript-declarations-state="unavailable"]'),
+  ).toHaveCount(1, {
     timeout: 15_000,
   });
   await page.keyboard.press("ControlOrMeta+A");
@@ -128,15 +156,23 @@ test("type scan errors do not block edits and recover on restart", async ({ page
     .poll(() =>
       page
         .locator(".cm-editor")
-        .evaluate((element) => getComputedStyle(element.parentElement!).opacity),
+        .evaluate(
+          (element) => getComputedStyle(element.parentElement!).opacity,
+        ),
     )
     .toBe("1");
-  await page.screenshot({ path: "/tmp/iris-declaration-unavailable-narrow.png" });
+  await page.screenshot({
+    path: "/tmp/iris-declaration-unavailable-narrow.png",
+  });
   await page.setViewportSize({ width: 1280, height: 800 });
   await expect(page.locator('[data-panel="preview"]')).toHaveCount(1);
-  await page.evaluate(() => delete document.documentElement.dataset.failDeclarations);
+  await page.evaluate(
+    () => delete document.documentElement.dataset.failDeclarations,
+  );
   await page.getByRole("button", { name: "Run preview", exact: true }).click();
-  await expect(page.locator('[data-typescript-declarations-state="ready"]')).toHaveCount(1, {
+  await expect(
+    page.locator('[data-typescript-declarations-state="ready"]'),
+  ).toHaveCount(1, {
     timeout: 15_000,
   });
   await expect(editor).toContainText("stillEditable");
@@ -148,20 +184,28 @@ test("refreshes active diagnostics when declarations change without editing the 
   page,
 }) => {
   await controlledRuntime(page);
-  await page.goto(`/room/types-refresh-${crypto.randomUUID()}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/room/types-refresh-${crypto.randomUUID()}`, {
+    waitUntil: "domcontentloaded",
+  });
   const editor = page.locator(".cm-content");
   await expect(editor).toBeFocused();
-  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator('[data-typescript-ready="true"]')).toHaveCount(1, {
+    timeout: 15_000,
+  });
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.insertText(
     'import { answer } from "typed-pkg";\nconst count: number = answer;',
   );
-  await expect(page.locator(".cm-lintRange-error")).toHaveCount(1, { timeout: 15_000 });
+  await expect(page.locator(".cm-lintRange-error")).toHaveCount(1, {
+    timeout: 15_000,
+  });
 
   await page.evaluate(() => {
     document.documentElement.dataset.declarationVersion = "2";
   });
   await page.getByRole("button", { name: "Run preview", exact: true }).click();
-  await expect(page.locator(".cm-lintRange-error")).toHaveCount(0, { timeout: 15_000 });
+  await expect(page.locator(".cm-lintRange-error")).toHaveCount(0, {
+    timeout: 15_000,
+  });
   await expect(editor).toContainText("const count: number = answer;");
 });

@@ -31,7 +31,9 @@ test("bootstraps the shared project with files and settings", () => {
     "tsconfig.json",
     "vite.config.ts",
   ]);
-  const manifest = JSON.parse(getFileByPath(doc, "package.json")!.text.toString());
+  const manifest = JSON.parse(
+    getFileByPath(doc, "package.json")!.text.toString(),
+  );
   expect(manifest.name).toBe("tsugite-room");
   expect(manifest.scripts.dev).toBe("vite --host 0.0.0.0");
   expect(manifest.dependencies.react).toBe("19.3.1");
@@ -41,19 +43,36 @@ test("bootstraps the shared project with files and settings", () => {
   expect(manifest).not.toHaveProperty("overrides");
   expect(manifest).not.toHaveProperty("resolutions");
   expect(manifest).not.toHaveProperty("pnpm");
-  for (const version of Object.values({ ...manifest.dependencies, ...manifest.devDependencies })) {
+  for (const version of Object.values({
+    ...manifest.dependencies,
+    ...manifest.devDependencies,
+  })) {
     expect(version).toMatch(/^\d+\.\d+\.\d+$/);
   }
   expect(getFileByPath(doc, "index.html")?.text.toString()).toContain(
     "<title>Tsugite React workspace</title>",
   );
-  expect(getFileByPath(doc, "pnpm-workspace.yaml")?.text.toString()).toBe("packages:\n  - .\n");
-  expect(getFileByPath(doc, "index.html")?.text.toString()).toContain("/src/main.tsx");
-  expect(getFileByPath(doc, "src/App.tsx")?.text.toString()).toContain("Tsugite workspace");
-  expect(getFileByPath(doc, "src/main.tsx")?.text.toString()).toContain("<App />");
-  expect(getFileByPath(doc, "src/index.css")?.text.toString()).toContain('@import "tailwindcss"');
-  expect(getFileByPath(doc, "vite.config.ts")?.text.toString()).toContain("@tailwindcss/vite");
-  expect(getFileByPath(doc, "tsconfig.json")?.text.toString()).toContain('"jsx": "react-jsx"');
+  expect(getFileByPath(doc, "pnpm-workspace.yaml")?.text.toString()).toBe(
+    "packages:\n  - .\n",
+  );
+  expect(getFileByPath(doc, "index.html")?.text.toString()).toContain(
+    "/src/main.tsx",
+  );
+  expect(getFileByPath(doc, "src/App.tsx")?.text.toString()).toContain(
+    "Tsugite workspace",
+  );
+  expect(getFileByPath(doc, "src/main.tsx")?.text.toString()).toContain(
+    "<App />",
+  );
+  expect(getFileByPath(doc, "src/index.css")?.text.toString()).toContain(
+    '@import "tailwindcss"',
+  );
+  expect(getFileByPath(doc, "vite.config.ts")?.text.toString()).toContain(
+    "@tailwindcss/vite",
+  );
+  expect(getFileByPath(doc, "tsconfig.json")?.text.toString()).toContain(
+    '"jsx": "react-jsx"',
+  );
   expect(snapshot.settings).toEqual({
     theme: "paper",
     fontFamily: "JetBrains Mono",
@@ -77,7 +96,9 @@ test("merges file text and settings through a Loro update", () => {
   setSharedSetting(first, "fontFamily", "IBM Plex Mono");
   second.import(first.export({ mode: "snapshot" }));
 
-  expect(getFileByPath(second, "src/main.tsx")?.text.toString()).toContain("shared");
+  expect(getFileByPath(second, "src/main.tsx")?.text.toString()).toContain(
+    "shared",
+  );
   expect(readSettings(second)).toEqual({
     theme: "ink",
     fontFamily: "IBM Plex Mono",
@@ -124,25 +145,41 @@ test("shares relative line number settings", () => {
 
 test("creates and renames a file without changing its stable id", () => {
   const doc = new LoroDoc();
-  const file = createFile(doc, "src/new.ts", "typescript", "export const value = 1");
+  const file = createFile(
+    doc,
+    "src/new.ts",
+    "typescript",
+    "export const value = 1",
+  );
 
   const renamed = renameFile(doc, file.id, "src/renamed.ts");
   expect(renamed.id).toBe(file.id);
   expect(getFileByPath(doc, "src/new.ts")).toBeUndefined();
-  expect(getFileByPath(doc, "src/renamed.ts")?.text.toString()).toContain("value");
+  expect(getFileByPath(doc, "src/renamed.ts")?.text.toString()).toContain(
+    "value",
+  );
 });
 
 test("shares empty folders and supports folder operations", () => {
   const doc = new LoroDoc();
   createFolder(doc, "src/components");
   createFolder(doc, "src/components/buttons");
-  expect(listFolders(doc)).toEqual(["src", "src/components", "src/components/buttons"]);
+  expect(listFolders(doc)).toEqual([
+    "src",
+    "src/components",
+    "src/components/buttons",
+  ]);
 
   const renamed = renameFolder(doc, "src/components", "src/ui");
   expect(renamed).toBe("src/ui");
   expect(listFolders(doc)).toEqual(["src", "src/ui", "src/ui/buttons"]);
 
-  createFile(doc, "src/ui/Button.tsx", "typescript", "export const Button = null");
+  createFile(
+    doc,
+    "src/ui/Button.tsx",
+    "typescript",
+    "export const Button = null",
+  );
   deleteFolder(doc, "src/ui");
   expect(getFileByPath(doc, "src/ui/Button.tsx")).toBeUndefined();
   expect(listFolders(doc)).toEqual(["src"]);
@@ -150,7 +187,12 @@ test("shares empty folders and supports folder operations", () => {
 
 test("copies and deletes a file while preserving its source", () => {
   const doc = new LoroDoc();
-  const source = createFile(doc, "src/new.ts", "typescript", "export const value = 1");
+  const source = createFile(
+    doc,
+    "src/new.ts",
+    "typescript",
+    "export const value = 1",
+  );
 
   const copied = copyFile(doc, source.id);
   expect(copied.path).toBe("src/new copy.ts");
@@ -167,9 +209,9 @@ test("rejects file and folder paths that conflict with existing entries", () => 
   expect(() => createFolder(fileParent, "README.md/docs")).toThrow(
     "A file already exists at README.md",
   );
-  expect(() => createFile(fileParent, "README.md/docs.ts", "typescript")).toThrow(
-    "A file already exists at README.md",
-  );
+  expect(() =>
+    createFile(fileParent, "README.md/docs.ts", "typescript"),
+  ).toThrow("A file already exists at README.md");
 
   const folderPath = new LoroDoc();
   createFolder(folderPath, "src");
@@ -199,13 +241,21 @@ test("rejects file and folder paths that conflict with existing entries", () => 
 
 test("rejects malformed paths without rejecting valid dotted filenames", () => {
   const doc = new LoroDoc();
-  for (const path of ["", "src/", "src//main.ts", "src/./main.ts", "src/../main.ts"]) {
+  for (const path of [
+    "",
+    "src/",
+    "src//main.ts",
+    "src/./main.ts",
+    "src/../main.ts",
+  ]) {
     expect(() => createFile(doc, path, "typescript")).toThrow(
       "File path must be a relative non-empty path",
     );
   }
 
-  expect(createFile(doc, "src/version..ts", "typescript").path).toBe("src/version..ts");
+  expect(createFile(doc, "src/version..ts", "typescript").path).toBe(
+    "src/version..ts",
+  );
 });
 
 test("skips folder names when choosing a copied file path", () => {
@@ -219,7 +269,11 @@ test("skips folder names when choosing a copied file path", () => {
 test("rejects renaming a folder that no longer exists", () => {
   const doc = new LoroDoc();
 
-  expect(() => renameFolder(doc, "src", "lib")).toThrow("Folder does not exist");
-  expect(() => renameFolder(doc, "src", "src")).toThrow("Folder does not exist");
+  expect(() => renameFolder(doc, "src", "lib")).toThrow(
+    "Folder does not exist",
+  );
+  expect(() => renameFolder(doc, "src", "src")).toThrow(
+    "Folder does not exist",
+  );
   expect(listFolders(doc)).toEqual([]);
 });

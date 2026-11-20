@@ -21,6 +21,10 @@ export function buildEditorTabViewModels(
     file,
     label: labels[index] ?? file.path,
     active: file.path === activePath,
-    collaboratorCount: getFileCollaboratorCount(remoteMembers, currentUserId, file.path),
+    collaboratorCount: getFileCollaboratorCount(
+      remoteMembers,
+      currentUserId,
+      file.path,
+    ),
   }));
 }

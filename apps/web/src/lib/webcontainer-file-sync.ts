@@ -12,7 +12,9 @@ export class WebContainerFileSync {
   private pending: Promise<unknown> = Promise.resolve();
   private packageChangePending = false;
 
-  constructor(private readonly container: Pick<RuntimeContainer, "fs" | "mount">) {}
+  constructor(
+    private readonly container: Pick<RuntimeContainer, "fs" | "mount">,
+  ) {}
 
   mount(
     files: ProjectFile[],
@@ -34,7 +36,11 @@ export class WebContainerFileSync {
     );
   }
 
-  sync(files: ProjectFile[], folders: string[], isCurrent: IsCurrent): Promise<SyncResult> {
+  sync(
+    files: ProjectFile[],
+    folders: string[],
+    isCurrent: IsCurrent,
+  ): Promise<SyncResult> {
     const next = createSnapshot(files, folders);
     const cancelled = { packageChanged: false };
     return this.enqueue(
@@ -42,7 +48,8 @@ export class WebContainerFileSync {
       async () => {
         const previousPackage = this.snapshot.files.get("package.json");
         const packageChanged =
-          this.packageChangePending || previousPackage !== next.files.get("package.json");
+          this.packageChangePending ||
+          previousPackage !== next.files.get("package.json");
         if (packageChanged) this.packageChangePending = true;
         if (!(await this.removeObsolete(next, isCurrent))) return cancelled;
 
@@ -67,17 +74,25 @@ export class WebContainerFileSync {
     );
   }
 
-  syncChangedFiles(files: ProjectFile[], isCurrent: IsCurrent): Promise<SyncResult> {
-    const changed = files.map((file) => [file.path, file.text.toString()] as const);
+  syncChangedFiles(
+    files: ProjectFile[],
+    isCurrent: IsCurrent,
+  ): Promise<SyncResult> {
+    const changed = files.map(
+      (file) => [file.path, file.text.toString()] as const,
+    );
     const cancelled = { packageChanged: false };
     return this.enqueue(
       isCurrent,
       async () => {
         const previousPackage = this.snapshot.files.get("package.json");
-        const nextPackage = changed.find(([path]) => path === "package.json")?.[1];
+        const nextPackage = changed.find(
+          ([path]) => path === "package.json",
+        )?.[1];
         const includesPackage = nextPackage !== undefined;
         const packageChanged =
-          includesPackage && (this.packageChangePending || previousPackage !== nextPackage);
+          includesPackage &&
+          (this.packageChangePending || previousPackage !== nextPackage);
         if (packageChanged) this.packageChangePending = true;
 
         for (const [path, contents] of changed) {
@@ -94,14 +109,19 @@ export class WebContainerFileSync {
     );
   }
 
-  private async removeObsolete(next: Snapshot, isCurrent: IsCurrent): Promise<boolean> {
+  private async removeObsolete(
+    next: Snapshot,
+    isCurrent: IsCurrent,
+  ): Promise<boolean> {
     for (const path of this.snapshot.files.keys()) {
       if (!isCurrent()) return false;
       if (next.files.has(path)) continue;
       await this.container.fs.rm(`/${path}`, { force: true });
       this.snapshot.files.delete(path);
     }
-    for (const path of [...this.snapshot.folders].toSorted((a, b) => b.length - a.length)) {
+    for (const path of [...this.snapshot.folders].toSorted(
+      (a, b) => b.length - a.length,
+    )) {
       if (!isCurrent()) return false;
       if (next.folders.has(path)) continue;
       await this.container.fs.rm(`/${path}`, { force: true, recursive: true });
@@ -110,7 +130,11 @@ export class WebContainerFileSync {
     return isCurrent();
   }
 
-  private enqueue<T>(isCurrent: IsCurrent, operation: () => Promise<T>, cancelled: T): Promise<T> {
+  private enqueue<T>(
+    isCurrent: IsCurrent,
+    operation: () => Promise<T>,
+    cancelled: T,
+  ): Promise<T> {
     const result = this.pending.then(async () => {
       if (!isCurrent()) return cancelled;
       try {
@@ -126,7 +150,9 @@ export class WebContainerFileSync {
 }
 
 function createSnapshot(files: ProjectFile[], folders: string[]): Snapshot {
-  const fileMap = new Map(files.map((file) => [file.path, file.text.toString()]));
+  const fileMap = new Map(
+    files.map((file) => [file.path, file.text.toString()]),
+  );
   const folderSet = new Set(folders);
   for (const path of [...fileMap.keys(), ...folders]) {
     const segments = path.split("/").slice(0, -1);

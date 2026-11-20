@@ -1,6 +1,13 @@
 import { ChevronDown, ChevronUp, Trash2 } from "lucide-react";
 import { Select } from "@radix-ui/themes";
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type PointerEvent,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { WorkspaceTheme } from "@iris/shared";
@@ -35,7 +42,10 @@ export function PreviewConsole({
   const [filter, setFilter] = useState<PreviewOutputFilter>("all");
   const dragRef = useRef<{ clientY: number; height: number } | null>(null);
   const outputRef = useRef<HTMLDivElement>(null);
-  const visibleOutputs = useMemo(() => filterPreviewOutputs(outputs, filter), [outputs, filter]);
+  const visibleOutputs = useMemo(
+    () => filterPreviewOutputs(outputs, filter),
+    [outputs, filter],
+  );
 
   useEffect(() => {
     if (!open || !outputRef.current) return;
@@ -70,7 +80,9 @@ export function PreviewConsole({
     if (event.key !== "ArrowUp" && event.key !== "ArrowDown") return;
     event.preventDefault();
     const delta = event.key === "ArrowUp" ? -16 : 16;
-    setHeight((current) => resizePreviewConsoleHeight(current, delta, getPreviewHeight()));
+    setHeight((current) =>
+      resizePreviewConsoleHeight(current, delta, getPreviewHeight()),
+    );
   };
 
   return (
@@ -87,7 +99,9 @@ export function PreviewConsole({
           aria-label={t("preview.console.resize")}
           aria-orientation="horizontal"
           aria-valuemin={MIN_PREVIEW_CONSOLE_HEIGHT}
-          aria-valuemax={Math.round(getPreviewConsoleMaxHeight(getPreviewHeight()))}
+          aria-valuemax={Math.round(
+            getPreviewConsoleMaxHeight(getPreviewHeight()),
+          )}
           aria-valuenow={Math.round(height)}
           onKeyDown={handleKeyDown}
           onPointerDown={handlePointerDown}
@@ -104,10 +118,16 @@ export function PreviewConsole({
           className="flex h-full items-center gap-1 bg-transparent p-0 text-inherit hover:text-iris-strong focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)]"
           type="button"
           aria-expanded={open}
-          aria-label={t(open ? "preview.console.collapse" : "preview.console.expand")}
+          aria-label={t(
+            open ? "preview.console.collapse" : "preview.console.expand",
+          )}
           onClick={() => onOpenChange(!open)}
         >
-          {!open ? <ChevronUp width="10" height="10" /> : <ChevronDown width="10" height="10" />}
+          {!open ? (
+            <ChevronUp width="10" height="10" />
+          ) : (
+            <ChevronDown width="10" height="10" />
+          )}
           <span>{t("preview.output")}</span>
         </button>
         <div className="flex items-center gap-1">
@@ -122,11 +142,16 @@ export function PreviewConsole({
               radius="small"
               variant="ghost"
             />
-            <Select.Content className={`theme-${theme} preview-console-select`} position="popper">
+            <Select.Content
+              className={`theme-${theme} preview-console-select`}
+              position="popper"
+            >
               <Select.Item value="all">{t("preview.filterAll")}</Select.Item>
               <Select.Item value="log">{t("preview.filterLog")}</Select.Item>
               <Select.Item value="warn">{t("preview.filterWarn")}</Select.Item>
-              <Select.Item value="error">{t("preview.filterError")}</Select.Item>
+              <Select.Item value="error">
+                {t("preview.filterError")}
+              </Select.Item>
             </Select.Content>
           </Select.Root>
           {outputs.length > 0 ? (
@@ -165,7 +190,11 @@ export function PreviewConsole({
             ))
           ) : (
             <p className="m-0 text-iris-muted">
-              {t(outputs.length > 0 ? "preview.filterEmpty" : "preview.outputEmpty")}
+              {t(
+                outputs.length > 0
+                  ? "preview.filterEmpty"
+                  : "preview.outputEmpty",
+              )}
             </p>
           )}
         </div>

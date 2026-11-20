@@ -1,4 +1,10 @@
-import { createFile, createProjectDoc, deleteFile, getFileByPath, listFiles } from "@iris/shared";
+import {
+  createFile,
+  createProjectDoc,
+  deleteFile,
+  getFileByPath,
+  listFiles,
+} from "@iris/shared";
 import { expect, test, type Page } from "playwright/test";
 import type { RoomTypeScriptIntelligence } from "../apps/web/src/lib/room-typescript-intelligence";
 import type { TypeScriptWorkerClient } from "../apps/web/src/lib/typescript-worker-client";
@@ -59,11 +65,20 @@ function createInputFixtures(maximum: boolean) {
   ];
   const declarationFiles = [
     { path: "package.json", text: "{}" },
-    { path: "node_modules/@iris/shared/package.json", text: '{"types":"index.d.ts"}' },
-    { path: "node_modules/@iris/shared/index.d.ts", text: "export type Member = { id: string };" },
+    {
+      path: "node_modules/@iris/shared/package.json",
+      text: '{"types":"index.d.ts"}',
+    },
+    {
+      path: "node_modules/@iris/shared/index.d.ts",
+      text: "export type Member = { id: string };",
+    },
   ];
   if (!maximum) return { sources, declarationFiles };
-  const fixture = createMaximumBudgetFixtures([...sources, ...declarationFiles]);
+  const fixture = createMaximumBudgetFixtures([
+    ...sources,
+    ...declarationFiles,
+  ]);
   const active = sources.find(({ path }) => path === "src/App.tsx")!;
   const suffix = "\n// input ";
   const prefix = active.text.slice(0, -suffix.length);
@@ -75,7 +90,10 @@ function createInputFixtures(maximum: boolean) {
   return fixture;
 }
 
-async function useProductionHarness(page: Page, declarations: { path: string; text: string }[]) {
+async function useProductionHarness(
+  page: Page,
+  declarations: { path: string; text: string }[],
+) {
   await page.route(/\/src\/main\.tsx(?:\?.*)?$/, (route) =>
     route.fulfill({
       contentType: "application/javascript",
@@ -85,7 +103,9 @@ async function useProductionHarness(page: Page, declarations: { path: string; te
     }),
   );
   await page.route("**/src/lib/room-typescript-intelligence.ts*", (route) => {
-    if (new URL(route.request().url()).searchParams.has("worker-input-original")) {
+    if (
+      new URL(route.request().url()).searchParams.has("worker-input-original")
+    ) {
       return route.continue();
     }
     return route.fulfill({
@@ -157,7 +177,8 @@ for (const maximum of [false, true]) {
     ).toBeUndefined();
     const doc = createProjectDoc();
     for (const file of listFiles(doc)) deleteFile(doc, file.id);
-    for (const file of fixture.sources) createFile(doc, file.path, "typescript", file.text);
+    for (const file of fixture.sources)
+      createFile(doc, file.path, "typescript", file.text);
     createFile(doc, "package.json", "javascript", "{}");
     doc.commit();
     const errors: string[] = [];
@@ -173,7 +194,10 @@ for (const maximum of [false, true]) {
           socket.send(JSON.stringify({ type: "update:ack" }));
           return;
         }
-        const payload = JSON.parse(message) as { type: string; roomId?: string };
+        const payload = JSON.parse(message) as {
+          type: string;
+          roomId?: string;
+        };
         if (payload.type !== "join") return;
         socket.send(JSON.stringify({ type: "ready", roomId: payload.roomId }));
         socket.send(Buffer.from(doc.export({ mode: "snapshot" })));
@@ -188,24 +212,39 @@ for (const maximum of [false, true]) {
       await expect(editor).toBeFocused({ timeout: 30_000 });
       await expect(editor).toContainText("trackedValue");
       await expect(
-        page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
+        page
+          .getByRole("region", { name: "Live preview" })
+          .getByText("paused", { exact: true }),
       ).toBeVisible({ timeout: 30_000 });
       await expect
-        .poll(() => page.evaluate(() => window.workerInputOwner?.getDeclarationsStatus().status), {
-          timeout: 30_000,
-        })
+        .poll(
+          () =>
+            page.evaluate(
+              () => window.workerInputOwner?.getDeclarationsStatus().status,
+            ),
+          {
+            timeout: 30_000,
+          },
+        )
         .toBe("ready");
       await expect
-        .poll(() => page.evaluate(() => window.workerInputOwner?.getServiceStatus().state), {
-          timeout: 90_000,
-        })
+        .poll(
+          () =>
+            page.evaluate(
+              () => window.workerInputOwner?.getServiceStatus().state,
+            ),
+          {
+            timeout: 90_000,
+          },
+        )
         .toBe("ready");
       const declarations = await page.evaluate(() => {
         const files = window.workerInputOwner.getDeclarationsSnapshot();
         return {
           count: files.length,
           bytes: files.reduce(
-            (bytes, file) => bytes + new TextEncoder().encode(file.text).byteLength,
+            (bytes, file) =>
+              bytes + new TextEncoder().encode(file.text).byteLength,
             0,
           ),
         };
@@ -217,7 +256,10 @@ for (const maximum of [false, true]) {
       await expect
         .poll(
           () =>
-            page.workers().filter((worker) => worker.url().includes("typescript.worker")).length,
+            page
+              .workers()
+              .filter((worker) => worker.url().includes("typescript.worker"))
+              .length,
           { timeout: 30_000 },
         )
         .toBe(1);
@@ -233,7 +275,9 @@ for (const maximum of [false, true]) {
         };
         window.workerInputRun = run;
         run.observer = new PerformanceObserver((list) => {
-          run.longTasks.push(...list.getEntries().map((entry) => entry.duration));
+          run.longTasks.push(
+            ...list.getEntries().map((entry) => entry.duration),
+          );
         });
         run.observer.observe({ type: "longtask" });
         const intelligence = window.workerInputOwner.intelligence;
@@ -279,12 +323,20 @@ for (const maximum of [false, true]) {
           window.workerInputRun.typing = false;
         });
         inserted += marker;
-        await expect(editor.locator(".cm-activeLine")).toHaveText(`// input ${inserted}`);
+        await expect(editor.locator(".cm-activeLine")).toHaveText(
+          `// input ${inserted}`,
+        );
         await expect
-          .poll(() => getFileByPath(doc, "src/App.tsx")!.text.toString().endsWith(inserted))
+          .poll(() =>
+            getFileByPath(doc, "src/App.tsx")!
+              .text.toString()
+              .endsWith(inserted),
+          )
           .toBe(true);
         await expect
-          .poll(() => page.evaluate(() => window.workspaceProfile.inputFrames.length))
+          .poll(() =>
+            page.evaluate(() => window.workspaceProfile.inputFrames.length),
+          )
           .toBe(marker.length);
         const frames = await page.evaluate(() => {
           const profile: WorkspaceProfile = window.workspaceProfile;
@@ -300,21 +352,30 @@ for (const maximum of [false, true]) {
           );
           return {
             total: successful.length,
-            byMethod: successful.reduce<Record<string, number>>((counts, { method }) => {
-              counts[method] = (counts[method] ?? 0) + 1;
-              return counts;
-            }, {}),
+            byMethod: successful.reduce<Record<string, number>>(
+              (counts, { method }) => {
+                counts[method] = (counts[method] ?? 0) + 1;
+                return counts;
+              },
+              {},
+            ),
           };
         }, round);
         for (const method of ["hover", "completion", "diagnostics"])
           expect(overlap.byMethod[method] ?? 0).toBeGreaterThan(0);
-        rounds.push({ round, input: summarize(frames), successfulQueriesDuringInput: overlap });
+        rounds.push({
+          round,
+          input: summarize(frames),
+          successfulQueriesDuringInput: overlap,
+        });
       }
       const state = await page.evaluate(async () => {
         const run = window.workerInputRun;
         run.running = false;
         await run.done;
-        run.longTasks.push(...(run.observer?.takeRecords().map((entry) => entry.duration) ?? []));
+        run.longTasks.push(
+          ...(run.observer?.takeRecords().map((entry) => entry.duration) ?? []),
+        );
         run.observer?.disconnect();
         const owner = window.workerInputOwner;
         const query = { path: "src/App.tsx", position: 31 };
@@ -322,14 +383,21 @@ for (const maximum of [false, true]) {
           queries: run.queries,
           longTasks: run.longTasks,
           service: owner.getServiceStatus(),
-          metrics: (owner.intelligence as TypeScriptWorkerClient).getMetricsSnapshot(),
+          metrics: (
+            owner.intelligence as TypeScriptWorkerClient
+          ).getMetricsSnapshot(),
           hover: await owner.intelligence.hover(query),
           definition: await owner.intelligence.definition(query),
-          diagnostics: await owner.intelligence.diagnostics({ path: query.path }),
+          diagnostics: await owner.intelligence.diagnostics({
+            path: query.path,
+          }),
         };
       });
       expect(state.service).toMatchObject({ state: "ready" });
-      expect(state.metrics).toMatchObject({ workerStarts: 1, workerRetries: 0 });
+      expect(state.metrics).toMatchObject({
+        workerStarts: 1,
+        workerRetries: 0,
+      });
       expect(state.queries.length).toBeGreaterThan(0);
       expect(
         state.queries.filter(
@@ -338,7 +406,9 @@ for (const maximum of [false, true]) {
         ).length,
       ).toBeGreaterThan(0);
       expect(
-        state.queries.filter(({ status }) => !["ok", "empty", "cancelled"].includes(status)),
+        state.queries.filter(
+          ({ status }) => !["ok", "empty", "cancelled"].includes(status),
+        ),
       ).toEqual([]);
       expect(state.hover).toMatchObject({ status: "ok" });
       expect(state.definition).toMatchObject({
@@ -346,18 +416,27 @@ for (const maximum of [false, true]) {
         value: [expect.objectContaining({ path: "src/editor-tab-model.ts" })],
       });
       expect(state.diagnostics).toEqual({ status: "empty" });
-      await page.screenshot({ path: testInfo.outputPath("typescript-worker-input.png") });
+      await page.screenshot({
+        path: testInfo.outputPath("typescript-worker-input.png"),
+      });
       await page.keyboard.press("ControlOrMeta+Home");
-      for (let index = 0; index < 10; index++) await page.keyboard.press("ArrowRight");
+      for (let index = 0; index < 10; index++)
+        await page.keyboard.press("ArrowRight");
       await page.keyboard.press("Shift+F10");
-      await page.getByRole("menuitem", { name: "Go to definition", exact: true }).click();
+      await page
+        .getByRole("menuitem", { name: "Go to definition", exact: true })
+        .click();
       await expect(
         page.getByRole("tab", { name: "src/editor-tab-model.ts", exact: true }),
       ).toHaveAttribute("aria-selected", "true");
       await expect(editor).toBeFocused();
-      await expect(editor.locator(".cm-activeLine")).toHaveText("export const trackedValue = 1;");
+      await expect(editor.locator(".cm-activeLine")).toHaveText(
+        "export const trackedValue = 1;",
+      );
       expect(
-        page.workers().filter((worker) => worker.url().includes("typescript.worker")),
+        page
+          .workers()
+          .filter((worker) => worker.url().includes("typescript.worker")),
       ).toHaveLength(1);
       await expect(page).toHaveTitle("Tsugite multiplayer editor");
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
@@ -367,15 +446,23 @@ for (const maximum of [false, true]) {
         sourceCount: fixture.sources.length,
         sourceBytes,
         sourceBytesAfterInput: sourceBytes + Buffer.byteLength(inserted),
-        inputCount: rounds.reduce((count, sample) => count + sample.input.count, 0),
+        inputCount: rounds.reduce(
+          (count, sample) => count + sample.input.count,
+          0,
+        ),
         declarations,
         rounds,
         longTasks: summarize(state.longTasks),
-        queryStatuses: state.queries.reduce<Record<string, number>>((counts, { status }) => {
-          counts[status] = (counts[status] ?? 0) + 1;
-          return counts;
-        }, {}),
-        queryLatency: summarize(state.queries.map(({ durationMs }) => durationMs)),
+        queryStatuses: state.queries.reduce<Record<string, number>>(
+          (counts, { status }) => {
+            counts[status] = (counts[status] ?? 0) + 1;
+            return counts;
+          },
+          {},
+        ),
+        queryLatency: summarize(
+          state.queries.map(({ durationMs }) => durationMs),
+        ),
         completedQueriesDuringInput: state.queries.filter(
           ({ startedDuringInput, completedDuringInput }) =>
             startedDuringInput && completedDuringInput,
@@ -387,7 +474,9 @@ for (const maximum of [false, true]) {
         body: JSON.stringify(report, null, 2),
         contentType: "application/json",
       });
-      await page.screenshot({ path: testInfo.outputPath("typescript-worker-navigation.png") });
+      await page.screenshot({
+        path: testInfo.outputPath("typescript-worker-navigation.png"),
+      });
     } finally {
       await page.close();
       doc.free();

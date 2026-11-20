@@ -7,7 +7,9 @@ async function keys(page: Page, sequence: string) {
 function getActiveLineIndex(page: Page) {
   return page
     .locator(".cm-line")
-    .evaluateAll((lines) => lines.findIndex((line) => line.classList.contains("cm-activeLine")));
+    .evaluateAll((lines) =>
+      lines.findIndex((line) => line.classList.contains("cm-activeLine")),
+    );
 }
 
 test.beforeEach(async ({ page }) => {
@@ -26,7 +28,9 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const style of ["block", "line", "underline"]) {
-  test(`repeated l reaches the last character with ${style} cursor`, async ({ page }) => {
+  test(`repeated l reaches the last character with ${style} cursor`, async ({
+    page,
+  }) => {
     await page.getByRole("button", { name: "Open settings" }).click();
     await page.getByRole("button", { name: "Editor", exact: true }).click();
     await page.getByLabel("Normal mode cursor").selectOption(style);
@@ -40,7 +44,12 @@ for (const style of ["block", "line", "underline"]) {
     await expect(cursor).toHaveText("f");
     await expect(cursor).toBeVisible();
     await page.keyboard.press("x");
-    await expect(page.locator(".cm-line")).toHaveText(["abcde", "x", "", "xyz"]);
+    await expect(page.locator(".cm-line")).toHaveText([
+      "abcde",
+      "x",
+      "",
+      "xyz",
+    ]);
     await keys(page, "G0" + "l".repeat(20) + "x");
     await expect(page.locator(".cm-line").last()).toHaveText("xy");
   });
@@ -68,10 +77,17 @@ test("l stays on single-character and empty lines", async ({ page }) => {
   await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "", "xyz"]);
   await keys(page, "l".repeat(10) + "ix");
   await page.keyboard.press("Escape");
-  await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "x", "xyz"]);
+  await expect(page.locator(".cm-line")).toHaveText([
+    "abcdef",
+    "x",
+    "x",
+    "xyz",
+  ]);
 });
 
-test("yank operators accept word and paragraph text objects", async ({ page }) => {
+test("yank operators accept word and paragraph text objects", async ({
+  page,
+}) => {
   await keys(page, "gg0y");
   await page.waitForTimeout(300);
   await keys(page, "iw$p");
@@ -81,9 +97,14 @@ test("yank operators accept word and paragraph text objects", async ({ page }) =
   await expect(page.locator(".cm-line")).toHaveCount(6);
 });
 
-test("system clipboard preserves yank motions and linewise paste", async ({ page, context }) => {
+test("system clipboard preserves yank motions and linewise paste", async ({
+  page,
+  context,
+}) => {
   await context.grantPermissions(["clipboard-read", "clipboard-write"]);
-  await page.evaluate(() => localStorage.setItem("tsugite.system-clipboard", "true"));
+  await page.evaluate(() =>
+    localStorage.setItem("tsugite.system-clipboard", "true"),
+  );
   await page.reload();
   await expect(page.locator(".cm-editor")).toBeVisible();
   await page.locator(".cm-content").focus();
@@ -94,7 +115,9 @@ test("system clipboard preserves yank motions and linewise paste", async ({ page
   await keys(page, "gg0y");
   await page.waitForTimeout(300);
   await keys(page, "iw");
-  await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe("alpha");
+  await expect
+    .poll(() => page.evaluate(() => navigator.clipboard.readText()))
+    .toBe("alpha");
   await keys(page, "$p");
   await expect(page.locator(".cm-line").first()).toHaveText("alpha betaalpha");
 
@@ -108,11 +131,15 @@ test("system clipboard preserves yank motions and linewise paste", async ({ page
 
 test("yank operators accept b and B block aliases", async ({ page }) => {
   await keys(page, "ggVGc");
-  await page.keyboard.insertText("call(one + two)\n\nconst value = {alpha + beta}");
+  await page.keyboard.insertText(
+    "call(one + two)\n\nconst value = {alpha + beta}",
+  );
   await page.keyboard.press("Escape");
 
   await keys(page, "gg0wyib$p");
-  await expect(page.locator(".cm-line").first()).toHaveText("call(one + two)one + two");
+  await expect(page.locator(".cm-line").first()).toHaveText(
+    "call(one + two)one + two",
+  );
 
   await keys(page, "G0wyiB$p");
   await expect(page.locator(".cm-line").last()).toHaveText(
@@ -120,7 +147,9 @@ test("yank operators accept b and B block aliases", async ({ page }) => {
   );
 });
 
-test("vim search keeps a styled status tag on the last matched line", async ({ page }) => {
+test("vim search keeps a styled status tag on the last matched line", async ({
+  page,
+}) => {
   await keys(page, "ggVGc");
   await page.keyboard.insertText("abc\nmiddle\nabc\ntail\nabc");
   await page.keyboard.press("Escape");
@@ -139,7 +168,9 @@ test("vim search keeps a styled status tag on the last matched line", async ({ p
       page
         .locator(".cm-line")
         .evaluateAll((lines) =>
-          lines.findIndex((line) => line.querySelector("[data-vim-search-status]")),
+          lines.findIndex((line) =>
+            line.querySelector("[data-vim-search-status]"),
+          ),
         ),
     )
     .toBe(2);
@@ -153,7 +184,9 @@ test("vim search keeps a styled status tag on the last matched line", async ({ p
       page
         .locator(".cm-line")
         .evaluateAll((lines) =>
-          lines.findIndex((line) => line.querySelector("[data-vim-search-status]")),
+          lines.findIndex((line) =>
+            line.querySelector("[data-vim-search-status]"),
+          ),
         ),
     )
     .toBe(4);
@@ -173,7 +206,9 @@ test("vim search keeps a styled status tag on the last matched line", async ({ p
     });
 });
 
-test("word search hides Vim boundaries and separates the match count", async ({ page }) => {
+test("word search hides Vim boundaries and separates the match count", async ({
+  page,
+}) => {
   await keys(page, "ggVGc");
   await page.keyboard.insertText("alpha beta\nalpha gamma");
   await page.keyboard.press("Escape");
@@ -198,14 +233,21 @@ test("word search hides Vim boundaries and separates the match count", async ({ 
     .toBeCloseTo(8, 1);
 });
 
-test("visual star replaces the active search used by n and N", async ({ page }) => {
+test("visual star replaces the active search used by n and N", async ({
+  page,
+}) => {
   await keys(page, "ggVGc");
-  await page.keyboard.insertText("alpha item\nalpha other\na+b gap\nmiddle\na+b end");
+  await page.keyboard.insertText(
+    "alpha item\nalpha other\na+b gap\nmiddle\na+b end",
+  );
   await page.keyboard.press("Escape");
   await keys(page, "gg0*j0vll*");
   await expect(page.locator("[data-vim-search-query]")).toHaveText("a+b");
   await expect(page.locator("[data-vim-search-count]")).toHaveText("2/2");
-  await expect(page.locator("[data-vim-mode]")).toHaveAttribute("data-vim-mode", "normal");
+  await expect(page.locator("[data-vim-mode]")).toHaveAttribute(
+    "data-vim-mode",
+    "normal",
+  );
 
   await page.keyboard.press("Shift+N");
   await expect(page.locator("[data-vim-search-count]")).toHaveText("1/2");
@@ -220,8 +262,15 @@ for (const mode of ["normal", "insert"]) {
     if (mode === "insert") await page.keyboard.press("i");
     await page.keyboard.press("ControlOrMeta+,");
     await expect(page.getByRole("dialog")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Close settings" })).toBeVisible();
-    await expect(page.locator(".cm-line")).toHaveText(["abcdef", "x", "", "xyz"]);
+    await expect(
+      page.getByRole("button", { name: "Close settings" }),
+    ).toBeVisible();
+    await expect(page.locator(".cm-line")).toHaveText([
+      "abcdef",
+      "x",
+      "",
+      "xyz",
+    ]);
     await page.keyboard.press("Escape");
     await expect(page.getByRole("dialog")).toHaveCount(0);
   });

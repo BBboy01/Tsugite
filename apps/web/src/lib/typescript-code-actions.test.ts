@@ -1,24 +1,41 @@
 import { expect, test } from "bun:test";
 import { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
-import { toCodeMirrorCompletions, toCodeMirrorDiagnostics } from "./typescript-code-actions";
+import {
+  toCodeMirrorCompletions,
+  toCodeMirrorDiagnostics,
+} from "./typescript-code-actions";
 
 test("converts intelligence completion and diagnostics into editor-owned plain data", () => {
   expect(
-    toCodeMirrorCompletions([{ name: "displayName", kind: "const", sortText: "1" }], 4),
+    toCodeMirrorCompletions(
+      [{ name: "displayName", kind: "const", sortText: "1" }],
+      4,
+    ),
   ).toMatchObject({
     from: 4,
     options: [{ label: "displayName", type: "const" }],
   });
   expect(
     toCodeMirrorDiagnostics([
-      { from: 2, to: 5, code: 2304, severity: "error", message: "Missing name" },
+      {
+        from: 2,
+        to: 5,
+        code: 2304,
+        severity: "error",
+        message: "Missing name",
+      },
     ]),
-  ).toEqual([{ from: 2, to: 5, severity: "error", message: "TS2304: Missing name" }]);
+  ).toEqual([
+    { from: 2, to: 5, severity: "error", message: "TS2304: Missing name" },
+  ]);
 });
 
 test("applies each completion's complete replacement range, including text after the caret", () => {
-  let state = EditorState.create({ doc: "object.alpha", selection: { anchor: 9 } });
+  let state = EditorState.create({
+    doc: "object.alpha",
+    selection: { anchor: 9 },
+  });
   const view = {
     get state() {
       return state;
@@ -29,7 +46,12 @@ test("applies each completion's complete replacement range, including text after
   } as unknown as EditorView;
   const result = toCodeMirrorCompletions(
     [
-      { name: "alpha", kind: "property", sortText: "0", replacement: { from: 7, to: 12 } },
+      {
+        name: "alpha",
+        kind: "property",
+        sortText: "0",
+        replacement: { from: 7, to: 12 },
+      },
       {
         name: "alpha as string key",
         kind: "property",
@@ -42,8 +64,14 @@ test("applies each completion's complete replacement range, including text after
     9,
   );
   expect(result.from).toBe(7);
-  for (const [index, expected] of ["object.alpha", 'object["alpha"]'].entries()) {
-    state = EditorState.create({ doc: "object.alpha", selection: { anchor: 9 } });
+  for (const [index, expected] of [
+    "object.alpha",
+    'object["alpha"]',
+  ].entries()) {
+    state = EditorState.create({
+      doc: "object.alpha",
+      selection: { anchor: 9 },
+    });
     const selected = result.options[index];
     expect(typeof selected.apply).toBe("function");
     if (typeof selected.apply !== "function") continue;

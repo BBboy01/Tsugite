@@ -1,6 +1,9 @@
 import { expect, test, type Page } from "playwright/test";
 import type { ProjectFile } from "@iris/shared";
-import type { WebContainerRuntime, RuntimeEvent } from "../apps/web/src/lib/webcontainer-runtime";
+import type {
+  WebContainerRuntime,
+  RuntimeEvent,
+} from "../apps/web/src/lib/webcontainer-runtime";
 import type { TypeScriptWorkerClient } from "../apps/web/src/lib/typescript-worker-client";
 
 function starterCounter(page: Page, count = 0) {
@@ -20,8 +23,12 @@ async function expectPreviewReady(page: Page, timeout = 30_000) {
 
 test.afterEach(async ({ page }, testInfo) => {
   if (testInfo.status === testInfo.expectedStatus) return;
-  if (!(await page.getByRole("region", { name: "Live preview" }).isVisible())) return;
-  const expand = page.getByRole("button", { name: "Expand output", exact: true });
+  if (!(await page.getByRole("region", { name: "Live preview" }).isVisible()))
+    return;
+  const expand = page.getByRole("button", {
+    name: "Expand output",
+    exact: true,
+  });
   if (await expand.isVisible()) await expand.click();
   await testInfo.attach("preview-output", {
     body: await page.getByRole("region", { name: "Live preview" }).innerText(),
@@ -35,17 +42,28 @@ test("keeps the initial room socket open through development remounts @smoke", a
   test.setTimeout(180_000);
   const socketWarnings: string[] = [];
   page.on("console", (message) => {
-    if (message.type() === "warning" && message.text().includes("WebSocket connection")) {
+    if (
+      message.type() === "warning" &&
+      message.text().includes("WebSocket connection")
+    ) {
       socketWarnings.push(message.text());
     }
   });
-  await page.goto("/room/e2e-connection-" + process.pid + "-" + testInfo.repeatEachIndex, {
-    waitUntil: "domcontentloaded",
-  });
+  await page.goto(
+    "/room/e2e-connection-" + process.pid + "-" + testInfo.repeatEachIndex,
+    {
+      waitUntil: "domcontentloaded",
+    },
+  );
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   const preview = page.locator('iframe[title^="Preview of "]');
-  await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
-  await expect(preview).toHaveAttribute("sandbox", "allow-scripts allow-same-origin");
+  await expect(preview).toHaveAttribute("src", /^https?:\/\//, {
+    timeout: 150_000,
+  });
+  await expect(preview).toHaveAttribute(
+    "sandbox",
+    "allow-scripts allow-same-origin",
+  );
   await expectPreviewReady(page);
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
@@ -86,7 +104,10 @@ test("real WebContainer scans installed declarations into the real TypeScript Wo
       'import {\n answer\n} from "typed-pkg"; const label = "界\\\\path"; const value = answer;';
     const resources = [
       { path: "package.json", text: '{"dependencies":{"typed-pkg":"1.0.0"}}' },
-      { path: "node_modules/typed-pkg/package.json", text: '{"types":"index.d.ts"}' },
+      {
+        path: "node_modules/typed-pkg/package.json",
+        text: '{"types":"index.d.ts"}',
+      },
       {
         path: "node_modules/typed-pkg/index.d.ts",
         text: 'export declare const answer: "webcontainer-types";',
@@ -108,13 +129,20 @@ test("real WebContainer scans installed declarations into the real TypeScript Wo
         autoInstall: false,
         autoStartPreview: false,
       });
-      if (!events.some((event) => event.type === "state" && event.state === "paused"))
+      if (
+        !events.some(
+          (event) => event.type === "state" && event.state === "paused",
+        )
+      )
         return { events, status: "runtime-unavailable" };
       const scanStart = performance.now();
       const declarations = await runtime.readTypeScriptDeclarations([
         { path: "src/app.ts", text: source },
       ]);
-      await client.syncWorkspace([{ path: "src/app.ts", text: source }, ...declarations]);
+      await client.syncWorkspace([
+        { path: "src/app.ts", text: source },
+        ...declarations,
+      ]);
       const hover = await client.hover({
         path: "src/app.ts",
         position: source.lastIndexOf("answer"),
@@ -145,7 +173,9 @@ test("real WebContainer scans installed declarations into the real TypeScript Wo
   });
 });
 
-test("keeps the runtime action focused while restarting the preview", async ({ page }) => {
+test("keeps the runtime action focused while restarting the preview", async ({
+  page,
+}) => {
   await page.goto(`/room/e2e-settings-runtime-focus-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
@@ -159,18 +189,28 @@ test("keeps the runtime action focused while restarting the preview", async ({ p
   await expect(restart).toBeFocused();
 });
 
-test("restores the preview after either runtime recovery action", async ({ page }, testInfo) => {
+test("restores the preview after either runtime recovery action", async ({
+  page,
+}, testInfo) => {
   test.setTimeout(360_000);
   const pageErrors: string[] = [];
   page.on("pageerror", (error) => pageErrors.push(error.message));
-  await page.goto(`/room/e2e-runtime-recovery-${Date.now()}`, { waitUntil: "domcontentloaded" });
+  await page.goto(`/room/e2e-runtime-recovery-${Date.now()}`, {
+    waitUntil: "domcontentloaded",
+  });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden({ timeout: 90_000 });
-  await expect(page.getByRole("treeitem", { name: "package.json", exact: true })).toBeVisible({
+  await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden({
+    timeout: 90_000,
+  });
+  await expect(
+    page.getByRole("treeitem", { name: "package.json", exact: true }),
+  ).toBeVisible({
     timeout: 90_000,
   });
   const preview = page.locator('iframe[title^="Preview of "]');
-  await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
+  await expect(preview).toHaveAttribute("src", /^https?:\/\//, {
+    timeout: 150_000,
+  });
   await expectPreviewReady(page);
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
@@ -181,8 +221,12 @@ test("restores the preview after either runtime recovery action", async ({ page 
   const restart = page.getByRole("button", { name: "Restart preview runtime" });
   await restart.click();
   await expect(preview).not.toHaveAttribute("src", /^https?:\/\//);
-  await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
-  await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
+  await expect(page.getByText("Waiting for preview…")).toBeHidden({
+    timeout: 90_000,
+  });
+  await expect(preview).toHaveAttribute("src", /^https?:\/\//, {
+    timeout: 150_000,
+  });
   await expectPreviewReady(page);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
@@ -198,18 +242,26 @@ test("restores the preview after either runtime recovery action", async ({ page 
   });
   await reinstall.click();
   await expect(preview).not.toHaveAttribute("src", /^https?:\/\//);
-  await expect(page.getByText("Waiting for preview…")).toBeHidden({ timeout: 90_000 });
-  await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
+  await expect(page.getByText("Waiting for preview…")).toBeHidden({
+    timeout: 90_000,
+  });
+  await expect(preview).toHaveAttribute("src", /^https?:\/\//, {
+    timeout: 150_000,
+  });
   await expectPreviewReady(page);
   await page.keyboard.press("Escape");
   await expect(page.getByRole("dialog")).toBeHidden();
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("preview-reinstalled.png") });
+  await page.screenshot({
+    path: testInfo.outputPath("preview-reinstalled.png"),
+  });
   expect(pageErrors).toEqual([]);
 });
 
-test("keeps the preview running after closing the last file tab", async ({ page }) => {
+test("keeps the preview running after closing the last file tab", async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await page.goto(`/room/e2e-preview-after-close-${Date.now()}`, {
     waitUntil: "domcontentloaded",
@@ -219,19 +271,25 @@ test("keeps the preview running after closing the last file tab", async ({ page 
   await expect(page.getByText("No open files")).toBeVisible();
   await expect(page.getByText("Waiting for the room snapshot…")).toBeHidden();
   await expect(page.getByText("Waiting for preview…")).toBeHidden();
-  await expect(page.getByRole("region", { name: "Live preview" })).toBeVisible();
+  await expect(
+    page.getByRole("region", { name: "Live preview" }),
+  ).toBeVisible();
   await expect(page.locator("iframe").first()).toBeVisible({ timeout: 15_000 });
   await expectPreviewReady(page, 150_000);
 });
 
-test("keeps the project preview stable when switching editor files", async ({ page }) => {
+test("keeps the project preview stable when switching editor files", async ({
+  page,
+}) => {
   test.setTimeout(180_000);
   await page.goto(`/room/e2e-preview-file-switch-${Date.now()}`, {
     waitUntil: "domcontentloaded",
   });
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
   const preview = page.locator('iframe[title^="Preview of "]');
-  await expect(preview).toHaveAttribute("src", /^https?:\/\//, { timeout: 150_000 });
+  await expect(preview).toHaveAttribute("src", /^https?:\/\//, {
+    timeout: 150_000,
+  });
   const previewUrl = await preview.getAttribute("src");
   await expectPreviewReady(page);
   await starterCounter(page).click();
@@ -243,10 +301,15 @@ test("keeps the project preview stable when switching editor files", async ({ pa
   await expect(starterCounter(page, 1)).toBeVisible();
 });
 
-test("shows syntax errors in preview instead of a blank frame", async ({ page }, testInfo) => {
+test("shows syntax errors in preview instead of a blank frame", async ({
+  page,
+}, testInfo) => {
   test.setTimeout(180_000);
   await page.goto(
-    "/room/e2e-preview-syntax-" + testInfo.workerIndex + "-" + testInfo.repeatEachIndex,
+    "/room/e2e-preview-syntax-" +
+      testInfo.workerIndex +
+      "-" +
+      testInfo.repeatEachIndex,
     { waitUntil: "domcontentloaded" },
   );
   await expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
@@ -265,10 +328,15 @@ test("shows syntax errors in preview instead of a blank frame", async ({ page },
   await page.keyboard.press("ControlOrMeta+A");
   await page.keyboard.type("export const broken = ;");
 
-  await expect(page.getByRole("alert")).toContainText(/Unexpected token|PARSE_ERROR/, {
-    timeout: 60_000,
+  await expect(page.getByRole("alert")).toContainText(
+    /Unexpected token|PARSE_ERROR/,
+    {
+      timeout: 60_000,
+    },
+  );
+  await page.screenshot({
+    path: testInfo.outputPath("preview-syntax-error.png"),
   });
-  await page.screenshot({ path: testInfo.outputPath("preview-syntax-error.png") });
 
   await editor.click();
   await page.keyboard.press("ControlOrMeta+A");
@@ -278,5 +346,7 @@ test("shows syntax errors in preview instead of a blank frame", async ({ page },
   await expectPreviewReady(page);
   await starterCounter(page).click();
   await expect(starterCounter(page, 1)).toBeVisible();
-  await page.screenshot({ path: testInfo.outputPath("preview-syntax-recovered.png") });
+  await page.screenshot({
+    path: testInfo.outputPath("preview-syntax-recovered.png"),
+  });
 });

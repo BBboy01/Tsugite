@@ -13,7 +13,9 @@ export function usePreviewStandalone(
   const [outputs, setOutputs] = useState<PreviewOutput[]>([]);
   const [runtimeState, setRuntimeState] = useState<"idle" | "error">("idle");
   const [buildError, setBuildError] = useState<string | undefined>(undefined);
-  const [sourceError, setSourceError] = useState<PreviewSourceError | undefined>(undefined);
+  const [sourceError, setSourceError] = useState<
+    PreviewSourceError | undefined
+  >(undefined);
 
   useEffect(() => {
     if (!enabled) {
@@ -29,7 +31,8 @@ export function usePreviewStandalone(
     const timer = window.setTimeout(() => {
       void (async () => {
         try {
-          const { createPreviewDocument, runPreview } = await import("./preview-runner");
+          const { createPreviewDocument, runPreview } =
+            await import("./preview-runner");
           if (cancelled) return;
           const source = file.text.toString();
           const result = runPreview(source, file.language);
@@ -39,7 +42,11 @@ export function usePreviewStandalone(
             setDocument("");
             setOutputs([{ level: "error", message: result.error }]);
             setBuildError(result.error);
-            setSourceError({ path: file.path, source, location: result.location });
+            setSourceError({
+              path: file.path,
+              source,
+              location: result.location,
+            });
             return;
           }
           setDocument(createPreviewDocument(result.code ?? ""));
@@ -49,7 +56,8 @@ export function usePreviewStandalone(
         } catch (error) {
           if (cancelled) return;
           setRuntimeState("error");
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           setDocument("");
           setOutputs([{ level: "error", message }]);
           setBuildError(message);
@@ -82,6 +90,9 @@ export function usePreviewStandalone(
   };
 }
 
-function appendOutput(outputs: PreviewOutput[], output: PreviewOutput): PreviewOutput[] {
+function appendOutput(
+  outputs: PreviewOutput[],
+  output: PreviewOutput,
+): PreviewOutput[] {
   return [...outputs, output].slice(-80);
 }

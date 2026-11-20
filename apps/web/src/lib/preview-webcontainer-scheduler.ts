@@ -20,7 +20,12 @@ import {
 
 export type PreviewRuntimePort = Pick<
   WebContainerRuntime,
-  "start" | "restart" | "sync" | "syncChangedFiles" | "readTypeScriptDeclarations" | "dispose"
+  | "start"
+  | "restart"
+  | "sync"
+  | "syncChangedFiles"
+  | "readTypeScriptDeclarations"
+  | "dispose"
 >;
 export type PreviewRuntimeInput = {
   enabled: boolean;
@@ -48,7 +53,12 @@ type SchedulerOptions = {
 
 type RuntimeCommand =
   | { type: "start"; forceStart: boolean }
-  | { type: "restart"; forceStart: boolean; forceInstall?: boolean; action?: RuntimeAction }
+  | {
+      type: "restart";
+      forceStart: boolean;
+      forceInstall?: boolean;
+      action?: RuntimeAction;
+    }
   | { type: "sync"; full: boolean };
 
 export class PreviewWebContainerScheduler {
@@ -73,7 +83,8 @@ export class PreviewWebContainerScheduler {
 
   constructor(private readonly options: SchedulerOptions = {}) {
     this.declarationSync =
-      options.declarations && new PreviewTypeScriptDeclarations(options.declarations);
+      options.declarations &&
+      new PreviewTypeScriptDeclarations(options.declarations);
   }
 
   getSnapshot = () => this.state;
@@ -94,7 +105,9 @@ export class PreviewWebContainerScheduler {
     void Promise.all([
       this.ensureRuntime(),
       this.options.loadSyntaxValidator?.() ??
-        import("./preview-runner").then((module) => module.validateSourceSyntaxDetails),
+        import("./preview-runner").then(
+          (module) => module.validateSourceSyntaxDetails,
+        ),
     ])
       .then(([runtime, validate]) => {
         if (!runtime || generation !== this.preflightGeneration) return;
@@ -119,15 +132,19 @@ export class PreviewWebContainerScheduler {
     this.manualAction = action;
   }
 
-  setPreviewLoaded = (previewLoaded: boolean): void => this.patch({ previewLoaded });
-  setPreviewUrl = (previewUrl: string | undefined): void => this.patch({ previewUrl });
+  setPreviewLoaded = (previewLoaded: boolean): void =>
+    this.patch({ previewLoaded });
+  setPreviewUrl = (previewUrl: string | undefined): void =>
+    this.patch({ previewUrl });
   clearOutputs = (): void => this.patch({ outputs: [] });
   prepareRerun = (): void => this.patch({ buildError: undefined });
 
   addOutput = (output: PreviewOutput): void => {
     this.patch({
       outputs: appendPreviewOutput(this.state.outputs, output),
-      ...(output.level === "error" ? { runtimeState: "error", buildError: output.message } : {}),
+      ...(output.level === "error"
+        ? { runtimeState: "error", buildError: output.message }
+        : {}),
     });
   };
 
@@ -169,8 +186,11 @@ export class PreviewWebContainerScheduler {
       const create =
         this.options.createRuntime ??
         (async () => {
-          const { WebContainerRuntime } = await import("./webcontainer-runtime");
-          return generation === this.sessionGeneration ? new WebContainerRuntime() : undefined;
+          const { WebContainerRuntime } =
+            await import("./webcontainer-runtime");
+          return generation === this.sessionGeneration
+            ? new WebContainerRuntime()
+            : undefined;
         });
       const pending = create()
         .then((runtime) => {
@@ -203,7 +223,11 @@ export class PreviewWebContainerScheduler {
         runtimeState: "error",
         runtimeError: undefined,
         outputs: [{ level: "error", message: error.message }],
-        sourceError: { path: input.file.path, source, location: error.location },
+        sourceError: {
+          path: input.file.path,
+          source,
+          location: error.location,
+        },
         buildError: error.message,
       });
       return;
@@ -221,18 +245,33 @@ export class PreviewWebContainerScheduler {
     const command = this.chooseCommand(input);
     if (!command) return;
     const preflightGeneration = this.preflightGeneration;
-    const generation = command.type === "sync" ? this.runtimeGeneration : ++this.runtimeGeneration;
-    void this.execute(command, input, runtime, generation).catch((failure: unknown) => {
-      if (preflightGeneration === this.preflightGeneration && this.isCurrent(runtime, generation))
-        this.reportFailure(failure);
-    });
+    const generation =
+      command.type === "sync"
+        ? this.runtimeGeneration
+        : ++this.runtimeGeneration;
+    void this.execute(command, input, runtime, generation).catch(
+      (failure: unknown) => {
+        if (
+          preflightGeneration === this.preflightGeneration &&
+          this.isCurrent(runtime, generation)
+        )
+          this.reportFailure(failure);
+      },
+    );
   }
 
-  private chooseCommand(input: PreviewRuntimeInput): RuntimeCommand | undefined {
+  private chooseCommand(
+    input: PreviewRuntimeInput,
+  ): RuntimeCommand | undefined {
     if (this.manualAction) {
       const action = this.manualAction;
       this.manualAction = undefined;
-      return { type: "restart", forceStart: true, forceInstall: action === "reinstall", action };
+      return {
+        type: "restart",
+        forceStart: true,
+        forceInstall: action === "reinstall",
+        action,
+      };
     }
     if (!this.started) return { type: "start", forceStart: input.runKey > 0 };
     const forceStart = input.runKey !== this.lastRunKey;
@@ -244,7 +283,8 @@ export class PreviewWebContainerScheduler {
       return { type: "restart", forceStart };
     }
     const full = this.syncedStructureKey !== getStructureKey(input);
-    if (full || input.getPendingContentChanges().length > 0) return { type: "sync", full };
+    if (full || input.getPendingContentChanges().length > 0)
+      return { type: "sync", full };
   }
 
   private async execute(
@@ -274,19 +314,33 @@ export class PreviewWebContainerScheduler {
         this.onEvent(event, runtime, input);
     };
     if (command.type === "start") {
-      await runtime.start(input.files, input.folders, listener, input.settings, {
-        forceStart: command.forceStart,
-      });
+      await runtime.start(
+        input.files,
+        input.folders,
+        listener,
+        input.settings,
+        {
+          forceStart: command.forceStart,
+        },
+      );
       if (this.isCurrent(runtime, generation) && this.input)
         await this.sync(runtime, this.input, generation, true);
       return;
     }
     const pending = input.getPendingContentChanges();
     try {
-      await runtime.restart(input.files, input.folders, listener, input.settings, {
-        forceStart: command.forceStart,
-        ...(command.forceInstall !== undefined ? { forceInstall: command.forceInstall } : {}),
-      });
+      await runtime.restart(
+        input.files,
+        input.folders,
+        listener,
+        input.settings,
+        {
+          forceStart: command.forceStart,
+          ...(command.forceInstall !== undefined
+            ? { forceInstall: command.forceInstall }
+            : {}),
+        },
+      );
       if (!this.isCurrent(runtime, generation)) return;
       input.acknowledgeContentChanges(pending);
       this.syncedStructureKey = getStructureKey(input);
@@ -330,7 +384,11 @@ export class PreviewWebContainerScheduler {
       this.patch({ previewLoaded: false, previewUrl: event.url });
     } else {
       this.patch({ runtimeState: event.state, runtimeError: event.error });
-      void this.declarationSync?.onRuntimeState(event.state, runtime, event.error);
+      void this.declarationSync?.onRuntimeState(
+        event.state,
+        runtime,
+        event.error,
+      );
       if (event.error) {
         const message = (this.input ?? input).translateError(event.error);
         this.patch({
@@ -338,7 +396,10 @@ export class PreviewWebContainerScheduler {
           previewLoaded: false,
           previewUrl: undefined,
           buildError: message,
-          outputs: appendPreviewOutput(this.state.outputs, { level: "error", message }),
+          outputs: appendPreviewOutput(this.state.outputs, {
+            level: "error",
+            message,
+          }),
         });
       }
     }
@@ -352,7 +413,10 @@ export class PreviewWebContainerScheduler {
       buildError: message,
       previewLoaded: false,
       previewUrl: undefined,
-      outputs: appendPreviewOutput(this.state.outputs, { level: "error", message }),
+      outputs: appendPreviewOutput(this.state.outputs, {
+        level: "error",
+        message,
+      }),
     });
     void this.options.declarations?.clearDeclarations(message);
   }

@@ -3,7 +3,9 @@ import { expect, test, type Page } from "playwright/test";
 function readEditorText(page: Page) {
   return page.locator(".cm-content").evaluate((element) => {
     const clone = element.cloneNode(true) as HTMLElement;
-    clone.querySelectorAll(".cm-remote-cursor-label").forEach((label) => label.remove());
+    clone
+      .querySelectorAll(".cm-remote-cursor-label")
+      .forEach((label) => label.remove());
     return Array.from(clone.querySelectorAll(".cm-line"))
       .map((line) => line.textContent ?? "")
       .join("\n");
@@ -14,7 +16,9 @@ test.beforeEach(async ({ page }) => {
   await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
 });
 
-test("renders a collaborator cursor, name, and selection", async ({ browser }) => {
+test("renders a collaborator cursor, name, and selection", async ({
+  browser,
+}) => {
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
   await firstContext.addInitScript(
@@ -36,8 +40,12 @@ test("renders a collaborator cursor, name, and selection", async ({ browser }) =
     firstPage.goto("/room/e2e-presence", { waitUntil: "domcontentloaded" }),
     secondPage.goto("/room/e2e-presence", { waitUntil: "domcontentloaded" }),
   ]);
-  await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await expect(firstPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(secondPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
 
   await secondPage.locator(".cm-content").click();
   await secondPage.keyboard.press("ControlOrMeta+A");
@@ -46,14 +54,18 @@ test("renders a collaborator cursor, name, and selection", async ({ browser }) =
     timeout: 15_000,
   });
   await expect(
-    firstPage.locator(".cm-remote-selection[data-user-id='e2e-second']").first(),
+    firstPage
+      .locator(".cm-remote-selection[data-user-id='e2e-second']")
+      .first(),
   ).toBeVisible();
 
   await firstContext.close();
   await secondContext.close();
 });
 
-test("undoes only the local edit after concurrent changes", async ({ browser }, testInfo) => {
+test("undoes only the local edit after concurrent changes", async ({
+  browser,
+}, testInfo) => {
   test.setTimeout(90_000);
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
@@ -73,13 +85,20 @@ test("undoes only the local edit after concurrent changes", async ({ browser }, 
   const firstPage = await firstContext.newPage();
   const secondPage = await secondContext.newPage();
   const roomPath =
-    "/room/e2e-undo-concurrent-" + testInfo.workerIndex + "-" + testInfo.repeatEachIndex;
+    "/room/e2e-undo-concurrent-" +
+    testInfo.workerIndex +
+    "-" +
+    testInfo.repeatEachIndex;
   await Promise.all([
     firstPage.goto(roomPath, { waitUntil: "domcontentloaded" }),
     secondPage.goto(roomPath, { waitUntil: "domcontentloaded" }),
   ]);
-  await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
-  await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await expect(firstPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(secondPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
 
   const initial = await readEditorText(firstPage);
 
@@ -93,7 +112,9 @@ test("undoes only the local edit after concurrent changes", async ({ browser }, 
   await secondPage.locator(".cm-content").click();
   await secondPage.keyboard.press("ControlOrMeta+Home");
   await secondPage.keyboard.type("// undo-jun\n");
-  await expect.poll(() => readEditorText(firstPage), { timeout: 45_000 }).toContain("// undo-jun");
+  await expect
+    .poll(() => readEditorText(firstPage), { timeout: 45_000 })
+    .toContain("// undo-jun");
 
   await firstPage.locator(".cm-content").click();
   await expect(firstPage.locator(".cm-editor")).toHaveClass(/cm-focused/, {
@@ -101,14 +122,20 @@ test("undoes only the local edit after concurrent changes", async ({ browser }, 
   });
   await firstPage.keyboard.press("ControlOrMeta+z");
   const expected = "// undo-jun\n" + initial;
-  await expect.poll(() => readEditorText(firstPage), { timeout: 45_000 }).toBe(expected);
-  await expect.poll(() => readEditorText(secondPage), { timeout: 45_000 }).toBe(expected);
+  await expect
+    .poll(() => readEditorText(firstPage), { timeout: 45_000 })
+    .toBe(expected);
+  await expect
+    .poll(() => readEditorText(secondPage), { timeout: 45_000 })
+    .toBe(expected);
 
   await firstContext.close();
   await secondContext.close();
 });
 
-test("sends the existing cursor to a collaborator who joins later", async ({ browser }) => {
+test("sends the existing cursor to a collaborator who joins later", async ({
+  browser,
+}) => {
   const firstContext = await browser.newContext();
   const secondContext = await browser.newContext();
   await firstContext.addInitScript(
@@ -125,13 +152,21 @@ test("sends the existing cursor to a collaborator who joins later", async ({ bro
   );
 
   const firstPage = await firstContext.newPage();
-  await firstPage.goto("/room/e2e-presence-late", { waitUntil: "domcontentloaded" });
-  await expect(firstPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await firstPage.goto("/room/e2e-presence-late", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(firstPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
   await firstPage.locator(".cm-content").click({ position: { x: 28, y: 12 } });
 
   const secondPage = await secondContext.newPage();
-  await secondPage.goto("/room/e2e-presence-late", { waitUntil: "domcontentloaded" });
-  await expect(secondPage.locator(".cm-editor")).toBeVisible({ timeout: 15_000 });
+  await secondPage.goto("/room/e2e-presence-late", {
+    waitUntil: "domcontentloaded",
+  });
+  await expect(secondPage.locator(".cm-editor")).toBeVisible({
+    timeout: 15_000,
+  });
 
   await expect(
     secondPage.locator(".cm-remote-cursor-label").filter({ hasText: "Maya" }),
@@ -143,7 +178,9 @@ test("sends the existing cursor to a collaborator who joins later", async ({ bro
   await secondContext.close();
 });
 
-test("keeps remaining collaborator cursors when one member leaves", async ({ browser }) => {
+test("keeps remaining collaborator cursors when one member leaves", async ({
+  browser,
+}) => {
   test.setTimeout(90_000);
   const identities = [
     { userId: "e2e-owner", displayName: "Maya", color: "#d88961" },
@@ -162,10 +199,14 @@ test("keeps remaining collaborator cursors when one member leaves", async ({ bro
   const pages = await Promise.all(contexts.map((context) => context.newPage()));
 
   await Promise.all(
-    pages.map((page) => page.goto("/room/e2e-presence-leave", { waitUntil: "domcontentloaded" })),
+    pages.map((page) =>
+      page.goto("/room/e2e-presence-leave", { waitUntil: "domcontentloaded" }),
+    ),
   );
   await Promise.all(
-    pages.map((page) => expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 })),
+    pages.map((page) =>
+      expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 }),
+    ),
   );
 
   await pages[1].locator(".cm-content").click();
@@ -174,20 +215,26 @@ test("keeps remaining collaborator cursors when one member leaves", async ({ bro
   await pages[2].keyboard.press("ControlOrMeta+A");
 
   await Promise.all([
-    expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toBeVisible({
+    expect(
+      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
+    ).toBeVisible({
       timeout: 30_000,
     }),
-    expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible({
+    expect(
+      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
+    ).toBeVisible({
       timeout: 30_000,
     }),
   ]);
 
   await contexts[2].close();
 
-  await expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toHaveCount(
-    0,
-  );
-  await expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toBeVisible({
+  await expect(
+    pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
+  ).toHaveCount(0);
+  await expect(
+    pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
+  ).toBeVisible({
     timeout: 15_000,
   });
   await expect(
@@ -198,7 +245,9 @@ test("keeps remaining collaborator cursors when one member leaves", async ({ bro
   await contexts[1].close();
 });
 
-test("keeps a collapsed cursor when a selected collaborator leaves", async ({ browser }) => {
+test("keeps a collapsed cursor when a selected collaborator leaves", async ({
+  browser,
+}) => {
   test.setTimeout(90_000);
   const identities = [
     { userId: "e2e-collapsed-observer", displayName: "Maya", color: "#d88961" },
@@ -217,11 +266,15 @@ test("keeps a collapsed cursor when a selected collaborator leaves", async ({ br
   const pages = await Promise.all(contexts.map((context) => context.newPage()));
   await Promise.all(
     pages.map((page) =>
-      page.goto("/room/e2e-presence-collapsed", { waitUntil: "domcontentloaded" }),
+      page.goto("/room/e2e-presence-collapsed", {
+        waitUntil: "domcontentloaded",
+      }),
     ),
   );
   await Promise.all(
-    pages.map((page) => expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 })),
+    pages.map((page) =>
+      expect(page.locator(".cm-editor")).toBeVisible({ timeout: 15_000 }),
+    ),
   );
 
   await pages[1].locator(".cm-content").focus();
@@ -229,25 +282,31 @@ test("keeps a collapsed cursor when a selected collaborator leaves", async ({ br
   await pages[2].locator(".cm-content").focus();
   await pages[2].keyboard.press("ControlOrMeta+A");
   await Promise.all([
-    expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible({
+    expect(
+      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
+    ).toBeVisible({
       timeout: 30_000,
     }),
-    expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toBeVisible({
+    expect(
+      pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
+    ).toBeVisible({
       timeout: 30_000,
     }),
   ]);
 
   await contexts[2].close();
-  await expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" })).toHaveCount(
-    0,
-  );
-  await expect(pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" })).toBeVisible(
-    {
-      timeout: 15_000,
-    },
-  );
   await expect(
-    pages[0].locator(".cm-remote-cursor[data-user-id='e2e-collapsed-survivor']"),
+    pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Jun" }),
+  ).toHaveCount(0);
+  await expect(
+    pages[0].locator(".cm-remote-cursor-label").filter({ hasText: "Sora" }),
+  ).toBeVisible({
+    timeout: 15_000,
+  });
+  await expect(
+    pages[0].locator(
+      ".cm-remote-cursor[data-user-id='e2e-collapsed-survivor']",
+    ),
   ).toBeVisible();
 
   await contexts[0].close();

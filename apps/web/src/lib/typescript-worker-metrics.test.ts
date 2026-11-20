@@ -1,5 +1,8 @@
 import { expect, test } from "bun:test";
-import { TypeScriptWorkerClient, type TypeScriptWorkerMetrics } from "./typescript-worker-client";
+import {
+  TypeScriptWorkerClient,
+  type TypeScriptWorkerMetrics,
+} from "./typescript-worker-client";
 import { files, transport } from "./typescript-worker-test-helpers";
 
 test("reports status metrics for a worker that becomes ready", () => {

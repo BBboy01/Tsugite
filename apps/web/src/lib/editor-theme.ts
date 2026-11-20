@@ -115,7 +115,8 @@ export function editorTheme(settings: ProjectSettings) {
       backgroundColor: "var(--editor-surface)",
       border: "1px solid var(--divider)",
       borderRadius: "6px",
-      boxShadow: "0 8px 24px color-mix(in srgb, var(--ink-strong) 18%, transparent)",
+      boxShadow:
+        "0 8px 24px color-mix(in srgb, var(--ink-strong) 18%, transparent)",
       color: "var(--ink)",
       fontFamily: "var(--mono-font)",
     },
@@ -127,9 +128,10 @@ export function editorTheme(settings: ProjectSettings) {
       boxShadow: "inset 2px 0 var(--accent)",
       color: "var(--ink)",
     },
-    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail": {
-      color: "color-mix(in srgb, var(--ink-strong) 70%, var(--muted))",
-    },
+    ".cm-tooltip.cm-tooltip-autocomplete > ul > li[aria-selected] .cm-completionDetail":
+      {
+        color: "color-mix(in srgb, var(--ink-strong) 70%, var(--muted))",
+      },
     ".cm-tooltip.cm-tooltip-autocomplete .cm-completionMatchedText": {
       color: "var(--accent-deep)",
     },
@@ -138,7 +140,8 @@ export function editorTheme(settings: ProjectSettings) {
       border: "none",
     },
     ".cm-vim-search-status": {
-      backgroundColor: "color-mix(in srgb, var(--accent) 12%, var(--editor-surface))",
+      backgroundColor:
+        "color-mix(in srgb, var(--accent) 12%, var(--editor-surface))",
       border: "1px solid color-mix(in srgb, var(--accent) 24%, var(--divider))",
       borderRadius: "4px",
       boxSizing: "border-box",
@@ -156,7 +159,8 @@ export function editorTheme(settings: ProjectSettings) {
       marginLeft: "8ch",
     },
     ".cm-panel.cm-search .cm-textfield": {
-      backgroundColor: "color-mix(in srgb, var(--glass-popover) 72%, var(--editor-surface))",
+      backgroundColor:
+        "color-mix(in srgb, var(--glass-popover) 72%, var(--editor-surface))",
       border: "1px solid var(--divider)",
       borderRadius: "6px",
       color: "var(--ink)",
@@ -271,9 +275,10 @@ export function editorTheme(settings: ProjectSettings) {
     ".cm-selectionBackground": {
       backgroundColor: "var(--editor-selection-surface)",
     },
-    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground": {
-      backgroundColor: "var(--editor-selection-surface)",
-    },
+    "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground":
+      {
+        backgroundColor: "var(--editor-selection-surface)",
+      },
     ".cm-content::selection, .cm-content ::selection": {
       backgroundColor: "var(--editor-selection-surface)",
     },
@@ -294,12 +299,14 @@ export function editorTheme(settings: ProjectSettings) {
       textDecoration: "underline wavy var(--accent)",
     },
     ".cm-foldPlaceholder": {
-      backgroundColor: "color-mix(in srgb, var(--accent) 8%, var(--editor-surface))",
+      backgroundColor:
+        "color-mix(in srgb, var(--accent) 8%, var(--editor-surface))",
       border: "1px solid var(--divider)",
       color: "var(--muted)",
     },
     ".cm-remote-selection": {
-      backgroundColor: "color-mix(in srgb, var(--remote-color) 24%, transparent)",
+      backgroundColor:
+        "color-mix(in srgb, var(--remote-color) 24%, transparent)",
     },
     ".cm-remote-cursor": {
       position: "relative",
@@ -334,5 +341,7 @@ export function editorTheme(settings: ProjectSettings) {
       color: "var(--editor-surface)",
     },
   };
-  return EditorView.theme(theme, { dark: isDarkWorkspaceTheme(settings.theme) });
+  return EditorView.theme(theme, {
+    dark: isDarkWorkspaceTheme(settings.theme),
+  });
 }

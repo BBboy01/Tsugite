@@ -1,7 +1,15 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { FileCode2 } from "lucide-react";
 import { useAtomValue } from "jotai";
-import { memo, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  memo,
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useTranslation } from "react-i18next";
 
 import type { ProjectFile, WorkspaceTheme } from "@iris/shared";
@@ -70,7 +78,10 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
       onOpenChange(false);
     }
   };
-  const handleEscape = (event: { preventDefault: () => void; stopPropagation?: () => void }) => {
+  const handleEscape = (event: {
+    preventDefault: () => void;
+    stopPropagation?: () => void;
+  }) => {
     if (escapeHandledRef.current) return;
     escapeHandledRef.current = true;
     queueMicrotask(() => {
@@ -83,18 +94,29 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
+        <Dialog.Overlay
+          data-dialog-overlay
+          className="fixed inset-0 z-50 bg-black/30"
+        />
         <Dialog.Content
           onEscapeKeyDown={handleEscape}
-          onKeyDownCapture={(event) => event.key === "Escape" && handleEscape(event)}
+          onKeyDownCapture={(event) =>
+            event.key === "Escape" && handleEscape(event)
+          }
           onCloseAutoFocus={(event) => {
             event.preventDefault();
           }}
           className={`theme-${theme} fixed left-1/2 top-[18%] z-50 w-[min(92vw,560px)] -translate-x-1/2 rounded-xl border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_20px_50px_rgba(65,66,45,0.2)] focus:outline-none`}
         >
           <div className="flex items-center gap-3 border-b border-iris-divider px-4 py-3">
-            <FileCode2 width="16" height="16" className="text-[var(--accent)]" />
-            <Dialog.Title className="sr-only">{t("files.searchTitle")}</Dialog.Title>
+            <FileCode2
+              width="16"
+              height="16"
+              className="text-[var(--accent)]"
+            />
+            <Dialog.Title className="sr-only">
+              {t("files.searchTitle")}
+            </Dialog.Title>
             <input
               ref={inputRef}
               role="combobox"
@@ -102,7 +124,9 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
               aria-expanded={open}
               aria-controls={listId}
               aria-autocomplete="list"
-              aria-activedescendant={matches[selected] ? `${listId}-${selected}` : undefined}
+              aria-activedescendant={
+                matches[selected] ? `${listId}-${selected}` : undefined
+              }
               value={query}
               onChange={(event) => {
                 setQuery(event.target.value);
@@ -121,7 +145,10 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
                 } else if (event.key === "Enter") {
                   event.preventDefault();
                   choose();
-                } else if (event.ctrlKey && (event.key === "n" || event.key === "p")) {
+                } else if (
+                  event.ctrlKey &&
+                  (event.key === "n" || event.key === "p")
+                ) {
                   event.preventDefault();
                   moveSelection(event.key === "n" ? 1 : -1);
                 }
@@ -156,8 +183,14 @@ export const FileFuzzySearchDialog = memo(function FileFuzzySearchDialog({
                   onOpenChange(false);
                 }}
               >
-                <FileCode2 width="14" height="14" className="shrink-0 text-[var(--accent)]" />
-                <span className="truncate">{renderHighlightedPath(file.path, query)}</span>
+                <FileCode2
+                  width="14"
+                  height="14"
+                  className="shrink-0 text-[var(--accent)]"
+                />
+                <span className="truncate">
+                  {renderHighlightedPath(file.path, query)}
+                </span>
               </button>
             ))}
             {matches.length === 0 && (

@@ -25,26 +25,58 @@ test("follows the leader's replacement tab and empty selection after closing tab
     await follower.goto(room);
     await expect(leader.locator(".cm-content")).toBeVisible();
     await expect(follower.locator(".cm-content")).toBeVisible();
-    await leader.getByRole("treeitem", { name: "index.html", exact: true }).click();
-    await leader.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
+    await leader
+      .getByRole("treeitem", { name: "index.html", exact: true })
+      .click();
+    await leader
+      .getByRole("treeitem", { name: "main.tsx", exact: true })
+      .click();
     await leader.locator(".cm-content").press("ArrowDown");
-    await follower.getByRole("button", { name: "2 online", exact: true }).click();
+    await follower
+      .getByRole("button", { name: "2 online", exact: true })
+      .click();
     await follower.getByRole("button", { name: "leader", exact: true }).click();
-    await expect(follower.getByRole("region", { name: "Editing src/main.tsx" })).toBeVisible();
+    await expect(
+      follower.getByRole("region", { name: "Editing src/main.tsx" }),
+    ).toBeVisible();
 
-    await leader.getByRole("button", { name: "Close index.html", exact: true }).click();
-    await expect(follower.getByRole("region", { name: "Editing src/main.tsx" })).toBeVisible();
-    await leader.getByRole("button", { name: "Close src/main.tsx", exact: true }).click();
-    await expect(leader.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible();
-    await expect(follower.getByRole("region", { name: "Editing src/App.tsx" })).toBeVisible();
-    await expect(follower.locator("[data-editor-following='true']")).toBeVisible();
+    await leader
+      .getByRole("button", { name: "Close index.html", exact: true })
+      .click();
+    await expect(
+      follower.getByRole("region", { name: "Editing src/main.tsx" }),
+    ).toBeVisible();
+    await leader
+      .getByRole("button", { name: "Close src/main.tsx", exact: true })
+      .click();
+    await expect(
+      leader.getByRole("region", { name: "Editing src/App.tsx" }),
+    ).toBeVisible();
+    await expect(
+      follower.getByRole("region", { name: "Editing src/App.tsx" }),
+    ).toBeVisible();
+    await expect(
+      follower.locator("[data-editor-following='true']"),
+    ).toBeVisible();
 
-    await leader.getByRole("button", { name: "Close src/App.tsx", exact: true }).click();
-    await expect(leader.getByText("No open files", { exact: true })).toBeVisible();
-    await expect(follower.getByText("No open files", { exact: true })).toBeVisible();
-    await leader.getByRole("treeitem", { name: "main.tsx", exact: true }).click();
-    await expect(follower.getByRole("region", { name: "Editing src/main.tsx" })).toBeVisible();
-    await expect(follower.locator("[data-editor-following='true']")).toBeVisible();
+    await leader
+      .getByRole("button", { name: "Close src/App.tsx", exact: true })
+      .click();
+    await expect(
+      leader.getByText("No open files", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      follower.getByText("No open files", { exact: true }),
+    ).toBeVisible();
+    await leader
+      .getByRole("treeitem", { name: "main.tsx", exact: true })
+      .click();
+    await expect(
+      follower.getByRole("region", { name: "Editing src/main.tsx" }),
+    ).toBeVisible();
+    await expect(
+      follower.locator("[data-editor-following='true']"),
+    ).toBeVisible();
   } finally {
     await leaderContext.close();
     await followerContext.close();

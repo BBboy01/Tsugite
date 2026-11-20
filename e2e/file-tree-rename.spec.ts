@@ -28,31 +28,42 @@ for (const keyboard of [false, true]) {
     await input.press("Escape");
     await expect(input).toHaveCount(0);
     await expect(file).toBeVisible();
-    await expect(page.getByRole("tab", { name: "src/App.tsx", exact: true })).toHaveAttribute(
-      "aria-selected",
-      "true",
-    );
-    await expect(page.getByRole("treeitem", { name: "cancelled.css", exact: true })).toHaveCount(0);
+    await expect(
+      page.getByRole("tab", { name: "src/App.tsx", exact: true }),
+    ).toHaveAttribute("aria-selected", "true");
+    await expect(
+      page.getByRole("treeitem", { name: "cancelled.css", exact: true }),
+    ).toHaveCount(0);
   });
 }
 
 test("inline rename commits on blur and survives reload", async ({ page }) => {
-  await page.getByRole("treeitem", { name: "index.css", exact: true }).click({ button: "right" });
+  await page
+    .getByRole("treeitem", { name: "index.css", exact: true })
+    .click({ button: "right" });
   await page.getByRole("menuitem", { name: "Rename", exact: true }).click();
   const input = page.locator("[data-item-rename-input]");
   await expect(input).toBeFocused();
   await input.fill("blur-renamed.css");
   await page.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
   await page.reload();
-  const renamed = page.getByRole("treeitem", { name: "blur-renamed.css", exact: true });
+  const renamed = page.getByRole("treeitem", {
+    name: "blur-renamed.css",
+    exact: true,
+  });
   await renamed.click();
   await expect(
-    page.getByRole("region", { name: "Editing src/blur-renamed.css", exact: true }),
+    page.getByRole("region", {
+      name: "Editing src/blur-renamed.css",
+      exact: true,
+    }),
   ).toBeVisible();
   await expect(page.locator(".cm-content")).toContainText("tailwindcss");
 });
 
-test("submitting a search path does not rename the focused file", async ({ page }) => {
+test("submitting a search path does not rename the focused file", async ({
+  page,
+}) => {
   const tree = page.getByRole("tree", { name: "Project files" });
   await page.getByRole("button", { name: "Search", exact: true }).click();
   const search = tree.getByPlaceholder("Search...");
@@ -60,5 +71,7 @@ test("submitting a search path does not rename the focused file", async ({ page 
   await search.press("Enter");
   await expect(page.getByRole("alert")).toHaveCount(0);
   await search.fill("");
-  await expect(tree.getByRole("treeitem", { name: "App.tsx", exact: true })).toBeVisible();
+  await expect(
+    tree.getByRole("treeitem", { name: "App.tsx", exact: true }),
+  ).toBeVisible();
 });

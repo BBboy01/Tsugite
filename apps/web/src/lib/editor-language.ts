@@ -6,15 +6,21 @@ import type { LanguageSupport } from "@codemirror/language";
 
 import type { FileLanguage } from "@iris/shared";
 
-export type EditorLanguage = "typescript" | "javascript" | "tsx" | "jsx" | "html" | "css" | "json";
+export type EditorLanguage =
+  "typescript" | "javascript" | "tsx" | "jsx" | "html" | "css" | "json";
 
-export function getEditorLanguage(path: string, fallback: FileLanguage): EditorLanguage {
+export function getEditorLanguage(
+  path: string,
+  fallback: FileLanguage,
+): EditorLanguage {
   const extension = path.toLowerCase().split(".").at(-1);
   if (extension === "ts") return "typescript";
   if (extension === "tsx") return "tsx";
-  if (extension === "js" || extension === "mjs" || extension === "cjs") return "javascript";
+  if (extension === "js" || extension === "mjs" || extension === "cjs")
+    return "javascript";
   if (extension === "jsx") return "jsx";
-  if (extension === "html" || extension === "htm" || extension === "xhtml") return "html";
+  if (extension === "html" || extension === "htm" || extension === "xhtml")
+    return "html";
   if (extension === "css" || extension === "scss") return "css";
   if (extension === "json" || extension === "jsonc") return "json";
   return fallback;
@@ -29,7 +35,9 @@ export function supportsTypeScriptServices(language: EditorLanguage): boolean {
   );
 }
 
-export function getEditorLanguageSupport(language: EditorLanguage): LanguageSupport {
+export function getEditorLanguageSupport(
+  language: EditorLanguage,
+): LanguageSupport {
   switch (language) {
     case "html":
       return html();

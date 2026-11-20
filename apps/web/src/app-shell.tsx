@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useMemo, useState, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type CSSProperties,
+} from "react";
 import { Theme } from "@radix-ui/themes";
 import { Provider } from "jotai";
 import { motion } from "motion/react";
@@ -13,7 +19,11 @@ import { WorkspaceLayout } from "./components/workspace-layout";
 import { FileFuzzySearchDialog } from "./components/file-fuzzy-search-dialog";
 import { CommandPalette } from "./components/command-palette";
 import { dispatchRuntimeAction } from "./lib/runtime-actions";
-import { isDarkWorkspaceTheme, readRoomTheme, writeRoomTheme } from "./lib/workspace-theme";
+import {
+  isDarkWorkspaceTheme,
+  readRoomTheme,
+  writeRoomTheme,
+} from "./lib/workspace-theme";
 import { useWorkspaceController } from "./lib/use-workspace-controller";
 import type { EditorLocation } from "./lib/editor-navigation";
 import { useRoomDrafts } from "./lib/use-room-drafts";
@@ -33,9 +43,12 @@ export function AppShell({ roomId }: { roomId: string }) {
 function AppShellContent({ roomId }: { roomId: string }) {
   const { t } = useTranslation();
   const [requestedLocation, setRequestedLocation] = useState<EditorLocation>();
-  const [deletionRecovery, setDeletionRecovery] = useState<FileDeletionRecovery>();
+  const [deletionRecovery, setDeletionRecovery] =
+    useState<FileDeletionRecovery>();
   const [filesCollapsed, setFilesCollapsed] = useState(false);
-  const [filesWidth, setFilesWidth] = useState(DEFAULT_WORKSPACE_PANEL_WIDTHS.files);
+  const [filesWidth, setFilesWidth] = useState(
+    DEFAULT_WORKSPACE_PANEL_WIDTHS.files,
+  );
   const {
     client,
     typeScript,
@@ -89,21 +102,31 @@ function AppShellContent({ roomId }: { roomId: string }) {
   } = useWorkspaceController(roomId);
   const { state: draftState, session: draftSession } = useRoomDrafts(client);
   const [themePreview, setThemePreview] = useState<WorkspaceTheme | null>(null);
-  const [cachedTheme] = useState(() => readRoomTheme(window.localStorage, roomId));
+  const [cachedTheme] = useState(() =>
+    readRoomTheme(window.localStorage, roomId),
+  );
   const isThemeReady =
-    hasReceivedSnapshot || cachedTheme !== null || client.syncError !== undefined;
+    hasReceivedSnapshot ||
+    cachedTheme !== null ||
+    client.syncError !== undefined;
   useEffect(() => {
     if (!isThemeReady) return;
-    const frame = requestAnimationFrame(() => document.getElementById("app-boot")?.remove());
+    const frame = requestAnimationFrame(() =>
+      document.getElementById("app-boot")?.remove(),
+    );
     return () => cancelAnimationFrame(frame);
   }, [isThemeReady]);
   useEffect(() => {
-    if (hasReceivedSnapshot) writeRoomTheme(window.localStorage, roomId, settings.theme);
+    if (hasReceivedSnapshot)
+      writeRoomTheme(window.localStorage, roomId, settings.theme);
   }, [hasReceivedSnapshot, roomId, settings.theme]);
   const visualSettings = useMemo(
     () => ({
       ...settings,
-      theme: themePreview ?? (hasReceivedSnapshot ? null : cachedTheme) ?? settings.theme,
+      theme:
+        themePreview ??
+        (hasReceivedSnapshot ? null : cachedTheme) ??
+        settings.theme,
     }),
     [settings, themePreview, hasReceivedSnapshot, cachedTheme],
   );
@@ -118,11 +141,23 @@ function AppShellContent({ roomId }: { roomId: string }) {
     () => setFilesCollapsed((collapsed) => !collapsed),
     [],
   );
-  const toggleMobileFilesPanel = useCallback(() => toggleMobilePanel("files"), [toggleMobilePanel]);
-  const openPreviewPanel = useCallback(() => toggleMobilePanel("preview"), [toggleMobilePanel]);
-  const handleDraftClose = useCallback(() => editorFocusRef.current?.(), [editorFocusRef]);
+  const toggleMobileFilesPanel = useCallback(
+    () => toggleMobilePanel("files"),
+    [toggleMobilePanel],
+  );
+  const openPreviewPanel = useCallback(
+    () => toggleMobilePanel("preview"),
+    [toggleMobilePanel],
+  );
+  const handleDraftClose = useCallback(
+    () => editorFocusRef.current?.(),
+    [editorFocusRef],
+  );
   const handleCommandPaletteCloseAutoFocus = useCallback(
-    () => requestAnimationFrame(() => requestAnimationFrame(() => editorFocusRef.current?.())),
+    () =>
+      requestAnimationFrame(() =>
+        requestAnimationFrame(() => editorFocusRef.current?.()),
+      ),
     [editorFocusRef],
   );
   const handleCommandSelect = useCallback(
@@ -158,7 +193,10 @@ function AppShellContent({ roomId }: { roomId: string }) {
     () => setFollowingUserId(null),
     [setFollowingUserId],
   );
-  const handleLocationHandled = useCallback(() => setRequestedLocation(undefined), []);
+  const handleLocationHandled = useCallback(
+    () => setRequestedLocation(undefined),
+    [],
+  );
   const handleNavigateToSource = useCallback(
     (location: EditorLocation) => {
       const sourceFile = files.find((item) => item.path === location.path);
@@ -181,7 +219,9 @@ function AppShellContent({ roomId }: { roomId: string }) {
     >
       <motion.main
         className={`grid h-screen min-h-screen w-full grid-cols-1 grid-rows-[48px_minmax(0,1fr)] overflow-hidden bg-iris-canvas pb-1 max-[760px]:grid-rows-[44px_minmax(0,1fr)] theme-${visualSettings.theme} ${isThemeReady ? "" : "invisible"}`}
-        style={{ "--code-font": `'${visualSettings.fontFamily}'` } as CSSProperties}
+        style={
+          { "--code-font": `'${visualSettings.fontFamily}'` } as CSSProperties
+        }
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.24, ease: "easeOut" }}

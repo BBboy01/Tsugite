@@ -32,7 +32,10 @@ export function getRuntimeActionLabel(action: RuntimeAction, t: TFunction) {
   return definition ? t(definition.labelKey) : action;
 }
 
-export function dispatchRuntimeAction(action: RuntimeAction, target: EventTarget = window): void {
+export function dispatchRuntimeAction(
+  action: RuntimeAction,
+  target: EventTarget = window,
+): void {
   dispatchRuntimeEvent(target, RUNTIME_ACTION_EVENT, action);
 }
 
@@ -69,7 +72,11 @@ export function subscribeRuntimeActionComplete(
   return subscribeRuntimeEvent(target, RUNTIME_ACTION_COMPLETE_EVENT, listener);
 }
 
-function dispatchRuntimeEvent(target: EventTarget, eventName: string, action: RuntimeAction): void {
+function dispatchRuntimeEvent(
+  target: EventTarget,
+  eventName: string,
+  action: RuntimeAction,
+): void {
   target.dispatchEvent(new CustomEvent(eventName, { detail: { action } }));
 }
 

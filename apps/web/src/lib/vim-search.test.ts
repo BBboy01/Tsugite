@@ -42,7 +42,10 @@ function setup(source = "alpha\nalpha\nalpha") {
   };
   const plugin = new VimSearchStatus(view as unknown as EditorView);
   plugins.push(plugin);
-  const edit = () => view.dispatch({ changes: { from: view.state.doc.length, insert: "\nalpha" } });
+  const edit = () =>
+    view.dispatch({
+      changes: { from: view.state.doc.length, insert: "\nalpha" },
+    });
   return { view, plugin, edit, scans: () => scans };
 }
 
@@ -63,7 +66,9 @@ test("coalesces repeated text edits before rescanning the full search", async ()
 test("new search queries refresh immediately and cancel a pending recount", async () => {
   const { view, plugin, scans, edit } = setup();
   edit();
-  const query = Object.assign(new SearchQuery({ search: "missing" }), { forVim: true });
+  const query = Object.assign(new SearchQuery({ search: "missing" }), {
+    forVim: true,
+  });
   view.cm.cm6Query = query;
   view.dispatch({ effects: setSearchQuery.of(query) });
   expect(plugin.decorations.size).toBe(0);
@@ -87,8 +92,12 @@ test("keeps exact match counts in long documents after a burst of edits", async 
   await Bun.sleep(160);
   expect(scans()).toBe(2);
   const widgets: unknown[] = [];
-  plugin.decorations.between(0, view.state.doc.length, (_from, _to, decoration) => {
-    widgets.push(decoration.spec.widget);
-  });
+  plugin.decorations.between(
+    0,
+    view.state.doc.length,
+    (_from, _to, decoration) => {
+      widgets.push(decoration.spec.widget);
+    },
+  );
   expect(widgets).toMatchObject([{ current: 2, total: 20_050 }]);
 });

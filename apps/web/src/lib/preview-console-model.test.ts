@@ -16,8 +16,12 @@ test("filters console output by level while preserving order", () => {
   ];
 
   expect(filterPreviewOutputs(outputs, "all")).toEqual(outputs);
-  expect(filterPreviewOutputs(outputs, "warn")).toEqual([{ level: "warn", message: "slow" }]);
-  expect(filterPreviewOutputs(outputs, "error")).toEqual([{ level: "error", message: "failed" }]);
+  expect(filterPreviewOutputs(outputs, "warn")).toEqual([
+    { level: "warn", message: "slow" },
+  ]);
+  expect(filterPreviewOutputs(outputs, "error")).toEqual([
+    { level: "error", message: "failed" },
+  ]);
 });
 
 test("clamps the console height between its minimum and half the preview height", () => {

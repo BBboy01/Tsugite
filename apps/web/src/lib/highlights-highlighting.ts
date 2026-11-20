@@ -33,16 +33,21 @@ export function highlightsHighlight(
       }
 
       update(update: ViewUpdate) {
-        if (update.docChanged) this.decorations = this.decorations.map(update.changes);
-        for (const effect of update.transactions.flatMap((transaction) => transaction.effects)) {
-          if (effect.is(setHighlightsDecorations)) this.decorations = effect.value;
+        if (update.docChanged)
+          this.decorations = this.decorations.map(update.changes);
+        for (const effect of update.transactions.flatMap(
+          (transaction) => transaction.effects,
+        )) {
+          if (effect.is(setHighlightsDecorations))
+            this.decorations = effect.value;
           if (effect.is(setHighlightsTheme)) {
             this.theme = effect.value;
             highlighter.cancelInFlight(this.scopeId);
             void this.highlight(update.view);
           }
         }
-        if (update.docChanged || update.viewportChanged) void this.highlight(update.view, update);
+        if (update.docChanged || update.viewportChanged)
+          void this.highlight(update.view, update);
       }
 
       destroy() {
@@ -64,7 +69,8 @@ export function highlightsHighlight(
           },
           this.scopeId,
         );
-        if (!spans || requestId !== this.requestId || !view.dom.isConnected) return;
+        if (!spans || requestId !== this.requestId || !view.dom.isConnected)
+          return;
 
         const builder = new RangeSetBuilder<Decoration>();
         for (const span of spans) {
@@ -80,7 +86,9 @@ export function highlightsHighlight(
           );
         }
         if (requestId !== this.requestId || !view.dom.isConnected) return;
-        view.dispatch({ effects: setHighlightsDecorations.of(builder.finish()) });
+        view.dispatch({
+          effects: setHighlightsDecorations.of(builder.finish()),
+        });
         if (!this.ready) {
           this.ready = true;
           onReady?.();
@@ -93,7 +101,10 @@ export function highlightsHighlight(
   );
 }
 
-export function formatHighlightsTokenStyle(color: string, fontStyle: number): string {
+export function formatHighlightsTokenStyle(
+  color: string,
+  fontStyle: number,
+): string {
   const styles = [`color:${color}`];
   if (fontStyle & 1) styles.push("font-style:italic");
   if (fontStyle & 2) styles.push("font-weight:700");

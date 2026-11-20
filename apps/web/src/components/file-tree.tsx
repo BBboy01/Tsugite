@@ -18,8 +18,14 @@ type FileTreeProps = {
   onSelect: (path: string) => void;
   onCreateFile: (target: FileTreeTarget, path: string) => string | undefined;
   onCreateFolder: (target: FileTreeTarget, path: string) => string | undefined;
-  onRename: (target: Exclude<FileTreeTarget, null>, path: string) => string | undefined;
-  onMove: (sourcePaths: readonly string[], directory: string) => string | undefined;
+  onRename: (
+    target: Exclude<FileTreeTarget, null>,
+    path: string,
+  ) => string | undefined;
+  onMove: (
+    sourcePaths: readonly string[],
+    directory: string,
+  ) => string | undefined;
   onCopy: (file: ProjectFile) => void;
   onDelete: (target: Exclude<FileTreeTarget, null>) => void;
   currentUserDisplayName: string;
@@ -27,7 +33,10 @@ type FileTreeProps = {
   onDisplayNameChange: (value: string) => boolean;
   onColorChange: (value: string) => boolean;
   settings: ProjectSettings;
-  onSettingChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  onSettingChange: <K extends keyof ProjectSettings>(
+    key: K,
+    value: ProjectSettings[K],
+  ) => void;
   vimMode: boolean;
   onVimModeChange: (enabled: boolean) => void;
   keymap: KeyBinding[];

@@ -19,11 +19,14 @@ test.each([
   async ({ signal, locked }) => {
     const directory = mkdtempSync(join(tmpdir(), "tsugite-shutdown-"));
     const databasePath = join(directory, "room.sqlite");
-    const child = Bun.spawn([process.execPath, "--no-env-file", "apps/server/src/index.ts"], {
-      env: { ...process.env, PORT: "0", DATABASE_PATH: databasePath },
-      stdout: "pipe",
-      stderr: "pipe",
-    });
+    const child = Bun.spawn(
+      [process.execPath, "--no-env-file", "apps/server/src/index.ts"],
+      {
+        env: { ...process.env, PORT: "0", DATABASE_PATH: databasePath },
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
     const sockets: WebSocket[] = [];
     let sqlite: Database | undefined;
     try {
@@ -47,7 +50,14 @@ test.each([
           ws.addEventListener("open", () => resolve());
           ws.addEventListener("error", reject);
         });
-        ws.send(JSON.stringify({ type: "join", userId, displayName: userId, color: "#d88961" }));
+        ws.send(
+          JSON.stringify({
+            type: "join",
+            userId,
+            displayName: userId,
+            color: "#d88961",
+          }),
+        );
         await waitFor(() => messages.length >= 3);
         return { ws, messages };
       };
@@ -59,9 +69,14 @@ test.each([
       setSharedSetting(document, "theme", "nord");
       author.ws.send(new Uint8Array(document.export({ mode: "update", from })));
       await waitFor(
-        () => observer.messages.filter((message) => message instanceof ArrayBuffer).length === 2,
+        () =>
+          observer.messages.filter((message) => message instanceof ArrayBuffer)
+            .length === 2,
       );
-      sqlite = new Database(databasePath, locked ? { readwrite: true } : { readonly: true });
+      sqlite = new Database(
+        databasePath,
+        locked ? { readwrite: true } : { readonly: true },
+      );
       const repository = new RoomRepository(drizzle({ client: sqlite }));
       const before = new LoroDoc();
       before.import(repository.load("shutdown")!.snapshot);
@@ -74,7 +89,10 @@ test.each([
         const code = await Promise.race([
           child.exited,
           new Promise<never>((_, reject) => {
-            deadline = setTimeout(() => reject(new Error("Shutdown exceeded seven seconds")), 7000);
+            deadline = setTimeout(
+              () => reject(new Error("Shutdown exceeded seven seconds")),
+              7000,
+            );
           }),
         ]);
         expect(code).toBe(locked ? 1 : 0);
@@ -86,7 +104,9 @@ test.each([
       const errors = await new Response(child.stderr).text();
       if (locked) {
         expect(readSettings(restored).theme).not.toBe("nord");
-        expect(errors).toContain("Shutdown failed to persist all room snapshots");
+        expect(errors).toContain(
+          "Shutdown failed to persist all room snapshots",
+        );
       } else {
         expect(readSettings(restored).theme).toBe("nord");
         expect(errors).toBe("");

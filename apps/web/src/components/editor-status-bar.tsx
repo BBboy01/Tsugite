@@ -7,14 +7,22 @@ type Props = {
 
 export function EditorStatusBar({ status, mode }: Props) {
   return (
-    <div className="iris-editor-statusbar" data-editor-status aria-label="Editor status">
+    <div
+      className="iris-editor-statusbar"
+      data-editor-status
+      aria-label="Editor status"
+    >
       <div className="iris-editor-status-group iris-editor-status-leading">
         {mode && (
           <span className="iris-editor-status-mode" data-status-mode>
             --{mode}--
           </span>
         )}
-        <span className="iris-editor-status-path" data-status-path title={status.path}>
+        <span
+          className="iris-editor-status-path"
+          data-status-path
+          title={status.path}
+        >
           {status.path}
         </span>
       </div>

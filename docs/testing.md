@@ -20,14 +20,14 @@ Use [focused static checks](development.md#verification) while iterating. Bug fi
 
 ## Documentation checks
 
-The root formatting scripts and [staged-file patterns](../lint-staged.config.mjs) exclude Markdown. Pass changed documents explicitly:
+The root formatting scripts and [staged-file patterns](../lint-staged.config.mjs) include Markdown. While iterating, pass only changed documents explicitly:
 
 ```bash
-bun --no-env-file x --no-install oxfmt --check README.md docs/testing.md
+bun --no-env-file fmt --check README.md docs/testing.md
 git diff --check
 ```
 
-Use `oxfmt --write` with the same changed paths to fix formatting. Check relative links, heading anchors, image paths, and fenced examples. Compare commands, defaults, limits, and CI descriptions with their enforcing source files. Inspect Mermaid diagrams and rendered tables when their structure changes. Keep diagnostic reports, generated test artifacts, databases, and dependency installations outside committed documentation.
+Use `bun fmt` with the same changed paths to fix formatting. Check relative links, heading anchors, image paths, and fenced examples. Compare commands, defaults, limits, and CI descriptions with their enforcing source files. Inspect Mermaid diagrams and rendered tables when their structure changes. Keep diagnostic reports, generated test artifacts, databases, and dependency installations outside committed documentation.
 
 ## Browser tests
 
@@ -76,17 +76,17 @@ CI uses one worker, up to two retries, and a 60-minute browser job timeout. PR e
 
 Other automation has separate responsibilities:
 
-| Workflow                                                        | What it establishes                                                                                                                                                     |
-| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [Quality CI](../.github/workflows/ci.yml)                       | Frozen install, migration consistency and fresh-database application, unit/integration tests with LCOV, lint/typecheck, configured formatting, advisory Knip, web build |
-| [Spelling](../.github/workflows/spelling.yml)                   | Typos against the repository configuration                                                                                                                              |
-| [Dependency Review](../.github/workflows/dependency-review.yml) | PR dependency vulnerability review, failing at high severity                                                                                                            |
-| [CodeQL](../.github/workflows/codeql.yml)                       | JavaScript/TypeScript static security analysis                                                                                                                          |
-| [Commitlint](../.github/workflows/commitlint.yml)               | Commit-message conventions                                                                                                                                              |
-| [Release](../.github/workflows/release.yml)                     | Matching tag/package version, quality checks, static archive, checksum, provenance, and release notes                                                                   |
-| [Docker images](../.github/workflows/docker-publish.yml)        | Separate web/server image builds; publishing on main/tags, build-only for selected Docker-related PR changes                                                            |
+| Workflow                                                        | What it establishes                                                                                                                                                  |
+| --------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [Quality CI](../.github/workflows/ci.yml)                       | Frozen install, migration consistency and fresh-database application, unit/integration tests with LCOV, Bun lint/typecheck, Bun formatting, advisory Knip, web build |
+| [Spelling](../.github/workflows/spelling.yml)                   | Typos against the repository configuration                                                                                                                           |
+| [Dependency Review](../.github/workflows/dependency-review.yml) | PR dependency vulnerability review, failing at high severity                                                                                                         |
+| [CodeQL](../.github/workflows/codeql.yml)                       | JavaScript/TypeScript static security analysis                                                                                                                       |
+| [Commitlint](../.github/workflows/commitlint.yml)               | Commit-message conventions                                                                                                                                           |
+| [Release](../.github/workflows/release.yml)                     | Matching tag/package version, quality checks, static archive, checksum, provenance, and release notes                                                                |
+| [Docker images](../.github/workflows/docker-publish.yml)        | Separate web/server image builds; publishing on main/tags, build-only for selected Docker-related PR changes                                                         |
 
-Quality CI runs on main pushes, PRs, and merge groups. Knip is advisory (`--no-exit-code`). Codecov upload failures fail the quality job; [coverage statuses](../codecov.yml) are informational with no configured percentage threshold. Root formatting and staged-file hooks do not cover Markdown. Release and Docker publishing jobs do not depend on Browser E2E; their success does not establish that browser checks passed.
+Quality CI runs on main pushes, PRs, and merge groups. Knip is advisory (`--no-exit-code`). Codecov upload failures fail the quality job; [coverage statuses](../codecov.yml) are informational with no configured percentage threshold. Root formatting and staged-file hooks include Markdown. Release and Docker publishing jobs do not depend on Browser E2E; their success does not establish that browser checks passed.
 
 Inspect Playwright's retained trace, screenshot, and video on failure. Report the failing step and distinguish application regressions from unavailable browser capabilities or dependency downloads. Keep diagnostic artifacts out of source control, and do not replace failing assertions with retries or skips without a cause.
 

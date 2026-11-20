@@ -14,7 +14,10 @@ export type IntelligenceLocation = {
   source: string;
 };
 export type IntelligenceRange = { from: number; to: number };
-export type IntelligenceHover = IntelligenceRange & { signature: string; documentation: string };
+export type IntelligenceHover = IntelligenceRange & {
+  signature: string;
+  documentation: string;
+};
 export type IntelligenceCompletion = {
   name: string;
   kind: string;
@@ -60,18 +63,34 @@ export type IntelligenceDiagnosticQuery = Omit<IntelligenceQuery, "position">;
 export interface EditorIntelligence {
   readonly workspaceVersion: number;
   subscribeWorkspace(listener: () => void): () => void;
-  syncWorkspace(files: readonly IntelligenceFile[]): Promise<IntelligenceResult<number>>;
+  syncWorkspace(
+    files: readonly IntelligenceFile[],
+  ): Promise<IntelligenceResult<number>>;
   updateFile(file: IntelligenceFile): Promise<IntelligenceResult<null>>;
-  hover(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceHover>>;
-  completion(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceCompletion[]>>;
-  signatureHelp(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceSignatureHelp>>;
+  hover(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceHover>>;
+  completion(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceCompletion[]>>;
+  signatureHelp(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceSignatureHelp>>;
   diagnostics(
     query: IntelligenceDiagnosticQuery,
   ): Promise<IntelligenceResult<IntelligenceDiagnostic[]>>;
-  definition(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceLocation[]>>;
-  typeDefinition(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceLocation[]>>;
-  implementation(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceLocation[]>>;
-  references(query: IntelligenceQuery): Promise<IntelligenceResult<IntelligenceLocation[]>>;
+  definition(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceLocation[]>>;
+  typeDefinition(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceLocation[]>>;
+  implementation(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceLocation[]>>;
+  references(
+    query: IntelligenceQuery,
+  ): Promise<IntelligenceResult<IntelligenceLocation[]>>;
   cancel(requestId: string): void;
   dispose(): void;
 }

@@ -40,7 +40,8 @@ export function groupedLoroUndo(undoManager: UndoManager): Extension {
     EditorView.domEventObservers({
       beforeinput: (event) => {
         const inputType = event.inputType;
-        if (typeof inputType === "string" && inputType.startsWith("history")) return;
+        if (typeof inputType === "string" && inputType.startsWith("history"))
+          return;
         grouping.begin();
       },
       keydown: (event) => {

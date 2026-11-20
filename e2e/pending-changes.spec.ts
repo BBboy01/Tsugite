@@ -12,7 +12,11 @@ test("warns before leaving with unacknowledged edits and clears the warning afte
     const server = socket.connectToServer();
     socket.onMessage((message) => server.send(message));
     server.onMessage((message) => {
-      if (holdAcknowledgements && typeof message === "string" && message.includes('"update:ack"')) {
+      if (
+        holdAcknowledgements &&
+        typeof message === "string" &&
+        message.includes('"update:ack"')
+      ) {
         acknowledgements.push(message);
       } else socket.send(message);
     });
@@ -25,7 +29,9 @@ test("warns before leaving with unacknowledged edits and clears the warning afte
   await editor.press("ControlOrMeta+End");
   await page.keyboard.insertText("\n// unacknowledged edit");
   await expect.poll(() => acknowledgements.length).toBeGreaterThan(0);
-  await expect(page.locator("[data-sync-pending='true']")).toContainText("Unsynced changes");
+  await expect(page.locator("[data-sync-pending='true']")).toContainText(
+    "Unsynced changes",
+  );
   const dialogPromise = page.waitForEvent("dialog");
   await page.evaluate(() => {
     setTimeout(() => location.reload(), 0);
@@ -36,7 +42,8 @@ test("warns before leaving with unacknowledged edits and clears the warning afte
   await expect(editor).toContainText("unacknowledged edit");
 
   holdAcknowledgements = false;
-  for (const acknowledgement of acknowledgements) clientSocket!.send(acknowledgement);
+  for (const acknowledgement of acknowledgements)
+    clientSocket!.send(acknowledgement);
   await expect(page.locator("[data-sync-pending='true']")).toHaveCount(0);
   await expect
     .poll(() =>
@@ -56,7 +63,9 @@ test("protects offline edits until reconnect sends them to another room member",
   const readerContext = await browser.newContext();
   try {
     for (const context of [writerContext, readerContext]) {
-      await context.addInitScript(() => localStorage.setItem("iris.language", "en"));
+      await context.addInitScript(() =>
+        localStorage.setItem("iris.language", "en"),
+      );
     }
     let allowConnections = true;
     let dropConnection: (() => void) | undefined;
@@ -89,9 +98,13 @@ test("protects offline edits until reconnect sends them to another room member",
     await editor.press("ControlOrMeta+End");
     await writer.keyboard.insertText("\n// offline recovery marker");
     await expect(writer.locator("[data-sync-pending='true']")).toBeVisible();
-    await expect(reader.locator(".cm-content")).not.toContainText("offline recovery marker");
+    await expect(reader.locator(".cm-content")).not.toContainText(
+      "offline recovery marker",
+    );
     allowConnections = true;
-    await expect(reader.locator(".cm-content")).toContainText("offline recovery marker");
+    await expect(reader.locator(".cm-content")).toContainText(
+      "offline recovery marker",
+    );
     await expect(writer.locator("[data-sync-pending='true']")).toHaveCount(0);
   } finally {
     await writerContext.close();

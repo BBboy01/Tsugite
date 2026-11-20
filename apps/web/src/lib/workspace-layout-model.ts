@@ -1,6 +1,9 @@
 export const WORKSPACE_PANEL_IDS = ["files", "editor", "preview"] as const;
 export type WorkspacePanelId = (typeof WORKSPACE_PANEL_IDS)[number];
-export type MobileWorkspacePanel = Extract<WorkspacePanelId, "files" | "preview">;
+export type MobileWorkspacePanel = Extract<
+  WorkspacePanelId,
+  "files" | "preview"
+>;
 
 export type WorkspacePanelWidths = {
   files: number;
@@ -39,7 +42,10 @@ export function constrainWorkspacePanelWidths(
       PANEL_WIDTH_LIMITS.preview.max,
     ),
   };
-  const availableForSides = Math.max(0, Math.round(containerWidth) - MIN_EDITOR_WIDTH);
+  const availableForSides = Math.max(
+    0,
+    Math.round(containerWidth) - MIN_EDITOR_WIDTH,
+  );
 
   if (!visibleSides.files && !visibleSides.preview) return next;
   if (!visibleSides.files) {
@@ -53,11 +59,17 @@ export function constrainWorkspacePanelWidths(
   if (next.files + next.preview <= availableForSides) return next;
 
   if (resizedSide === "files") {
-    next.files = Math.max(PANEL_WIDTH_LIMITS.files.min, availableForSides - next.preview);
+    next.files = Math.max(
+      PANEL_WIDTH_LIMITS.files.min,
+      availableForSides - next.preview,
+    );
     return next;
   }
   if (resizedSide === "preview") {
-    next.preview = Math.max(PANEL_WIDTH_LIMITS.preview.min, availableForSides - next.files);
+    next.preview = Math.max(
+      PANEL_WIDTH_LIMITS.preview.min,
+      availableForSides - next.files,
+    );
     return next;
   }
 
@@ -66,20 +78,28 @@ export function constrainWorkspacePanelWidths(
     next.files + next.preview - availableForSides,
   );
   next.preview -= previewReduction;
-  next.files = Math.max(PANEL_WIDTH_LIMITS.files.min, availableForSides - next.preview);
+  next.files = Math.max(
+    PANEL_WIDTH_LIMITS.files.min,
+    availableForSides - next.preview,
+  );
   return next;
 }
 
 export function readWorkspacePanelWidths(value: unknown): WorkspacePanelWidths {
-  if (!value || typeof value !== "object") return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
+  if (!value || typeof value !== "object")
+    return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
   const widths = value as Partial<WorkspacePanelWidths>;
   if (typeof widths.files !== "number" || typeof widths.preview !== "number") {
     return { ...DEFAULT_WORKSPACE_PANEL_WIDTHS };
   }
-  return constrainWorkspacePanelWidths(widths as WorkspacePanelWidths, Number.MAX_SAFE_INTEGER, {
-    files: true,
-    preview: true,
-  });
+  return constrainWorkspacePanelWidths(
+    widths as WorkspacePanelWidths,
+    Number.MAX_SAFE_INTEGER,
+    {
+      files: true,
+      preview: true,
+    },
+  );
 }
 
 export function toggleMobileWorkspacePanel(

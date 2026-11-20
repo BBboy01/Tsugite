@@ -19,7 +19,11 @@ declare global {
 
 window.workspaceProfile = { commits: [], inputFrames: [] };
 document.addEventListener("beforeinput", (event) => {
-  if (!(event.target instanceof Element) || !event.target.closest(".cm-content")) return;
+  if (
+    !(event.target instanceof Element) ||
+    !event.target.closest(".cm-content")
+  )
+    return;
   const started = performance.now();
   requestAnimationFrame(() =>
     window.workspaceProfile.inputFrames.push(performance.now() - started),
@@ -33,7 +37,11 @@ createRoot(document.getElementById("app")!).render(
       <Profiler
         id="workspace"
         onRender={(_id, phase, actualDuration, baseDuration) => {
-          window.workspaceProfile.commits.push({ phase, actualDuration, baseDuration });
+          window.workspaceProfile.commits.push({
+            phase,
+            actualDuration,
+            baseDuration,
+          });
         }}
       >
         <AppShell roomId={roomId} />

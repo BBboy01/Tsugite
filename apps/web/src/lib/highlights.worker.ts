@@ -1,5 +1,11 @@
-import { createHighlightsSession, type HighlightsTokenizerSession } from "./highlights-engine";
-import type { HighlightsReply, HighlightsRequest } from "./highlights-worker-client";
+import {
+  createHighlightsSession,
+  type HighlightsTokenizerSession,
+} from "./highlights-engine";
+import type {
+  HighlightsReply,
+  HighlightsRequest,
+} from "./highlights-worker-client";
 
 let session: HighlightsTokenizerSession | undefined;
 let sessionLanguage: HighlightsRequest["language"] | undefined;
@@ -56,6 +62,9 @@ self.onmessage = async ({ data }: MessageEvent<HighlightsRequest>) => {
   } catch {
     // CodeMirror's native syntax highlighting remains available on failure.
   }
-  // oxlint-disable-next-line unicorn/require-post-message-target-origin -- This is a dedicated worker, not a Window.
-  self.postMessage({ id: data.id, spans, ready: true } satisfies HighlightsReply);
+  self.postMessage({
+    id: data.id,
+    spans,
+    ready: true,
+  } satisfies HighlightsReply);
 };

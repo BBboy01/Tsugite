@@ -5,7 +5,10 @@ import { useTranslation } from "react-i18next";
 
 import type { WorkspaceTheme } from "@iris/shared";
 
-import { getRandomWorkspaceTheme, WORKSPACE_THEME_OPTIONS } from "../lib/workspace-theme";
+import {
+  getRandomWorkspaceTheme,
+  WORKSPACE_THEME_OPTIONS,
+} from "../lib/workspace-theme";
 
 type ThemePickerProps = {
   value: WorkspaceTheme;
@@ -47,8 +50,9 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
                 return;
               }
               {
-                const firstTheme =
-                  container?.querySelector<HTMLButtonElement>("[data-theme-option]");
+                const firstTheme = container?.querySelector<HTMLButtonElement>(
+                  "[data-theme-option]",
+                );
                 if (firstTheme) {
                   event.preventDefault();
                   firstTheme.focus();
@@ -73,8 +77,9 @@ export function ThemePicker({ value, onChange }: ThemePickerProps) {
               data-theme-option
               onKeyDown={(event) => {
                 if (event.key !== "Tab" || event.shiftKey) return;
-                const options =
-                  container?.querySelectorAll<HTMLButtonElement>("[data-theme-option]");
+                const options = container?.querySelectorAll<HTMLButtonElement>(
+                  "[data-theme-option]",
+                );
                 const currentIndex = options
                   ? Array.from(options).indexOf(event.currentTarget)
                   : -1;

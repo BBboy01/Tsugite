@@ -17,7 +17,11 @@ test("builds stable tab presentation data", () => {
   const tabs = [file("src/main.tsx", "one"), file("src/App.tsx", "two")];
   const models = buildEditorTabViewModels(tabs, "src/main.tsx", [], "me");
   expect(
-    models.map(({ label, active, collaboratorCount }) => ({ label, active, collaboratorCount })),
+    models.map(({ label, active, collaboratorCount }) => ({
+      label,
+      active,
+      collaboratorCount,
+    })),
   ).toEqual([
     { label: "main.tsx", active: true, collaboratorCount: 0 },
     { label: "App.tsx", active: false, collaboratorCount: 0 },

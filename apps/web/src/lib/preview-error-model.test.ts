@@ -22,16 +22,26 @@ test("only enables recovery appropriate to the preview error category", () => {
     "restart",
     "reinstall",
   ]);
-  expect(getPreviewRecoveryActions("runtime-unavailable", false, true)).toEqual(["restart"]);
-  expect(getPreviewRecoveryActions("server-exited", false, true)).toEqual(["restart"]);
+  expect(getPreviewRecoveryActions("runtime-unavailable", false, true)).toEqual(
+    ["restart"],
+  );
+  expect(getPreviewRecoveryActions("server-exited", false, true)).toEqual([
+    "restart",
+  ]);
   expect(getPreviewRecoveryActions("install-failed", true, true)).toEqual([]);
-  expect(getPreviewRecoveryActions("cross-origin-isolation-required", false, true)).toEqual([]);
+  expect(
+    getPreviewRecoveryActions("cross-origin-isolation-required", false, true),
+  ).toEqual([]);
   expect(getPreviewRecoveryActions(undefined, false, false)).toEqual([]);
 });
 
 test("invalidates syntax navigation when the source snapshot changes", () => {
   const source = "const ready = true;\nconst broken = ;";
-  const syntax = { path: "main.ts", source, location: { line: 2, column: 16, offset: 35 } };
+  const syntax = {
+    path: "main.ts",
+    source,
+    location: { line: 2, column: 16, offset: 35 },
+  };
   expect(getPreviewSourceLocation(syntax, "main.ts", source)).toEqual({
     path: "main.ts",
     source,
@@ -40,6 +50,8 @@ test("invalidates syntax navigation when the source snapshot changes", () => {
     line: 2,
     column: 16,
   });
-  expect(getPreviewSourceLocation(syntax, "main.ts", "const ready = true;")).toBeUndefined();
+  expect(
+    getPreviewSourceLocation(syntax, "main.ts", "const ready = true;"),
+  ).toBeUndefined();
   expect(getPreviewSourceLocation(syntax, "other.ts", source)).toBeUndefined();
 });

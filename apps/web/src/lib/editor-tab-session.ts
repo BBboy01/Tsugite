@@ -1,4 +1,7 @@
-import { reconcileWorkspaceNavigation, type WorkspaceFilePath } from "./workspace-navigation";
+import {
+  reconcileWorkspaceNavigation,
+  type WorkspaceFilePath,
+} from "./workspace-navigation";
 
 type TabSessionStorage = Pick<Storage, "getItem" | "setItem">;
 type TabNavigation = { openTabPaths: string[]; selectedPath: string };
@@ -40,7 +43,8 @@ function readNavigation(
     const openTabPaths = [...new Set(saved.fileIds)]
       .map((id) => pathsById.get(id))
       .filter((path): path is string => path !== undefined);
-    const activePath = saved.activeFileId === null ? "" : pathsById.get(saved.activeFileId);
+    const activePath =
+      saved.activeFileId === null ? "" : pathsById.get(saved.activeFileId);
     return {
       openTabPaths,
       selectedPath:
@@ -63,7 +67,8 @@ export class EditorTabSession {
 
   constructor(
     roomId: string,
-    private readonly storage: TabSessionStorage | undefined = getTabSessionStorage(),
+    private readonly storage:
+      TabSessionStorage | undefined = getTabSessionStorage(),
   ) {
     this.key = `iris.editor-tabs.v1.${roomId}`;
   }
@@ -82,11 +87,16 @@ export class EditorTabSession {
     );
     this.restored = true;
     this.previousFilePaths = next.currentFilePaths;
-    const navigation = { openTabPaths: next.openTabPaths, selectedPath: next.selectedPath };
+    const navigation = {
+      openTabPaths: next.openTabPaths,
+      selectedPath: next.selectedPath,
+    };
     if (
       navigation.selectedPath !== input.selectedPath ||
       navigation.openTabPaths.length !== input.openTabPaths.length ||
-      navigation.openTabPaths.some((path, index) => path !== input.openTabPaths[index])
+      navigation.openTabPaths.some(
+        (path, index) => path !== input.openTabPaths[index],
+      )
     ) {
       // Keep the restored target until its update is rendered, including repeated effects.
       this.pendingNavigation = navigation;

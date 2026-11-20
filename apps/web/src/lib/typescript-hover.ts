@@ -1,6 +1,9 @@
 import { hoverTooltip, ViewPlugin, type TooltipView } from "@codemirror/view";
 import type { WorkspaceTheme } from "@iris/shared";
-import type { EditorIntelligence, IntelligenceHover } from "./editor-intelligence";
+import type {
+  EditorIntelligence,
+  IntelligenceHover,
+} from "./editor-intelligence";
 import {
   createHighlightsSession,
   type HighlightsLanguage,
@@ -29,12 +32,17 @@ function codeLanguage(value: string | undefined): HighlightsLanguage {
   return LANGUAGE_ALIASES[value?.toLowerCase() ?? ""] ?? "typescript";
 }
 
-function appendInlineMarkdown(parent: HTMLElement, text: string, getTheme: HoverTheme): void {
+function appendInlineMarkdown(
+  parent: HTMLElement,
+  text: string,
+  getTheme: HoverTheme,
+): void {
   const inlineCode = /`([^`\n]+)`/g;
   let cursor = 0;
   for (const match of text.matchAll(inlineCode)) {
     const start = match.index ?? 0;
-    if (start > cursor) parent.append(document.createTextNode(text.slice(cursor, start)));
+    if (start > cursor)
+      parent.append(document.createTextNode(text.slice(cursor, start)));
     const code = document.createElement("code");
     code.className = "iris-ts-hover-code";
     const source = match[1] ?? "";
@@ -43,10 +51,15 @@ function appendInlineMarkdown(parent: HTMLElement, text: string, getTheme: Hover
     void highlightCode(code, source, "typescript", getTheme);
     cursor = start + match[0].length;
   }
-  if (cursor < text.length) parent.append(document.createTextNode(text.slice(cursor)));
+  if (cursor < text.length)
+    parent.append(document.createTextNode(text.slice(cursor)));
 }
 
-function appendMarkdown(parent: HTMLElement, documentation: string, getTheme: HoverTheme): void {
+function appendMarkdown(
+  parent: HTMLElement,
+  documentation: string,
+  getTheme: HoverTheme,
+): void {
   const lines = documentation.replace(/\r\n?/g, "\n").split("\n");
   let paragraph: string[] = [];
   let codeLines: string[] | undefined;
@@ -131,7 +144,10 @@ async function highlightCode(
       if (source[index] === "\n") lineOffsets.push(index + 1);
     }
     const lineCount = lineOffsets.length;
-    session = await createHighlightsSession(source, language, getTheme(), [0, lineCount]);
+    session = await createHighlightsSession(source, language, getTheme(), [
+      0,
+      lineCount,
+    ]);
     const spans = session.highlight([0, lineCount], lineOffsets);
     if (!element.isConnected) return;
 
@@ -140,7 +156,9 @@ async function highlightCode(
     for (const span of spans) {
       if (span.from < cursor) continue;
       if (span.from > cursor)
-        fragment.append(document.createTextNode(source.slice(cursor, span.from)));
+        fragment.append(
+          document.createTextNode(source.slice(cursor, span.from)),
+        );
       const token = document.createElement("span");
       token.className = "iris-ts-hover-code-token";
       token.textContent = source.slice(span.from, span.to);
@@ -148,7 +166,8 @@ async function highlightCode(
       fragment.append(token);
       cursor = span.to;
     }
-    if (cursor < source.length) fragment.append(document.createTextNode(source.slice(cursor)));
+    if (cursor < source.length)
+      fragment.append(document.createTextNode(source.slice(cursor)));
     element.replaceChildren(fragment);
   } catch {
     // The code remains readable with the CSS fallback if tokenization is unavailable.

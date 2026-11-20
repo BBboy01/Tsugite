@@ -1,5 +1,9 @@
 import { expect, test } from "bun:test";
-import { RoomTransport, type RoomSocket, type TransportEvent } from "./room-transport";
+import {
+  RoomTransport,
+  type RoomSocket,
+  type TransportEvent,
+} from "./room-transport";
 
 class FakeSocket implements RoomSocket {
   binaryType = "";
@@ -7,7 +11,9 @@ class FakeSocket implements RoomSocket {
   sent: Array<string | Uint8Array> = [];
   closed = false;
   onopen: (() => void) | null = null;
-  onmessage: ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null = null;
+  onmessage:
+    ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null =
+    null;
   onclose: (() => void) | null = null;
   onerror: (() => void) | null = null;
 

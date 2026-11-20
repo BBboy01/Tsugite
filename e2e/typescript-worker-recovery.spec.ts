@@ -32,10 +32,16 @@ async function observeTypeScriptWorkers(page: Page) {
         const workerIndex = state.typeScriptWorkers!.push(this) - 1;
         workerIndexes.set(this, workerIndex);
         this.addEventListener("message", (event: MessageEvent) => {
-          state.typeScriptWorkerReplies!.push({ workerIndex, data: event.data });
+          state.typeScriptWorkerReplies!.push({
+            workerIndex,
+            data: event.data,
+          });
         });
       }
-      postMessage(message: unknown, transfer?: Transferable[] | StructuredSerializeOptions) {
+      postMessage(
+        message: unknown,
+        transfer?: Transferable[] | StructuredSerializeOptions,
+      ) {
         const workerIndex = workerIndexes.get(this);
         if (workerIndex !== undefined)
           state.typeScriptWorkerRequests!.push({
@@ -79,12 +85,16 @@ async function expectWorkerRequest(page: Page, expectedText: string) {
   await expect
     .poll(() =>
       page.evaluate((expected) => {
-        const state = window as Window & { typeScriptWorkerRequests?: WorkerRequestRecord[] };
+        const state = window as Window & {
+          typeScriptWorkerRequests?: WorkerRequestRecord[];
+        };
         return state.typeScriptWorkerRequests?.some(
           ({ workerIndex: recordWorkerIndex, data }) =>
             recordWorkerIndex === 0 &&
             data.kind === "update" &&
-            data.changes?.some(({ text: changeText }) => changeText.includes(expected)) === true,
+            data.changes?.some(({ text: changeText }) =>
+              changeText.includes(expected),
+            ) === true,
         );
       }, expectedText),
     )
@@ -149,21 +159,29 @@ self.onmessage = (event) => {
     await expectTypeScriptWorkerReady(page, 1);
     expect(
       await page.evaluate(() => {
-        const state = window as Window & { typeScriptWorkerRequests?: WorkerRequestRecord[] };
+        const state = window as Window & {
+          typeScriptWorkerRequests?: WorkerRequestRecord[];
+        };
         return state.typeScriptWorkerRequests?.some(
           ({ workerIndex, data }) =>
             workerIndex === 1 &&
             data.kind === "initialize" &&
-            data.files?.some(({ text }) => text.includes('marker: "recovered"')) === true,
+            data.files?.some(({ text }) =>
+              text.includes('marker: "recovered"'),
+            ) === true,
         );
       }),
     ).toBe(true);
 
     await page.keyboard.press("Control+Space");
-    await expect(page.getByRole("option", { name: "marker", exact: true })).toBeVisible();
+    await expect(
+      page.getByRole("option", { name: "marker", exact: true }),
+    ).toBeVisible();
     expect(
       await page.evaluate(
-        () => (window as Window & { typeScriptWorkers?: Worker[] }).typeScriptWorkers?.length,
+        () =>
+          (window as Window & { typeScriptWorkers?: Worker[] })
+            .typeScriptWorkers?.length,
       ),
     ).toBe(2);
 
@@ -173,7 +191,9 @@ self.onmessage = (event) => {
       const state = window as Window & { typeScriptWorkers?: Worker[] };
       state.typeScriptWorkers?.[1]?.postMessage({ kind: "test-crash" });
     });
-    await expect(page.locator('[data-typescript-service-state="unavailable"]')).toHaveCount(1, {
+    await expect(
+      page.locator('[data-typescript-service-state="unavailable"]'),
+    ).toHaveCount(1, {
       timeout: 15_000,
     });
     await expect(content).toBeFocused();

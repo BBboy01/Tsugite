@@ -10,8 +10,10 @@ export const uxTranslations = {
     "files.deleteFileTitle": "Delete file",
     "files.deleteFolderTitle": "Delete folder",
     "files.deleteFileDescription": "Delete {{path}}?",
-    "files.deleteFolderDescription_one": "Delete {{path}} and its {{count}} file?",
-    "files.deleteFolderDescription_other": "Delete {{path}} and its {{count}} files?",
+    "files.deleteFolderDescription_one":
+      "Delete {{path}} and its {{count}} file?",
+    "files.deleteFolderDescription_other":
+      "Delete {{path}} and its {{count}} files?",
     "files.deleted": "Deleted {{path}}",
     "files.undoDeletion": "Undo deletion",
     "files.restoreConflict": "Cannot restore: an original path is now in use.",
@@ -20,7 +22,8 @@ export const uxTranslations = {
   },
   "zh-CN": {
     "status.unsynced": "有未同步更改",
-    "status.unsyncedDescription": "更改尚未确认同步，请保持此标签页打开，避免丢失。",
+    "status.unsyncedDescription":
+      "更改尚未确认同步，请保持此标签页打开，避免丢失。",
     "settings.sharing.device": "此设备",
     "settings.sharing.room": "此房间",
     "preview.goToSource": "定位错误",
@@ -28,7 +31,8 @@ export const uxTranslations = {
     "files.deleteFileTitle": "删除文件",
     "files.deleteFolderTitle": "删除文件夹",
     "files.deleteFileDescription": "删除 {{path}}？",
-    "files.deleteFolderDescription": "删除 {{path}} 及其中的 {{count}} 个文件？",
+    "files.deleteFolderDescription":
+      "删除 {{path}} 及其中的 {{count}} 个文件？",
     "files.deleted": "已删除 {{path}}",
     "files.undoDeletion": "撤销删除",
     "files.restoreConflict": "无法恢复：原路径已被占用。",
@@ -37,7 +41,8 @@ export const uxTranslations = {
   },
   "zh-TW": {
     "status.unsynced": "有未同步變更",
-    "status.unsyncedDescription": "變更尚未確認同步，請保持此分頁開啟，避免遺失。",
+    "status.unsyncedDescription":
+      "變更尚未確認同步，請保持此分頁開啟，避免遺失。",
     "settings.sharing.device": "此裝置",
     "settings.sharing.room": "此房間",
     "preview.goToSource": "定位錯誤",
@@ -45,7 +50,8 @@ export const uxTranslations = {
     "files.deleteFileTitle": "刪除檔案",
     "files.deleteFolderTitle": "刪除資料夾",
     "files.deleteFileDescription": "刪除 {{path}}？",
-    "files.deleteFolderDescription": "刪除 {{path}} 及其中的 {{count}} 個檔案？",
+    "files.deleteFolderDescription":
+      "刪除 {{path}} 及其中的 {{count}} 個檔案？",
     "files.deleted": "已刪除 {{path}}",
     "files.undoDeletion": "復原刪除",
     "files.restoreConflict": "無法復原：原路徑已被使用。",
@@ -63,11 +69,13 @@ export const uxTranslations = {
     "files.deleteFileTitle": "ファイルを削除",
     "files.deleteFolderTitle": "フォルダーを削除",
     "files.deleteFileDescription": "{{path}} を削除しますか？",
-    "files.deleteFolderDescription": "{{path}} と、その中の {{count}} 個のファイルを削除しますか？",
+    "files.deleteFolderDescription":
+      "{{path}} と、その中の {{count}} 個のファイルを削除しますか？",
     "files.deleted": "{{path}} を削除しました",
     "files.undoDeletion": "削除を取り消す",
     "files.restoreConflict": "復元できません。元のパスは既に使用されています。",
     "files.dismissRecovery": "削除通知を閉じる",
-    "files.deleteFailed": "この項目を削除できません。変更された可能性があります。",
+    "files.deleteFailed":
+      "この項目を削除できません。変更された可能性があります。",
   },
 } as const;

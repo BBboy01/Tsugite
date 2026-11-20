@@ -20,7 +20,9 @@ export class TypeScriptWorkerLifecycle {
     unavailableCount: 0,
   } satisfies TypeScriptWorkerMetrics;
 
-  constructor(private readonly onMetrics?: (metrics: TypeScriptWorkerMetrics) => void) {}
+  constructor(
+    private readonly onMetrics?: (metrics: TypeScriptWorkerMetrics) => void,
+  ) {}
 
   getStatusSnapshot = (): TypeScriptWorkerStatus => this.status;
   getMetricsSnapshot = (): TypeScriptWorkerMetrics => ({ ...this.metrics });
@@ -37,7 +39,8 @@ export class TypeScriptWorkerLifecycle {
   }
 
   setStatus(state: TypeScriptWorkerStatus["state"], reason?: string): boolean {
-    if (this.status.state === state && this.status.reason === reason) return false;
+    if (this.status.state === state && this.status.reason === reason)
+      return false;
     const changedState = this.status.state !== state;
     this.status = { state, reason };
     if (changedState)

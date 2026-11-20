@@ -14,12 +14,20 @@ import {
   type WorkerRequest,
 } from "./typescript-worker-protocol";
 
-const navigationMethods = new Set(["definition", "typeDefinition", "implementation", "references"]);
+const navigationMethods = new Set([
+  "definition",
+  "typeDefinition",
+  "implementation",
+  "references",
+]);
 
 function compactNavigationReply(
   request: WorkerRequest,
   result: IntelligenceResult<unknown>,
-): { result: IntelligenceResult<unknown>; sourceSnapshots?: Record<string, string> } {
+): {
+  result: IntelligenceResult<unknown>;
+  sourceSnapshots?: Record<string, string>;
+} {
   if (
     request.kind !== "query" ||
     !navigationMethods.has(request.method) ||
@@ -28,7 +36,12 @@ function compactNavigationReply(
   )
     return { result };
   if (result.value.length > NAVIGATION_LIMITS.locations)
-    return { result: { status: "error", message: "Too many TypeScript navigation results" } };
+    return {
+      result: {
+        status: "error",
+        message: "Too many TypeScript navigation results",
+      },
+    };
   const sourceSnapshots: Record<string, string> = {};
   let sourceBytes = 0;
   const value = result.value.map((location) => {
@@ -79,7 +92,10 @@ export class TypeScriptWorkerSession {
     });
     if (this.disposed) return Promise.resolve(reply({ status: "disposed" }));
     if (request.kind === "cancel") {
-      if (request.epoch === this.epoch || this.initializingEpochs.has(request.epoch)) {
+      if (
+        request.epoch === this.epoch ||
+        this.initializingEpochs.has(request.epoch)
+      ) {
         this.cancelled.add(request.target);
         this.engine?.cancel(request.target);
         if (this.cancelled.size > WORKER_QUEUE_LIMIT)
@@ -91,7 +107,8 @@ export class TypeScriptWorkerSession {
       return Promise.resolve(
         reply({ status: "error", message: "TypeScript worker queue is full" }),
       );
-    if (request.kind === "initialize") this.initializingEpochs.add(request.epoch);
+    if (request.kind === "initialize")
+      this.initializingEpochs.add(request.epoch);
     this.queued++;
     const task = this.queue.then(async () => {
       try {
@@ -101,7 +118,10 @@ export class TypeScriptWorkerSession {
         } catch (error) {
           return reply({
             status: "error",
-            message: error instanceof Error ? error.message : "TypeScript worker failed",
+            message:
+              error instanceof Error
+                ? error.message
+                : "TypeScript worker failed",
           });
         }
         const compacted = compactNavigationReply(request, result);
@@ -109,19 +129,23 @@ export class TypeScriptWorkerSession {
       } catch (error) {
         return reply({
           status: "error",
-          message: error instanceof Error ? error.message : "TypeScript worker failed",
+          message:
+            error instanceof Error ? error.message : "TypeScript worker failed",
         });
       } finally {
         this.queued--;
         this.cancelled.delete(request.requestId);
-        if (request.kind === "initialize") this.initializingEpochs.delete(request.epoch);
+        if (request.kind === "initialize")
+          this.initializingEpochs.delete(request.epoch);
       }
     });
     this.queue = task.then(() => {});
     return task;
   }
 
-  private async handle(request: WorkerRequest): Promise<IntelligenceResult<unknown>> {
+  private async handle(
+    request: WorkerRequest,
+  ): Promise<IntelligenceResult<unknown>> {
     if (this.disposed) return { status: "disposed" };
     if (request.kind === "initialize") {
       const invalid = validateWorkspaceFiles(request.files);
@@ -129,9 +153,14 @@ export class TypeScriptWorkerSession {
         invalid ||
         request.epoch <= this.epoch ||
         request.workspaceVersion < 1 ||
-        request.files.some((file) => !Number.isSafeInteger(file.version) || file.version < 1)
+        request.files.some(
+          (file) => !Number.isSafeInteger(file.version) || file.version < 1,
+        )
       )
-        return { status: "error", message: invalid ?? "Invalid TypeScript initialization version" };
+        return {
+          status: "error",
+          message: invalid ?? "Invalid TypeScript initialization version",
+        };
       this.engine?.dispose();
       const engine = await this.createEngine(request.files);
       if (this.disposed) {
@@ -140,14 +169,20 @@ export class TypeScriptWorkerSession {
       }
       this.engine = engine;
       this.files = new Map(request.files.map((file) => [file.path, file]));
-      this.versions = new Map(request.files.map((file) => [file.path, file.version]));
+      this.versions = new Map(
+        request.files.map((file) => [file.path, file.version]),
+      );
       this.epoch = request.epoch;
       this.version = request.workspaceVersion;
       return { status: "ok", value: null };
     }
     if (request.kind === "query" && this.cancelled.has(request.requestId))
       return { status: "cancelled" };
-    if (!this.engine) return { status: "error", message: "TypeScript worker is not initialized" };
+    if (!this.engine)
+      return {
+        status: "error",
+        message: "TypeScript worker is not initialized",
+      };
     if (request.epoch !== this.epoch) return { status: "cancelled" };
     if (request.kind === "update") {
       if (
@@ -159,7 +194,10 @@ export class TypeScriptWorkerSession {
             file.version <= (this.versions.get(file.path) ?? 0),
         )
       )
-        return { status: "error", message: "Invalid TypeScript update version" };
+        return {
+          status: "error",
+          message: "Invalid TypeScript update version",
+        };
       const next = new Map(this.files);
       request.deleted.forEach((path) => next.delete(path));
       request.changes.forEach((file) => next.set(file.path, file));
@@ -178,34 +216,57 @@ export class TypeScriptWorkerSession {
       request.deleted
         .filter((path) => !request.changes.some((file) => file.path === path))
         .forEach((path) => this.versions.delete(path));
-      request.changes.forEach((file) => this.versions.set(file.path, file.version));
+      request.changes.forEach((file) =>
+        this.versions.set(file.path, file.version),
+      );
       this.version = request.workspaceVersion;
       return { status: "ok", value: null };
     }
     if (request.kind !== "query") return { status: "empty" };
     const invalidPath = validateQueryPath(request.query.path);
     if (invalidPath) return { status: "error", message: invalidPath };
-    if (request.workspaceVersion !== this.version || this.cancelled.has(request.requestId))
+    if (
+      request.workspaceVersion !== this.version ||
+      this.cancelled.has(request.requestId)
+    )
       return { status: "cancelled" };
-    const query = { ...request.query, requestId: request.requestId, revision: undefined };
+    const query = {
+      ...request.query,
+      requestId: request.requestId,
+      revision: undefined,
+    };
     const engine = this.engine;
     switch (request.method) {
       case "hover":
-        return engine.hover(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.hover(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "completion":
-        return engine.completion(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.completion(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "signatureHelp":
-        return engine.signatureHelp(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.signatureHelp(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "diagnostics":
         return engine.diagnostics(query);
       case "definition":
-        return engine.definition(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.definition(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "typeDefinition":
-        return engine.typeDefinition(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.typeDefinition(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "implementation":
-        return engine.implementation(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.implementation(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
       case "references":
-        return engine.references(query as import("./editor-intelligence").IntelligenceQuery);
+        return engine.references(
+          query as import("./editor-intelligence").IntelligenceQuery,
+        );
     }
   }
   dispose(): void {

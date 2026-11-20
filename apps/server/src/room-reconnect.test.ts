@@ -29,7 +29,9 @@ function setup() {
       roomId: "reconnect",
       identity: { userId, displayName: userId, color: "#d88961" },
       socketFactory: () => {
-        const socket = new WebSocket(`ws://127.0.0.1:${app.server!.port}/ws/reconnect`);
+        const socket = new WebSocket(
+          `ws://127.0.0.1:${app.server!.port}/ws/reconnect`,
+        );
         socket.addEventListener("message", (event) => {
           if (
             dropFirstAck &&
@@ -75,13 +77,20 @@ test("replays more than one rate window of offline edits without losing changes"
   const expected = file.text.toString();
   await waitFor(
     () =>
-      getFileByPath(rooms.getDocument("reconnect")!, "src/App.tsx")?.text.toString() === expected,
+      getFileByPath(
+        rooms.getDocument("reconnect")!,
+        "src/App.tsx",
+      )?.text.toString() === expected,
   );
-  await waitFor(() => getFileByPath(peer.doc, "src/App.tsx")?.text.toString() === expected);
+  await waitFor(
+    () => getFileByPath(peer.doc, "src/App.tsx")?.text.toString() === expected,
+  );
   file.text.insert(0, "after-reconnect");
   client.doc.commit();
   await waitFor(
-    () => getFileByPath(peer.doc, "src/App.tsx")?.text.toString() === file.text.toString(),
+    () =>
+      getFileByPath(peer.doc, "src/App.tsx")?.text.toString() ===
+      file.text.toString(),
   );
   expect(client.status).toBe("live");
 }, 10_000);
@@ -102,9 +111,14 @@ test("reconnects after a lost acknowledgement without dropping or duplicating ed
   const expected = file.text.toString();
   await waitFor(
     () =>
-      getFileByPath(rooms.getDocument("reconnect")!, "src/App.tsx")?.text.toString() === expected,
+      getFileByPath(
+        rooms.getDocument("reconnect")!,
+        "src/App.tsx",
+      )?.text.toString() === expected,
   );
-  await waitFor(() => getFileByPath(peer.doc, "src/App.tsx")?.text.toString() === expected);
+  await waitFor(
+    () => getFileByPath(peer.doc, "src/App.tsx")?.text.toString() === expected,
+  );
   expect(client.status).toBe("live");
 });
 
@@ -123,10 +137,15 @@ test("online editing and presence bursts share a safe transport budget", async (
   const expected = file.text.toString();
   await waitFor(
     () =>
-      getFileByPath(rooms.getDocument("reconnect")!, "src/App.tsx")?.text.toString() === expected,
+      getFileByPath(
+        rooms.getDocument("reconnect")!,
+        "src/App.tsx",
+      )?.text.toString() === expected,
   );
   await waitFor(
-    () => peer.members.find((member) => member.userId === "writer")?.cursor?.head === 149,
+    () =>
+      peer.members.find((member) => member.userId === "writer")?.cursor
+        ?.head === 149,
   );
   expect(client.status).toBe("live");
 }, 10_000);
@@ -147,7 +166,10 @@ test("retains oversized local edits without repeatedly reconnecting or claiming 
   file.text.insert(0, "retained locally");
   client.doc.commit();
   expect(file.text.toString()).toBe(`retained locally${content}${before}`);
-  expect(getFileByPath(rooms.getDocument("reconnect")!, "src/App.tsx")!.text.toString()).toBe(
-    before,
-  );
+  expect(
+    getFileByPath(
+      rooms.getDocument("reconnect")!,
+      "src/App.tsx",
+    )!.text.toString(),
+  ).toBe(before);
 }, 10_000);

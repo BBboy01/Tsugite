@@ -1,7 +1,11 @@
 import { expect, spyOn, test } from "bun:test";
 import { createStore } from "jotai/vanilla";
 import { workspaceCommandAtom, workspaceStateAtom } from "./workspace-atoms";
-import type { WorkspaceCommand, WorkspaceDialog, WorkspaceState } from "./workspace-state";
+import type {
+  WorkspaceCommand,
+  WorkspaceDialog,
+  WorkspaceState,
+} from "./workspace-state";
 
 const invalidCommands: [string, unknown, WorkspaceDialog?][] = [
   ["null", null],
@@ -17,30 +21,52 @@ const invalidCommands: [string, unknown, WorkspaceDialog?][] = [
   ["invalid reordered tab", { type: "reorder-tabs", paths: [42] }],
   ["sparse reordered tabs", { type: "reorder-tabs", paths: Array(1) }],
   ["missing bulk close target", { type: "close-tabs", mode: "all" }],
-  ["invalid bulk close target", { type: "close-tabs", path: null, mode: "others" }],
+  [
+    "invalid bulk close target",
+    { type: "close-tabs", path: null, mode: "others" },
+  ],
   ["missing bulk close mode", { type: "close-tabs", path: "src/App.tsx" }],
-  ["unknown bulk close mode", { type: "close-tabs", path: "src/App.tsx", mode: "left" }],
+  [
+    "unknown bulk close mode",
+    { type: "close-tabs", path: "src/App.tsx", mode: "left" },
+  ],
   ["missing selected path", { type: "set-navigation", openTabPaths: [] }],
   ["missing tabs", { type: "set-navigation", selectedPath: "" }],
-  ["invalid tab", { type: "set-navigation", selectedPath: "", openTabPaths: [42] }],
-  ["sparse tabs", { type: "set-navigation", selectedPath: "", openTabPaths: Array(1) }],
+  [
+    "invalid tab",
+    { type: "set-navigation", selectedPath: "", openTabPaths: [42] },
+  ],
+  [
+    "sparse tabs",
+    { type: "set-navigation", selectedPath: "", openTabPaths: Array(1) },
+  ],
   ["invalid following target", { type: "set-following", userId: false }],
   ["missing following target", { type: "set-following" }],
   ["invalid panel toggle", { type: "set-mobile-panel", panel: "editor" }],
   ["null panel toggle", { type: "set-mobile-panel", panel: null }],
-  ["invalid panel value", { type: "set-mobile-panel-value", panel: "settings" }],
+  [
+    "invalid panel value",
+    { type: "set-mobile-panel-value", panel: "settings" },
+  ],
   ["missing panel value", { type: "set-mobile-panel-value" }],
   ["string console flag", { type: "set-preview-console-open", open: "false" }],
   ["missing settings flag", { type: "set-settings-open" }, "settings"],
   ["numeric search flag", { type: "set-file-search-open", open: 1 }],
-  ["null palette flag", { type: "set-command-palette-open", open: null }, "commandPalette"],
+  [
+    "null palette flag",
+    { type: "set-command-palette-open", open: null },
+    "commandPalette",
+  ],
 ];
 
 for (const [name, command, activeDialog] of invalidCommands) {
   test(`ignores ${name} without publishing or corrupting state`, () => {
     const store = createStore();
     if (activeDialog) {
-      store.set(workspaceStateAtom, { ...store.get(workspaceStateAtom), activeDialog });
+      store.set(workspaceStateAtom, {
+        ...store.get(workspaceStateAtom),
+        activeDialog,
+      });
     }
     const before = store.get(workspaceStateAtom);
     let updates = 0;
@@ -58,7 +84,10 @@ for (const [name, command, activeDialog] of invalidCommands) {
         expect(typeof warnings.mock.calls[0][0]).toBe("string");
       }
 
-      store.set(workspaceCommandAtom, { type: "activate-file", path: "src/main.tsx" });
+      store.set(workspaceCommandAtom, {
+        type: "activate-file",
+        path: "src/main.tsx",
+      });
       expect(store.get(workspaceStateAtom)).toMatchObject({
         selectedPath: "src/main.tsx",
         openTabPaths: ["src/App.tsx", "src/main.tsx"],
@@ -74,7 +103,10 @@ for (const [name, command, activeDialog] of invalidCommands) {
 const validCommands = {
   "activate-file": {
     command: { type: "activate-file", path: "src/main.tsx" },
-    expected: { selectedPath: "src/main.tsx", openTabPaths: ["src/App.tsx", "src/main.tsx"] },
+    expected: {
+      selectedPath: "src/main.tsx",
+      openTabPaths: ["src/App.tsx", "src/main.tsx"],
+    },
   },
   "select-file": {
     command: { type: "select-file", path: "" },
@@ -133,11 +165,14 @@ const validCommands = {
   { command: WorkspaceCommand; expected: Partial<WorkspaceState> }
 >;
 
-test.each(Object.entries(validCommands))("accepts the %s command", (_, { command, expected }) => {
-  const store = createStore();
-  store.set(workspaceCommandAtom, command);
-  expect(store.get(workspaceStateAtom)).toMatchObject(expected);
-});
+test.each(Object.entries(validCommands))(
+  "accepts the %s command",
+  (_, { command, expected }) => {
+    const store = createStore();
+    store.set(workspaceCommandAtom, command);
+    expect(store.get(workspaceStateAtom)).toMatchObject(expected);
+  },
+);
 
 test("publishes a valid tab reorder while preserving selection and follow mode", () => {
   const store = createStore();
@@ -147,7 +182,10 @@ test("publishes a valid tab reorder while preserving selection and follow mode",
     openTabPaths: ["a.ts", "b.ts", "c.ts"],
   });
   store.set(workspaceCommandAtom, { type: "set-following", userId: "remote" });
-  store.set(workspaceCommandAtom, { type: "reorder-tabs", paths: ["c.ts", "a.ts", "b.ts"] });
+  store.set(workspaceCommandAtom, {
+    type: "reorder-tabs",
+    paths: ["c.ts", "a.ts", "b.ts"],
+  });
 
   expect(store.get(workspaceStateAtom)).toMatchObject({
     selectedPath: "b.ts",
@@ -159,13 +197,25 @@ test("publishes a valid tab reorder while preserving selection and follow mode",
 test("accepts explicit false and null values when clearing workspace UI", () => {
   const store = createStore();
   store.set(workspaceCommandAtom, { type: "set-following", userId: "remote" });
-  store.set(workspaceCommandAtom, { type: "set-mobile-panel-value", panel: "preview" });
+  store.set(workspaceCommandAtom, {
+    type: "set-mobile-panel-value",
+    panel: "preview",
+  });
   store.set(workspaceCommandAtom, { type: "set-settings-open", open: true });
-  store.set(workspaceCommandAtom, { type: "set-preview-console-open", open: true });
+  store.set(workspaceCommandAtom, {
+    type: "set-preview-console-open",
+    open: true,
+  });
   store.set(workspaceCommandAtom, { type: "set-following", userId: null });
-  store.set(workspaceCommandAtom, { type: "set-mobile-panel-value", panel: null });
+  store.set(workspaceCommandAtom, {
+    type: "set-mobile-panel-value",
+    panel: null,
+  });
   store.set(workspaceCommandAtom, { type: "set-settings-open", open: false });
-  store.set(workspaceCommandAtom, { type: "set-preview-console-open", open: false });
+  store.set(workspaceCommandAtom, {
+    type: "set-preview-console-open",
+    open: false,
+  });
   expect(store.get(workspaceStateAtom)).toMatchObject({
     followingUserId: null,
     mobilePanel: null,

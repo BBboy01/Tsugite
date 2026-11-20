@@ -5,7 +5,8 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 
 export function createRoomDatabase(databasePath: string) {
-  if (databasePath !== ":memory:") mkdirSync(dirname(databasePath), { recursive: true });
+  if (databasePath !== ":memory:")
+    mkdirSync(dirname(databasePath), { recursive: true });
   const sqlite = new Database(databasePath, { create: true });
   try {
     sqlite.run("PRAGMA journal_mode = WAL");

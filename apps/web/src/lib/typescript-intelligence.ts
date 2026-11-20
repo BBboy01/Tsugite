@@ -11,10 +11,14 @@ import type {
 } from "./editor-intelligence";
 
 const absolute = (path: string) => `/${path.replace(/^\//, "")}`;
-const sourceFile = (path: string) => /\.[cm]?[jt]sx?$/.test(path) || path.endsWith("package.json");
+const sourceFile = (path: string) =>
+  /\.[cm]?[jt]sx?$/.test(path) || path.endsWith("package.json");
 const display = (parts: readonly { text: string }[] | undefined) =>
   parts?.map((part) => part.text).join("") ?? "";
-const range = (span: ts.TextSpan) => ({ from: span.start, to: span.start + span.length });
+const range = (span: ts.TextSpan) => ({
+  from: span.start,
+  to: span.start + span.length,
+});
 
 export function createTypeScriptIntelligence(
   path: string,
@@ -22,10 +26,17 @@ export function createTypeScriptIntelligence(
   files: readonly IntelligenceFile[],
   libraries: readonly IntelligenceFile[],
 ): EditorIntelligence {
-  const environment = createEditorTypeScriptEnvironment(path, source, files, libraries);
+  const environment = createEditorTypeScriptEnvironment(
+    path,
+    source,
+    files,
+    libraries,
+  );
   const service = environment.languageService;
   const sources = new Map(
-    files.filter((file) => sourceFile(file.path)).map((file) => [absolute(file.path), file.text]),
+    files
+      .filter((file) => sourceFile(file.path))
+      .map((file) => [absolute(file.path), file.text]),
   );
   sources.set(absolute(path), source);
   let disposed = false;
@@ -52,17 +63,23 @@ export function createTypeScriptIntelligence(
       if (disposed) return { status: "disposed" };
       if (token.cancelled) return { status: "cancelled" };
       if (performance.now() >= deadline) return { status: "timeout" };
-      if (query && (!Number.isFinite(query.timeoutMs ?? 2000) || (query.timeoutMs ?? 2000) < 0))
+      if (
+        query &&
+        (!Number.isFinite(query.timeoutMs ?? 2000) ||
+          (query.timeoutMs ?? 2000) < 0)
+      )
         return { status: "error", message: "Invalid query timeout" };
       if (
         query &&
         "position" in query &&
         (!Number.isInteger(query.position) ||
           query.position < 0 ||
-          query.position > (sources.get(absolute(query.path))?.length ?? Infinity))
+          query.position >
+            (sources.get(absolute(query.path))?.length ?? Infinity))
       )
         return { status: "error", message: "Invalid UTF-16 query position" };
-      if (query && !sources.has(absolute(query.path))) return { status: "empty" };
+      if (query && !sources.has(absolute(query.path)))
+        return { status: "empty" };
       if (query?.revision !== undefined && query.revision !== revision)
         return { status: "cancelled" };
       const value = action();
@@ -75,7 +92,8 @@ export function createTypeScriptIntelligence(
     } catch (error) {
       return {
         status: "error",
-        message: error instanceof Error ? error.message : "Language query failed",
+        message:
+          error instanceof Error ? error.message : "Language query failed",
       };
     } finally {
       if (requestId !== undefined) {
@@ -94,7 +112,12 @@ export function createTypeScriptIntelligence(
       const text = sources.get(fileName);
       const { start, length } = textSpan;
       const key = `${fileName}:${start}:${length}`;
-      if (text === undefined || start < 0 || start + length > text.length || seen.has(key))
+      if (
+        text === undefined ||
+        start < 0 ||
+        start + length > text.length ||
+        seen.has(key)
+      )
         return [];
       seen.add(key);
       const prefix = text.slice(0, start);
@@ -131,7 +154,9 @@ export function createTypeScriptIntelligence(
       run(undefined, () => {
         const previous = revision;
         const next = new Set(
-          workspaceFiles.filter((file) => sourceFile(file.path)).map((file) => absolute(file.path)),
+          workspaceFiles
+            .filter((file) => sourceFile(file.path))
+            .map((file) => absolute(file.path)),
         );
         for (const oldPath of sources.keys()) {
           if (next.has(oldPath)) continue;
@@ -152,7 +177,10 @@ export function createTypeScriptIntelligence(
       }),
     hover: (query) =>
       run(query, () => {
-        const info = service.getQuickInfoAtPosition(absolute(query.path), query.position);
+        const info = service.getQuickInfoAtPosition(
+          absolute(query.path),
+          query.position,
+        );
         return (
           info && {
             ...range(info.textSpan),
@@ -169,19 +197,26 @@ export function createTypeScriptIntelligence(
           {},
         );
         return completions?.entries.map((entry) => {
-          const replacement = entry.replacementSpan ?? completions.optionalReplacementSpan;
+          const replacement =
+            entry.replacementSpan ?? completions.optionalReplacementSpan;
           return {
             name: entry.name,
             kind: entry.kind,
             sortText: entry.sortText,
-            ...(entry.insertText === undefined ? {} : { insertText: entry.insertText }),
+            ...(entry.insertText === undefined
+              ? {}
+              : { insertText: entry.insertText }),
             ...(replacement ? { replacement: range(replacement) } : {}),
           };
         });
       }),
     signatureHelp: (query) =>
       run(query, () => {
-        const help = service.getSignatureHelpItems(absolute(query.path), query.position, undefined);
+        const help = service.getSignatureHelpItems(
+          absolute(query.path),
+          query.position,
+          undefined,
+        );
         return (
           help && {
             signatures: help.items.map((item) => ({
@@ -208,25 +243,44 @@ export function createTypeScriptIntelligence(
           from: diagnostic.start ?? 0,
           to: (diagnostic.start ?? 0) + (diagnostic.length ?? 0),
           code: diagnostic.code,
-          severity: (["warning", "error", "suggestion", "message"] as const)[diagnostic.category],
-          message: ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n"),
+          severity: (["warning", "error", "suggestion", "message"] as const)[
+            diagnostic.category
+          ],
+          message: ts.flattenDiagnosticMessageText(
+            diagnostic.messageText,
+            "\n",
+          ),
         })),
       ),
     definition: (query) =>
       run(query, () =>
-        locations(service.getDefinitionAtPosition(absolute(query.path), query.position)),
+        locations(
+          service.getDefinitionAtPosition(absolute(query.path), query.position),
+        ),
       ),
     typeDefinition: (query) =>
       run(query, () =>
-        locations(service.getTypeDefinitionAtPosition(absolute(query.path), query.position)),
+        locations(
+          service.getTypeDefinitionAtPosition(
+            absolute(query.path),
+            query.position,
+          ),
+        ),
       ),
     implementation: (query) =>
       run(query, () =>
-        locations(service.getImplementationAtPosition(absolute(query.path), query.position)),
+        locations(
+          service.getImplementationAtPosition(
+            absolute(query.path),
+            query.position,
+          ),
+        ),
       ),
     references: (query) =>
       run(query, () =>
-        locations(service.getReferencesAtPosition(absolute(query.path), query.position)),
+        locations(
+          service.getReferencesAtPosition(absolute(query.path), query.position),
+        ),
       ),
     cancel(requestId) {
       pending.get(requestId)?.forEach((token) => {

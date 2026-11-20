@@ -21,13 +21,16 @@ export type ProjectFile = {
 `;
 
 async function typeScriptWorkerCount(page: Page) {
-  return page.workers().filter((worker) => worker.url().includes("typescript.worker")).length;
+  return page
+    .workers()
+    .filter((worker) => worker.url().includes("typescript.worker")).length;
 }
 
 async function measureWorkerHeap(cdp: CDPSession) {
   const { targetInfos } = await cdp.send("Target.getTargets");
   const workers = targetInfos.filter(
-    (target) => target.type === "worker" && target.url.includes("typescript.worker"),
+    (target) =>
+      target.type === "worker" && target.url.includes("typescript.worker"),
   );
   if (workers.length !== 1)
     throw new Error(`Expected one TypeScript Worker, found ${workers.length}`);
@@ -78,10 +81,15 @@ async function measureWorkerHeap(cdp: CDPSession) {
 
 async function productionGraph() {
   const editorFiles = await Promise.all(
-    ["editor-tab-model.ts", "editor-tabs.ts", "presence.ts"].map(async (name) => ({
-      path: `src/${name}`,
-      text: await readFile(new URL(`../apps/web/src/lib/${name}`, import.meta.url), "utf8"),
-    })),
+    ["editor-tab-model.ts", "editor-tabs.ts", "presence.ts"].map(
+      async (name) => ({
+        path: `src/${name}`,
+        text: await readFile(
+          new URL(`../apps/web/src/lib/${name}`, import.meta.url),
+          "utf8",
+        ),
+      }),
+    ),
   );
   return [
     ...editorFiles,
@@ -126,17 +134,27 @@ test("real Worker resolves production editor modules and follows imported type e
           status: string;
           value?: { name: string }[];
         }>;
-        diagnostics(query: { path: string }): Promise<{ status: string; value?: unknown[] }>;
-        updateFile(file: { path: string; text: string }): Promise<{ status: string }>;
+        diagnostics(query: {
+          path: string;
+        }): Promise<{ status: string; value?: unknown[] }>;
+        updateFile(file: {
+          path: string;
+          text: string;
+        }): Promise<{ status: string }>;
         dispose(): void;
       };
     };
-    const source = initialFiles.find((file) => file.path === "src/editor-tab-model.ts")!.text;
-    const presence = initialFiles.find((file) => file.path === "src/presence.ts")!;
+    const source = initialFiles.find(
+      (file) => file.path === "src/editor-tab-model.ts",
+    )!.text;
+    const presence = initialFiles.find(
+      (file) => file.path === "src/presence.ts",
+    )!;
     const functionName = "getFileCollaboratorCount";
-    const hoverPosition = source.lastIndexOf(functionName) + functionName.length;
-    const memberPosition = presence.text.indexOf("member.userId") + "member.".length;
-    // oxlint-disable-next-line unicorn/consistent-function-scoping -- Playwright serializes this callback without its closure.
+    const hoverPosition =
+      source.lastIndexOf(functionName) + functionName.length;
+    const memberPosition =
+      presence.text.indexOf("member.userId") + "member.".length;
     const summarize = (samples: number[]) => {
       const sorted = samples.toSorted((left, right) => left - right);
       return {
@@ -178,7 +196,9 @@ test("real Worker resolves production editor modules and follows imported type e
         completion.push(performance.now() - started);
         statuses.push(completionResult.status);
         started = performance.now();
-        const diagnosticResult = await client.diagnostics({ path: "src/editor-tab-model.ts" });
+        const diagnosticResult = await client.diagnostics({
+          path: "src/editor-tab-model.ts",
+        });
         diagnostics.push(performance.now() - started);
         statuses.push(diagnosticResult.status);
       }
@@ -199,15 +219,22 @@ test("real Worker resolves production editor modules and follows imported type e
         "member.selectedPath === selectedPath,\n  ).length;",
         "member.selectedPath === selectedPath,\n  ).length.toString();",
       );
-    const update = await client.updateFile({ path: presence.path, text: changed });
+    const update = await client.updateFile({
+      path: presence.path,
+      text: changed,
+    });
     const changedHover = await client.hover({
       path: "src/editor-tab-model.ts",
       position: hoverPosition,
     });
-    const changedDiagnostics = await client.diagnostics({ path: "src/editor-tab-model.ts" });
+    const changedDiagnostics = await client.diagnostics({
+      path: "src/editor-tab-model.ts",
+    });
     const changedQueries = await measureQueries();
     const restored = await client.updateFile(presence);
-    const restoredDiagnostics = await client.diagnostics({ path: "src/editor-tab-model.ts" });
+    const restoredDiagnostics = await client.diagnostics({
+      path: "src/editor-tab-model.ts",
+    });
     const status = client.status;
     client.dispose();
     return {
@@ -215,10 +242,18 @@ test("real Worker resolves production editor modules and follows imported type e
       startupMs,
       sourceBytes: initialFiles
         .filter((file) => !file.path.startsWith("node_modules/"))
-        .reduce((total, file) => total + new TextEncoder().encode(file.text).byteLength, 0),
+        .reduce(
+          (total, file) =>
+            total + new TextEncoder().encode(file.text).byteLength,
+          0,
+        ),
       declarationBytes: initialFiles
         .filter((file) => file.path.startsWith("node_modules/"))
-        .reduce((total, file) => total + new TextEncoder().encode(file.text).byteLength, 0),
+        .reduce(
+          (total, file) =>
+            total + new TextEncoder().encode(file.text).byteLength,
+          0,
+        ),
       first,
       firstCompletion,
       clean,
@@ -241,7 +276,9 @@ test("real Worker resolves production editor modules and follows imported type e
     value: { signature: expect.stringContaining("): number") },
   });
   expect(result.firstCompletion).toMatchObject({ status: "ok" });
-  expect(result.firstCompletion.value?.map((entry) => entry.name)).toContain("selectedPath");
+  expect(result.firstCompletion.value?.map((entry) => entry.name)).toContain(
+    "selectedPath",
+  );
   expect(result.clean).toEqual({ status: "empty" });
   expect(result.stableQueries.statuses).toEqual({ ok: 60, empty: 30 });
   expect(result.update).toMatchObject({ status: "ok" });
@@ -272,10 +309,14 @@ test("real Worker client rejects exact source and declaration over-budget snapsh
   const result = await page.evaluate(async () => {
     const clientPath = "/src/lib/typescript-worker-client.ts";
     const { TypeScriptWorkerClient } = (await import(clientPath)) as {
-      TypeScriptWorkerClient: new (files: readonly { path: string; text: string }[]) => {
+      TypeScriptWorkerClient: new (
+        files: readonly { path: string; text: string }[],
+      ) => {
         status: string;
         disabledReason?: string;
-        syncWorkspace(files: readonly { path: string; text: string }[]): Promise<unknown>;
+        syncWorkspace(
+          files: readonly { path: string; text: string }[],
+        ): Promise<unknown>;
         hover(query: { path: string; position: number }): Promise<unknown>;
         dispose(): void;
       };
@@ -303,13 +344,24 @@ test("real Worker client rejects exact source and declaration over-budget snapsh
       sourceBytes,
       declarationBytes,
       source: { status: source.status, reason: source.disabledReason },
-      declaration: { status: declaration.status, reason: declaration.disabledReason },
+      declaration: {
+        status: declaration.status,
+        reason: declaration.disabledReason,
+      },
     };
-    const recoveryFiles = [{ path: "src/recovered.ts", text: "export const recovered = 1;" }];
+    const recoveryFiles = [
+      { path: "src/recovered.ts", text: "export const recovered = 1;" },
+    ];
     output.sourceRecovery = await source.syncWorkspace(recoveryFiles);
     output.declarationRecovery = await declaration.syncWorkspace(recoveryFiles);
-    output.sourceQuery = await source.hover({ path: "src/recovered.ts", position: 20 });
-    output.declarationQuery = await declaration.hover({ path: "src/recovered.ts", position: 20 });
+    output.sourceQuery = await source.hover({
+      path: "src/recovered.ts",
+      position: 20,
+    });
+    output.declarationQuery = await declaration.hover({
+      path: "src/recovered.ts",
+      position: 20,
+    });
     output.sourceRecoveredStatus = source.status;
     output.declarationRecoveredStatus = declaration.status;
     source.dispose();
@@ -347,15 +399,21 @@ test("real Worker client enforces the per-file source and declaration byte bound
   const result = await page.evaluate(async () => {
     const clientPath = "/src/lib/typescript-worker-client.ts";
     const { TypeScriptWorkerClient } = (await import(clientPath)) as {
-      TypeScriptWorkerClient: new (files: readonly { path: string; text: string }[]) => {
+      TypeScriptWorkerClient: new (
+        files: readonly { path: string; text: string }[],
+      ) => {
         status: string;
         disabledReason?: string;
         dispose(): void;
       };
     };
     const exact = "x".repeat(1024 * 1024);
-    const sourceExact = new TypeScriptWorkerClient([{ path: "src/exact.ts", text: exact }]);
-    const sourceOver = new TypeScriptWorkerClient([{ path: "src/over.ts", text: `${exact}x` }]);
+    const sourceExact = new TypeScriptWorkerClient([
+      { path: "src/exact.ts", text: exact },
+    ]);
+    const sourceOver = new TypeScriptWorkerClient([
+      { path: "src/over.ts", text: `${exact}x` },
+    ]);
     const declarationExact = new TypeScriptWorkerClient([
       { path: "node_modules/pkg/index.d.ts", text: exact },
     ]);
@@ -363,13 +421,22 @@ test("real Worker client enforces the per-file source and declaration byte bound
       { path: "node_modules/pkg/over.d.ts", text: `${exact}x` },
     ]);
     const output = {
-      sourceExact: { status: sourceExact.status, reason: sourceExact.disabledReason },
-      sourceOver: { status: sourceOver.status, reason: sourceOver.disabledReason },
+      sourceExact: {
+        status: sourceExact.status,
+        reason: sourceExact.disabledReason,
+      },
+      sourceOver: {
+        status: sourceOver.status,
+        reason: sourceOver.disabledReason,
+      },
       declarationExact: {
         status: declarationExact.status,
         reason: declarationExact.disabledReason,
       },
-      declarationOver: { status: declarationOver.status, reason: declarationOver.disabledReason },
+      declarationOver: {
+        status: declarationOver.status,
+        reason: declarationOver.disabledReason,
+      },
     };
     sourceExact.dispose();
     sourceOver.dispose();
@@ -398,20 +465,30 @@ test("maximum legal source and declaration snapshots answer the first query", as
   await openBenchmarkPage(page);
   const cdp = await context.newCDPSession(page);
   const pageHeapBefore = await cdp.send("Runtime.getHeapUsage");
-  await page.exposeFunction("measureMaximumBudgetWorkerHeap", () => measureWorkerHeap(cdp));
+  await page.exposeFunction("measureMaximumBudgetWorkerHeap", () =>
+    measureWorkerHeap(cdp),
+  );
   const graph = await productionGraph();
-  const { sources, declarationFiles, measuredBytes } = createMaximumBudgetFixtures(graph);
+  const { sources, declarationFiles, measuredBytes } =
+    createMaximumBudgetFixtures(graph);
   expect(sources).toHaveLength(512);
   expect(declarationFiles).toHaveLength(1024);
-  expect(measuredBytes).toEqual({ source: 16 * 1024 * 1024, declarations: 8 * 1024 * 1024 });
-  const editorModel = sources.find((file) => file.path === "src/editor-tab-model.ts")!;
+  expect(measuredBytes).toEqual({
+    source: 16 * 1024 * 1024,
+    declarations: 8 * 1024 * 1024,
+  });
+  const editorModel = sources.find(
+    (file) => file.path === "src/editor-tab-model.ts",
+  )!;
   const queryPosition = editorModel.text.indexOf("collaboratorCount");
 
   const result = await page.evaluate(
     async ({ files, sourceBytes, declarationBytes, position }) => {
       const clientPath = "/src/lib/typescript-worker-client.ts";
       const { TypeScriptWorkerClient } = (await import(clientPath)) as {
-        TypeScriptWorkerClient: new (files: readonly { path: string; text: string }[]) => {
+        TypeScriptWorkerClient: new (
+          files: readonly { path: string; text: string }[],
+        ) => {
           status: string;
           disabledReason?: string;
           hover(query: { path: string; position: number }): Promise<{
@@ -436,7 +513,10 @@ test("maximum legal source and declaration snapshots answer the first query", as
       observer.observe({ type: "longtask", buffered: true });
       const startedAt = performance.now();
       const client = new TypeScriptWorkerClient(files);
-      const queryResult = await client.hover({ path: "src/editor-tab-model.ts", position });
+      const queryResult = await client.hover({
+        path: "src/editor-tab-model.ts",
+        position,
+      });
       const startupMs = performance.now() - startedAt;
       observer.disconnect();
       let workerHeap:
@@ -484,7 +564,9 @@ test("maximum legal source and declaration snapshots answer the first query", as
   });
   expect(result.status, result.disabledReason).toBe("worker");
   expect(result.queryResult.status).toBe("ok");
-  expect(result.queryResult.value?.signature).toContain("collaboratorCount: number");
+  expect(result.queryResult.value?.signature).toContain(
+    "collaboratorCount: number",
+  );
   expect(result.startupMs).toBeLessThan(2000);
   expect(result.sourceBytes).toBe(16 * 1024 * 1024);
   expect(result.declarationBytes).toBe(8 * 1024 * 1024);

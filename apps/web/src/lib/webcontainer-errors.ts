@@ -23,7 +23,8 @@ export function getRuntimeError(error: unknown): RuntimeError {
           typeof error.message === "string"
         ? error.message
         : undefined;
-  if (message && isStoragePartitioningErrorMessage(message)) return "storage-partitioning-required";
+  if (message && isStoragePartitioningErrorMessage(message))
+    return "storage-partitioning-required";
   if (message && isRuntimeError(message)) return message;
   return "runtime-unavailable";
 }

@@ -4,30 +4,48 @@ import { files, transport } from "./typescript-worker-test-helpers";
 
 test("workspace subscribers observe readiness and changed snapshots but not identical writes", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   const revisions: number[] = [];
-  const stop = client.subscribeWorkspace(() => revisions.push(client.workspaceVersion));
+  const stop = client.subscribeWorkspace(() =>
+    revisions.push(client.workspaceVersion),
+  );
   fake.reply(fake.sent[0], { status: "ok", value: null });
   await client.syncWorkspace(files);
-  await client.updateFile({ path: "other.ts", text: "export const value = 2;" });
-  await client.updateFile({ path: "other.ts", text: "export const value = 2;" });
+  await client.updateFile({
+    path: "other.ts",
+    text: "export const value = 2;",
+  });
+  await client.updateFile({
+    path: "other.ts",
+    text: "export const value = 2;",
+  });
   expect(revisions).toEqual([1, 2]);
   stop();
-  await client.updateFile({ path: "other.ts", text: "export const value = 3;" });
+  await client.updateFile({
+    path: "other.ts",
+    text: "export const value = 3;",
+  });
   expect(revisions).toEqual([1, 2]);
   client.dispose();
 });
 
 test("restores deduplicated worker source snapshots for navigation consumers", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
   const pending = client.references({ path: "app.ts", position: 6 });
   const request = fake.sent[1];
   const location = { path: "app.ts", from: 6, to: 11, line: 1, column: 7 };
   fake.reply(
     request,
-    { status: "ok", value: [location, { ...location, from: 18, to: 23, column: 19 }] },
+    {
+      status: "ok",
+      value: [location, { ...location, from: 18, to: 23, column: 19 }],
+    },
     { "app.ts": files[0].text },
   );
   expect(await pending).toEqual({
@@ -42,9 +60,13 @@ test("restores deduplicated worker source snapshots for navigation consumers", a
 
 test("publishes stable loading, ready and disposed status snapshots", () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   const states: string[] = [];
-  const unsubscribe = client.subscribeStatus(() => states.push(client.getStatusSnapshot().state));
+  const unsubscribe = client.subscribeStatus(() =>
+    states.push(client.getStatusSnapshot().state),
+  );
   const loading = client.getStatusSnapshot();
   expect(loading.state).toBe("loading");
   expect(client.getStatusSnapshot()).toBe(loading);
@@ -57,9 +79,14 @@ test("publishes stable loading, ready and disposed status snapshots", () => {
 
 test("publishes only changed files with monotonic versions and rejects stale replies", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
-  await client.syncWorkspace([...files, { path: "other.ts", text: "export {}" }]);
+  await client.syncWorkspace([
+    ...files,
+    { path: "other.ts", text: "export {}" },
+  ]);
   expect(fake.sent[1]).toMatchObject({
     kind: "update",
     workspaceVersion: 2,
@@ -105,7 +132,9 @@ test("timeout only discards that query and does not restart the worker", async (
     createWorker: () => fake.worker,
   });
   fake.reply(fake.sent[0], { status: "ok", value: null });
-  expect(await client.hover({ path: "app.ts", position: 6, timeoutMs: 1 })).toEqual({
+  expect(
+    await client.hover({ path: "app.ts", position: 6, timeoutMs: 1 }),
+  ).toEqual({
     status: "timeout",
   });
   expect(fake.stopped()).toBe(0);
@@ -136,7 +165,10 @@ test("a failed update restarts from the latest snapshot instead of silently dive
   });
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   await client.updateFile({ path: "app.ts", text: "const updated = true;" });
-  workers[0].reply(workers[0].sent[1], { status: "error", message: "update rejected" });
+  workers[0].reply(workers[0].sent[1], {
+    status: "error",
+    message: "update rejected",
+  });
   expect(created).toBe(2);
   expect(workers[1].sent[0]).toMatchObject({
     kind: "initialize",
@@ -153,7 +185,10 @@ test("a saturated update queue restarts once with the latest source snapshot", a
   });
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   for (let index = 0; index < 33; index++)
-    await client.updateFile({ path: "app.ts", text: `const value = ${index};` });
+    await client.updateFile({
+      path: "app.ts",
+      text: `const value = ${index};`,
+    });
   expect(created).toBe(2);
   expect(workers[0].stopped()).toBe(1);
   expect(workers[1].sent[0]).toMatchObject({
@@ -167,10 +202,14 @@ test("a saturated update queue restarts once with the latest source snapshot", a
 
 test("releases deleted path versions and restarts a recreated path at version one", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
   await client.syncWorkspace([]);
-  await client.syncWorkspace([{ path: "app.ts", text: "const recreated = true;" }]);
+  await client.syncWorkspace([
+    { path: "app.ts", text: "const recreated = true;" },
+  ]);
   expect(fake.sent.at(-1)).toMatchObject({
     kind: "update",
     changes: [{ path: "app.ts", version: 1 }],
@@ -209,11 +248,19 @@ test("initialization failure retries once and does not start a main-thread compi
   const client = new TypeScriptWorkerClient(files, {
     createWorker: () => workers[created++].worker,
   });
-  workers[0].reply(workers[0].sent[0], { status: "error", message: "init failed" });
+  workers[0].reply(workers[0].sent[0], {
+    status: "error",
+    message: "init failed",
+  });
   expect(created).toBe(2);
   expect(workers[1].sent[0]).toMatchObject({ kind: "initialize", epoch: 2 });
-  workers[1].reply(workers[1].sent[0], { status: "error", message: "init failed again" });
-  expect(await client.hover({ path: "app.ts", position: 6 })).toMatchObject({ status: "error" });
+  workers[1].reply(workers[1].sent[0], {
+    status: "error",
+    message: "init failed again",
+  });
+  expect(await client.hover({ path: "app.ts", position: 6 })).toMatchObject({
+    status: "error",
+  });
   expect(client.getStatusSnapshot().state).toBe("unavailable");
   client.dispose();
 });
@@ -227,7 +274,10 @@ test("resource and unsafe path rejection never creates a worker", async () => {
     [{ path: "node_modules/pkg/execute.ts", text: "" }],
     [{ path: "big.ts", text: "x".repeat(1024 * 1024 + 1) }],
     Array.from({ length: 513 }, (_, i) => ({ path: `${i}.ts`, text: "" })),
-    Array.from({ length: 17 }, (_, i) => ({ path: `${i}.ts`, text: "x".repeat(1024 * 1024) })),
+    Array.from({ length: 17 }, (_, i) => ({
+      path: `${i}.ts`,
+      text: "x".repeat(1024 * 1024),
+    })),
   ]) {
     const client = new TypeScriptWorkerClient(snapshot, {
       createWorker: () => {
@@ -235,7 +285,9 @@ test("resource and unsafe path rejection never creates a worker", async () => {
         return transport().worker;
       },
     });
-    expect(await client.hover({ path: "big.ts", position: 0 })).toMatchObject({ status: "error" });
+    expect(await client.hover({ path: "big.ts", position: 0 })).toMatchObject({
+      status: "error",
+    });
     client.dispose();
   }
   expect(created).toBe(0);
@@ -243,9 +295,13 @@ test("resource and unsafe path rejection never creates a worker", async () => {
 
 test("recovers from an over-budget snapshot after a valid workspace is synchronized", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   const listeners: string[] = [];
-  client.subscribeStatus(() => listeners.push(client.getStatusSnapshot().state));
+  client.subscribeStatus(() =>
+    listeners.push(client.getStatusSnapshot().state),
+  );
   const oversized = await client.syncWorkspace(
     Array.from({ length: 17 }, (_, index) => ({
       path: `file${index}.ts`,
@@ -258,7 +314,10 @@ test("recovers from an over-budget snapshot after a valid workspace is synchroni
   expect(recovered.status).toBe("ok");
   expect(client.status).toBe("worker");
   expect(client.getStatusSnapshot().state).toBe("loading");
-  expect(fake.sent.at(-1)).toMatchObject({ kind: "initialize", files: expect.any(Array) });
+  expect(fake.sent.at(-1)).toMatchObject({
+    kind: "initialize",
+    files: expect.any(Array),
+  });
   fake.reply(fake.sent.at(-1)!, { status: "ok", value: null });
   expect(client.getStatusSnapshot().state).toBe("ready");
   expect(listeners).toContain("unavailable");
@@ -268,12 +327,20 @@ test("recovers from an over-budget snapshot after a valid workspace is synchroni
 
 test("requires a complete snapshot before recovering from rejected workspace edits", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
-  await client.syncWorkspace([...files, { path: "big.ts", text: "x".repeat(1024 * 1024 + 1) }]);
+  await client.syncWorkspace([
+    ...files,
+    { path: "big.ts", text: "x".repeat(1024 * 1024 + 1) },
+  ]);
   const updated = { path: "app.ts", text: "const value = 2; value;" };
   const repaired = { path: "big.ts", text: "const repaired = true;" };
-  const updates = [await client.updateFile(updated), await client.updateFile(repaired)];
+  const updates = [
+    await client.updateFile(updated),
+    await client.updateFile(repaired),
+  ];
   const rejectedState = client.getStatusSnapshot().state;
   const messagesBeforeRecovery = fake.sent.length;
   const recovered = await client.syncWorkspace([updated, repaired]);
@@ -287,16 +354,23 @@ test("requires a complete snapshot before recovering from rejected workspace edi
   expect(recovered.status).toBe("ok");
   expect(initialization).toMatchObject({
     kind: "initialize",
-    files: [expect.objectContaining(updated), expect.objectContaining(repaired)],
+    files: [
+      expect.objectContaining(updated),
+      expect.objectContaining(repaired),
+    ],
   });
   expect(recoveredState).toBe("ready");
 });
 
 test("rejects unsafe query paths before sending them to the worker", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
-  expect(await client.hover({ path: "../escape.ts", position: 0 })).toMatchObject({
+  expect(
+    await client.hover({ path: "../escape.ts", position: 0 }),
+  ).toMatchObject({
     status: "error",
   });
   expect(fake.sent).toHaveLength(1);
@@ -309,7 +383,10 @@ test("publishes declaration metadata and enforces its independent byte budget", 
     [
       ...files,
       { path: "node_modules/pkg/package.json", text: '{"types":"index.d.ts"}' },
-      { path: "node_modules/pkg/index.d.ts", text: "export declare const value: number;" },
+      {
+        path: "node_modules/pkg/index.d.ts",
+        text: "export declare const value: number;",
+      },
     ],
     { createWorker: () => fake.worker },
   );
@@ -336,18 +413,24 @@ test("publishes declaration metadata and enforces its independent byte budget", 
 
 test("queue bounds, cancellation and disposal settle safely", async () => {
   const fake = transport();
-  const client = new TypeScriptWorkerClient(files, { createWorker: () => fake.worker });
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => fake.worker,
+  });
   fake.reply(fake.sent[0], { status: "ok", value: null });
   const pending = Array.from({ length: 32 }, (_, i) =>
     client.hover({ path: "app.ts", position: 0, requestId: `q${i}` }),
   );
-  expect(await client.hover({ path: "app.ts", position: 0 })).toMatchObject({ status: "error" });
+  expect(await client.hover({ path: "app.ts", position: 0 })).toMatchObject({
+    status: "error",
+  });
   client.cancel("q0");
   expect(await pending[0]).toEqual({ status: "cancelled" });
   client.dispose();
   client.dispose();
   expect(fake.stopped()).toBe(1);
   expect(
-    (await Promise.all(pending.slice(1))).every((result) => result.status === "disposed"),
+    (await Promise.all(pending.slice(1))).every(
+      (result) => result.status === "disposed",
+    ),
   ).toBe(true);
 });

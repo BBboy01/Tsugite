@@ -4,7 +4,10 @@ import type { LanguageCode } from "../lib/i18n";
 
 export type SettingsDialogProps = {
   settings: ProjectSettings;
-  onChange: <K extends keyof ProjectSettings>(key: K, value: ProjectSettings[K]) => void;
+  onChange: <K extends keyof ProjectSettings>(
+    key: K,
+    value: ProjectSettings[K],
+  ) => void;
   vimMode: boolean;
   onVimModeChange: (enabled: boolean) => void;
   keymap: KeyBinding[];

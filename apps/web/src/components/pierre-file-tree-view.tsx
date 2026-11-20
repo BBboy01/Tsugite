@@ -1,6 +1,9 @@
 import { FileTree as PierreFileTree } from "@pierre/trees/react";
 import type { CSSProperties } from "react";
-import { getPierreCreationDirectory, getPierreTarget } from "../lib/pierre-file-tree-actions";
+import {
+  getPierreCreationDirectory,
+  getPierreTarget,
+} from "../lib/pierre-file-tree-actions";
 import { DeletePopover } from "./file-tree-inline-controls";
 import { PierreFileTreeContextActions } from "./pierre-file-tree-context-actions";
 import { PierreFileTreeToolbar } from "./pierre-file-tree-toolbar";
@@ -38,7 +41,9 @@ export function PierreFileTreeView(props: PierreFileTreeProps) {
               label={props.label}
               title={t("panel.files")}
               searchOpen={searchOpen}
-              onSearch={() => (model.isSearchOpen() ? model.closeSearch() : model.openSearch())}
+              onSearch={() =>
+                model.isSearchOpen() ? model.closeSearch() : model.openSearch()
+              }
               onCreate={(action) => startDraftCreation(action, "")}
               newFileLabel={t("files.newFile")}
               newFolderLabel={t("files.newFolder")}
@@ -57,7 +62,11 @@ export function PierreFileTreeView(props: PierreFileTreeProps) {
               }}
               onAction={(action, actionAnchorRect) => {
                 const target = item
-                  ? getPierreTarget(item.path, callbacks.current.files, item.kind !== "file")
+                  ? getPierreTarget(
+                      item.path,
+                      callbacks.current.files,
+                      item.kind !== "file",
+                    )
                   : null;
                 if (action === "new-file" || action === "new-folder") {
                   const parent = getPierreCreationDirectory(item);
@@ -76,7 +85,8 @@ export function PierreFileTreeView(props: PierreFileTreeProps) {
                 } else if (action === "delete" && target) {
                   const request = {
                     target,
-                    anchorRect: actionAnchorRect ?? (context.anchorRect as DOMRect),
+                    anchorRect:
+                      actionAnchorRect ?? (context.anchorRect as DOMRect),
                   };
                   setDeleteError(undefined);
                   setDeletePrompt(request);
@@ -152,7 +162,11 @@ export function PierreFileTreeView(props: PierreFileTreeProps) {
               setDeletePrompt(null);
               setDeleteError(undefined);
             } catch (error) {
-              setDeleteError(error instanceof Error ? error.message : t("files.deleteFailed"));
+              setDeleteError(
+                error instanceof Error
+                  ? error.message
+                  : t("files.deleteFailed"),
+              );
             }
           }}
         />

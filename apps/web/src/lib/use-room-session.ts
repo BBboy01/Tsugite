@@ -70,7 +70,10 @@ export function useRoomSession(roomId: string) {
     () => readWorkspaceSnapshot(client.doc),
     [client, workspaceRevision],
   );
-  const settings = useMemo(() => readSettings(client.doc), [client, settingsRevision]);
+  const settings = useMemo(
+    () => readSettings(client.doc),
+    [client, settingsRevision],
+  );
   return {
     client,
     typeScript,

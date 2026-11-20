@@ -45,7 +45,11 @@ function setup(store: MemoryStore, scope = "room-a") {
   };
   const client = new RoomClient({
     roomId: scope,
-    identity: { userId: crypto.randomUUID(), displayName: "User", color: "#7389b7" },
+    identity: {
+      userId: crypto.randomUUID(),
+      displayName: "User",
+      color: "#7389b7",
+    },
     socketFactory: () => socket,
   });
   const drafts = new RoomDrafts(client, store, scope);
@@ -277,7 +281,9 @@ test("oversized recovered edits stay local and retain a recoverable copy", async
   first.client.doc.getMap("fixture").set("payload", payload);
   first.client.doc.commit();
   expect(first.client.pendingUpdates).toHaveLength(1);
-  expect(first.client.pendingUpdates[0]!.byteLength).toBeGreaterThan(MAX_ROOM_UPDATE_BYTES);
+  expect(first.client.pendingUpdates[0]!.byteLength).toBeGreaterThan(
+    MAX_ROOM_UPDATE_BYTES,
+  );
   await first.drafts.dispose();
   const next = setup(store);
   await next.drafts.start();

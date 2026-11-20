@@ -1,7 +1,10 @@
 import { Vim } from "@replit/codemirror-vim";
 import type { EditorView } from "@codemirror/view";
 
-export function attachVimClipboard(view: EditorView, enabled: boolean): () => void {
+export function attachVimClipboard(
+  view: EditorView,
+  enabled: boolean,
+): () => void {
   if (!enabled || typeof navigator === "undefined" || !navigator.clipboard) {
     return () => undefined;
   }
@@ -30,8 +33,14 @@ export function attachVimClipboard(view: EditorView, enabled: boolean): () => vo
     lastSnapshot = nextSnapshot;
     registerController
       .getRegister("+")
-      .setText(nextSnapshot.text, nextSnapshot.linewise, nextSnapshot.blockwise);
-    void navigator.clipboard.writeText(nextSnapshot.text).catch(() => undefined);
+      .setText(
+        nextSnapshot.text,
+        nextSnapshot.linewise,
+        nextSnapshot.blockwise,
+      );
+    void navigator.clipboard
+      .writeText(nextSnapshot.text)
+      .catch(() => undefined);
   };
   view.dom.addEventListener("keyup", syncRegister, true);
 

@@ -84,9 +84,11 @@ export const englishTranslations = {
   "settings.cursor.lineBlink": "Blinking line",
   "settings.cursor.underlineBlink": "Blinking underline",
   "settings.vimMode": "Vim mode",
-  "settings.vimModeDescription": "Use Vim keyboard modes and commands in the editor.",
+  "settings.vimModeDescription":
+    "Use Vim keyboard modes and commands in the editor.",
   "settings.systemClipboard": "Use system clipboard",
-  "settings.systemClipboardDescription": "Sync Vim yank and paste with the browser clipboard.",
+  "settings.systemClipboardDescription":
+    "Sync Vim yank and paste with the browser clipboard.",
   "settings.language": "Language",
   "settings.close": "Close settings",
   "settings.search": "Search settings",
@@ -125,7 +127,8 @@ export const englishTranslations = {
   "editor.context.noResults": "No locations found",
   "editor.context.queryFailed": "Unable to query this symbol.",
   "editor.context.staleTarget": "The source has changed. Open the menu again.",
-  "editor.context.clipboardFailed": "Clipboard access failed. No text was removed.",
+  "editor.context.clipboardFailed":
+    "Clipboard access failed. No text was removed.",
   "editor.context.dismiss": "Dismiss",
   "editor.context.paste": "Paste",
   "editor.context.selectAll": "Select all",
@@ -139,15 +142,20 @@ export const englishTranslations = {
   "settings.nav.editor": "Editor",
   "settings.nav.runtime": "Runtime",
   "settings.section.style.title": "Style",
-  "settings.section.style.description": "Tune the shared visual language of this room.",
+  "settings.section.style.description":
+    "Tune the shared visual language of this room.",
   "settings.section.workspace.title": "Workspace",
-  "settings.section.workspace.description": "Set your language and the room's visual theme.",
+  "settings.section.workspace.description":
+    "Set your language and the room's visual theme.",
   "settings.section.keyboard.title": "Keyboard",
-  "settings.section.keyboard.description": "Configure Vim behavior and editor shortcuts.",
+  "settings.section.keyboard.description":
+    "Configure Vim behavior and editor shortcuts.",
   "settings.section.editor.title": "Editor",
-  "settings.section.editor.description": "Choose the shared code editing preferences.",
+  "settings.section.editor.description":
+    "Choose the shared code editing preferences.",
   "settings.section.runtime.title": "Runtime",
-  "settings.section.runtime.description": "Control how dependencies and preview servers run.",
+  "settings.section.runtime.description":
+    "Control how dependencies and preview servers run.",
   "settings.packageManager": "Package manager",
   "settings.autoInstall": "Install dependencies automatically",
   "settings.autoInstallDescription":
@@ -155,7 +163,8 @@ export const englishTranslations = {
   "settings.autoStartPreview": "Start preview automatically",
   "settings.autoStartPreviewDescription":
     "Start the dev or start script after dependencies are ready.",
-  "settings.runtimeNote": "The preview uses {{manager}} for install and script commands.",
+  "settings.runtimeNote":
+    "The preview uses {{manager}} for install and script commands.",
   "settings.runtimeRestart": "Restart preview runtime",
   "settings.runtimeRestarting": "Restarting preview runtime…",
   "settings.runtimeReinstall": "Reinstall dependencies and restart preview",
@@ -188,14 +197,18 @@ export const englishTranslations = {
   "preview.outputEmpty": "Run output will appear here.",
   "preview.runtime.invalid-package-json": "package.json is invalid.",
   "preview.runtime.missing-package-json": "package.json is missing.",
-  "preview.runtime.missing-preview-script": "Add a dev or start script to package.json.",
+  "preview.runtime.missing-preview-script":
+    "Add a dev or start script to package.json.",
   "preview.runtime.install-failed": "{{manager}} install failed.",
   "preview.runtime.start-failed": "The preview server failed to start.",
-  "preview.runtime.server-exited": "The preview server stopped. Restart it to continue.",
-  "preview.runtime.cross-origin-isolation-required": "WebContainer needs cross-origin isolation.",
+  "preview.runtime.server-exited":
+    "The preview server stopped. Restart it to continue.",
+  "preview.runtime.cross-origin-isolation-required":
+    "WebContainer needs cross-origin isolation.",
   "preview.runtime.storage-partitioning-required":
     "Chrome blocked WebContainer storage partitioning. Enable chrome://flags/#third-party-storage-partitioning or allow third-party storage for *.webcontainer.io and *.webcontainer-api.io, then reload.",
-  "preview.runtime.runtime-unavailable": "WebContainer is unavailable in this browser.",
+  "preview.runtime.runtime-unavailable":
+    "WebContainer is unavailable in this browser.",
   "editor.openFiles": "Open files",
   "editor.closeFile": "Close {{path}}",
   "editor.tabs.close": "Close",

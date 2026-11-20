@@ -75,7 +75,8 @@ export const traditionalChineseTranslations = {
   "settings.wordWrap": "文字換行",
   "settings.wordWrapDescription": "將超出編輯器寬度的長行自動換行。",
   "settings.relativeLineNumbers": "相對行號",
-  "settings.relativeLineNumbersDescription": "目前行顯示實際行號，其他行顯示與目前行的距離。",
+  "settings.relativeLineNumbersDescription":
+    "目前行顯示實際行號，其他行顯示與目前行的距離。",
   "settings.language": "語言",
   "settings.close": "關閉設定",
   "settings.nav.style": "樣式",
@@ -91,7 +92,8 @@ export const traditionalChineseTranslations = {
   "settings.autoInstall": "自動安裝依賴",
   "settings.autoInstallDescription": "房間啟動時執行套件管理器安裝命令。",
   "settings.autoStartPreview": "自動啟動預覽",
-  "settings.autoStartPreviewDescription": "依賴準備完成後啟動 dev 或 start 指令。",
+  "settings.autoStartPreviewDescription":
+    "依賴準備完成後啟動 dev 或 start 指令。",
   "settings.runtimeNote": "預覽會使用 {{manager}} 執行安裝和指令。",
   "settings.runtimeRestart": "重新啟動預覽執行階段",
   "settings.runtimeRestarting": "正在重新啟動預覽執行階段…",
@@ -125,11 +127,13 @@ export const traditionalChineseTranslations = {
   "preview.outputEmpty": "執行輸出會顯示在這裡。",
   "preview.runtime.invalid-package-json": "package.json 無效。",
   "preview.runtime.missing-package-json": "缺少 package.json。",
-  "preview.runtime.missing-preview-script": "請在 package.json 中加入 dev 或 start 指令。",
+  "preview.runtime.missing-preview-script":
+    "請在 package.json 中加入 dev 或 start 指令。",
   "preview.runtime.install-failed": "{{manager}} install 失敗。",
   "preview.runtime.start-failed": "預覽伺服器啟動失敗。",
   "preview.runtime.server-exited": "預覽伺服器已停止，請重新啟動。",
-  "preview.runtime.cross-origin-isolation-required": "WebContainer 需要跨來源隔離。",
+  "preview.runtime.cross-origin-isolation-required":
+    "WebContainer 需要跨來源隔離。",
   "preview.runtime.storage-partitioning-required":
     "Chrome 阻止了 WebContainer 的儲存分區。請在 chrome://flags/#third-party-storage-partitioning 中啟用儲存分區，或允許 *.webcontainer.io 和 *.webcontainer-api.io 使用第三方儲存，然後重新載入頁面。",
   "preview.runtime.runtime-unavailable": "目前瀏覽器無法使用 WebContainer。",

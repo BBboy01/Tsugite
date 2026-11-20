@@ -32,13 +32,18 @@ test("preserves partial collaborator cursor data while merging presence", () => 
 
 test("sends local selection and cursor through the presence boundary", () => {
   const sent: PresenceMessage[] = [];
-  const presence = new RoomPresence(identity(), (message) => sent.push(message));
+  const presence = new RoomPresence(identity(), (message) =>
+    sent.push(message),
+  );
 
   presence.send("src/App.tsx", { anchor: 2, head: 2 });
   presence.send(undefined, null);
 
   expect(sent).toEqual([
-    expect.objectContaining({ selectedPath: "src/App.tsx", cursor: { anchor: 2, head: 2 } }),
+    expect.objectContaining({
+      selectedPath: "src/App.tsx",
+      cursor: { anchor: 2, head: 2 },
+    }),
     expect.objectContaining({ selectedPath: "src/App.tsx", cursor: null }),
   ]);
 });

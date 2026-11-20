@@ -6,5 +6,8 @@ export type RoomClientEvent =
   | { type: "snapshot" }
   | { type: "status"; status: ConnectionStatus }
   | { type: "sync"; pending: boolean }
-  | { type: "document"; changes: { workspace: boolean; settings: boolean; content: boolean } }
+  | {
+      type: "document";
+      changes: { workspace: boolean; settings: boolean; content: boolean };
+    }
   | { type: "presence"; members: PresenceMember[] };

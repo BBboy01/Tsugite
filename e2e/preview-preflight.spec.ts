@@ -8,7 +8,7 @@ declare global {
   }
 }
 
-async function usePreflightProbe(page: Page, release?: Promise<void>) {
+async function installPreflightProbe(page: Page, release?: Promise<void>) {
   const requested = Promise.withResolvers<void>();
   await page.addInitScript(() => {
     localStorage.setItem("iris.language", "en");
@@ -51,12 +51,16 @@ async function usePreflightProbe(page: Page, release?: Promise<void>) {
 
 async function pauseAfterStartup(page: Page) {
   await page.clock.install();
-  await usePreflightProbe(page);
+  await installPreflightProbe(page);
   await page.goto(`/room/preflight-${crypto.randomUUID()}`);
   await expect(
-    page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
+    page
+      .getByRole("region", { name: "Live preview" })
+      .getByText("paused", { exact: true }),
   ).toBeVisible();
-  await page.clock.pauseAt(new Date(await page.evaluate(() => Date.now() + 1000)));
+  await page.clock.pauseAt(
+    new Date(await page.evaluate(() => Date.now() + 1000)),
+  );
   await page.evaluate(() => {
     window.preflightSources = [];
   });
@@ -64,7 +68,9 @@ async function pauseAfterStartup(page: Page) {
   await page.keyboard.press("ControlOrMeta+End");
 }
 
-test("coalesces rapid edits before running real syntax validation", async ({ page }) => {
+test("coalesces rapid edits before running real syntax validation", async ({
+  page,
+}) => {
   await pauseAfterStartup(page);
   for (const text of ["\n//", " rapid", " edits"]) {
     await page.keyboard.insertText(text);
@@ -72,10 +78,14 @@ test("coalesces rapid edits before running real syntax validation", async ({ pag
   }
   expect(await page.evaluate(() => window.preflightSources)).toEqual([]);
   await page.clock.runFor(300);
-  await expect.poll(() => page.evaluate(() => window.preflightSources.length)).toBe(1);
-  expect(await page.evaluate(() => window.preflightSources[0].endsWith("\n// rapid edits"))).toBe(
-    true,
-  );
+  await expect
+    .poll(() => page.evaluate(() => window.preflightSources.length))
+    .toBe(1);
+  expect(
+    await page.evaluate(() =>
+      window.preflightSources[0].endsWith("\n// rapid edits"),
+    ),
+  ).toBe(true);
   await expect(page.locator(".cm-content")).toContainText("// rapid edits");
 });
 
@@ -96,12 +106,16 @@ test("runtime progress still arrives while preflight waits for typing to stop", 
   ).toBeVisible();
   expect(await page.evaluate(() => window.preflightSources)).toEqual([]);
   await page.clock.runFor(300);
-  await expect.poll(() => page.evaluate(() => window.preflightSources.length)).toBe(1);
+  await expect
+    .poll(() => page.evaluate(() => window.preflightSources.length))
+    .toBe(1);
 });
 
-test("skips cancelled validation after its module finishes loading", async ({ page }) => {
+test("skips cancelled validation after its module finishes loading", async ({
+  page,
+}) => {
   const release = Promise.withResolvers<void>();
-  const { requested } = await usePreflightProbe(page, release.promise);
+  const { requested } = await installPreflightProbe(page, release.promise);
   try {
     await page.goto(`/room/preflight-load-${crypto.randomUUID()}`, {
       waitUntil: "domcontentloaded",
@@ -113,16 +127,22 @@ test("skips cancelled validation after its module finishes loading", async ({ pa
     await page.keyboard.insertText("export const latest = 42;");
     release.resolve();
     await expect(
-      page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
+      page
+        .getByRole("region", { name: "Live preview" })
+        .getByText("paused", { exact: true }),
     ).toBeVisible();
     expect(await page.evaluate(() => window.preflightSources)).toEqual([
       "export const latest = 42;",
     ]);
     await page.keyboard.press("ControlOrMeta+A");
     await page.keyboard.insertText("export const broken = ;");
-    const error = page.getByRole("region", { name: "Live preview" }).getByRole("alert");
+    const error = page
+      .getByRole("region", { name: "Live preview" })
+      .getByRole("alert");
     await expect(error).toContainText("Unexpected token");
-    await expect(error.getByRole("button", { name: "Go to source" })).toBeVisible();
+    await expect(
+      error.getByRole("button", { name: "Go to source" }),
+    ).toBeVisible();
   } finally {
     release.resolve();
     await page.unrouteAll({ behavior: "wait" });

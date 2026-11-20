@@ -29,7 +29,9 @@ async function openThemedRoom(page: Page, theme: string) {
 }
 
 for (const theme of ["Paper Light", "Ink Dark", "Dracula"]) {
-  test(`palette separator and back hover inherit ${theme}`, async ({ page }) => {
+  test(`palette separator and back hover inherit ${theme}`, async ({
+    page,
+  }) => {
     await openThemedRoom(page, theme);
     await page.keyboard.press("ControlOrMeta+K");
     const dialog = page.getByRole("dialog");
@@ -40,24 +42,42 @@ for (const theme of ["Paper Light", "Ink Dark", "Dracula"]) {
       await themeColor(dialog, "--divider", "border-bottom-color"),
     );
     await expect(input).toHaveCSS("color", await themeColor(dialog, "--ink"));
-    const hoveredResult = dialog.locator(":scope > div").last().getByRole("button").nth(1);
+    const hoveredResult = dialog
+      .locator(":scope > div")
+      .last()
+      .getByRole("button")
+      .nth(1);
     await hoveredResult.hover();
     await expect(hoveredResult).toHaveCSS(
       "background-color",
       await themeColor(dialog, "--selection-surface", "background-color"),
     );
-    await expect(hoveredResult).toHaveCSS("color", await themeColor(dialog, "--ink"));
-    const selected = dialog.getByRole("button", { name: "Choose theme", exact: true });
+    await expect(hoveredResult).toHaveCSS(
+      "color",
+      await themeColor(dialog, "--ink"),
+    );
+    const selected = dialog.getByRole("button", {
+      name: "Choose theme",
+      exact: true,
+    });
     await selected.focus();
-    await expect(selected).toHaveCSS("color", await themeColor(dialog, "--ink"));
-    await page.getByRole("button", { name: "Choose theme", exact: true }).click();
+    await expect(selected).toHaveCSS(
+      "color",
+      await themeColor(dialog, "--ink"),
+    );
+    await page
+      .getByRole("button", { name: "Choose theme", exact: true })
+      .click();
     const back = dialog.getByRole("button", { name: "Back", exact: true });
     await back.hover();
     await expect(back).toHaveCSS(
       "background-color",
       await themeColor(dialog, "--hover-surface", "background-color"),
     );
-    await expect(back).toHaveCSS("color", await themeColor(dialog, "--ink-strong"));
+    await expect(back).toHaveCSS(
+      "color",
+      await themeColor(dialog, "--ink-strong"),
+    );
     await back.click();
     await expect(input).toHaveAttribute("placeholder", "Search commands...");
     await page.keyboard.press("Escape");
@@ -66,23 +86,32 @@ for (const theme of ["Paper Light", "Ink Dark", "Dracula"]) {
 
   test(`settings navigation hover inherits ${theme}`, async ({ page }) => {
     await openThemedRoom(page, theme);
-    await page.getByRole("button", { name: "Open settings", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Open settings", exact: true })
+      .click();
     const dialog = page.getByRole("dialog");
     await dialog.getByRole("button", { name: "Editor", exact: true }).click();
-    const inactiveSection = dialog.getByRole("button", { name: "Workspace", exact: true });
+    const inactiveSection = dialog.getByRole("button", {
+      name: "Workspace",
+      exact: true,
+    });
     await inactiveSection.hover();
     await expect(inactiveSection).toHaveCSS(
       "background-color",
       await themeColor(dialog, "--hover-surface", "background-color"),
     );
     await inactiveSection.click();
-    await expect(dialog.getByRole("heading", { name: "Workspace", exact: true })).toBeVisible();
+    await expect(
+      dialog.getByRole("heading", { name: "Workspace", exact: true }),
+    ).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
   });
 }
 
-test("mobile panel controls use themed hover and keyboard focus surfaces", async ({ page }) => {
+test("mobile panel controls use themed hover and keyboard focus surfaces", async ({
+  page,
+}) => {
   await page.setViewportSize({ width: 390, height: 800 });
   await openThemedRoom(page, "Dracula");
   const main = page.locator("main");

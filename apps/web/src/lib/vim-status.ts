@@ -4,7 +4,13 @@ import { editorStatusAt } from "./editor-status";
 
 export function attachVimCursorStyle(
   view: EditorView,
-  style: "block" | "line" | "underline" | "block-blink" | "line-blink" | "underline-blink",
+  style:
+    | "block"
+    | "line"
+    | "underline"
+    | "block-blink"
+    | "line-blink"
+    | "underline-blink",
 ): () => void {
   const apply = () => {
     const base = style.replace("-blink", "");
@@ -23,12 +29,24 @@ export function attachVimCursorStyle(
         );
         cursor.style.setProperty("color", "transparent", "important");
         cursor.style.setProperty("outline-color", "var(--accent)", "important");
-        cursor.style.setProperty("width", base === "line" ? "0" : "0.65em", "important");
+        cursor.style.setProperty(
+          "width",
+          base === "line" ? "0" : "0.65em",
+          "important",
+        );
         cursor.style.setProperty("border", "0", "important");
         if (base === "line")
-          cursor.style.setProperty("border-left", "2px solid var(--accent)", "important");
+          cursor.style.setProperty(
+            "border-left",
+            "2px solid var(--accent)",
+            "important",
+          );
         if (base === "underline")
-          cursor.style.setProperty("border-bottom", "2px solid var(--accent)", "important");
+          cursor.style.setProperty(
+            "border-bottom",
+            "2px solid var(--accent)",
+            "important",
+          );
       });
     const layer = view.dom.querySelector<HTMLElement>(".cm-vimCursorLayer");
     if (layer)
@@ -52,12 +70,20 @@ export function attachVimStatus(
   const sync = () => {
     const state = cm.state.vim;
     if (!state) return;
-    const status = state.visualMode ? "VISUAL" : state.insertMode ? "INSERT" : "NORMAL";
+    const status = state.visualMode
+      ? "VISUAL"
+      : state.insertMode
+        ? "INSERT"
+        : "NORMAL";
     view.dom.classList.toggle("vim-normal", status === "NORMAL");
     onStatus(status);
   };
   const onModeChange = (event: { mode?: string }) => {
-    if (event.mode === "NORMAL" || event.mode === "INSERT" || event.mode === "VISUAL") {
+    if (
+      event.mode === "NORMAL" ||
+      event.mode === "INSERT" ||
+      event.mode === "VISUAL"
+    ) {
       view.dom.classList.toggle("vim-normal", event.mode === "NORMAL");
       onStatus(event.mode);
     } else {
@@ -87,7 +113,8 @@ export function attachVimNotifications(view: EditorView): () => void {
     }
     const close = cm.state.currentNotificationClose;
     cm.state.currentNotificationClose = null;
-    if (cm.state.closeVimNotification === close) cm.state.closeVimNotification = null;
+    if (cm.state.closeVimNotification === close)
+      cm.state.closeVimNotification = null;
     close?.();
   };
 
@@ -100,7 +127,10 @@ export type VimStatusDetails = {
   destroy: () => void;
 };
 
-export function attachVimStatusDetails(view: EditorView, path: string): VimStatusDetails {
+export function attachVimStatusDetails(
+  view: EditorView,
+  path: string,
+): VimStatusDetails {
   const cm = getCM(view);
   if (!cm) return { refresh: () => undefined, destroy: () => undefined };
 
@@ -113,7 +143,11 @@ export function attachVimStatusDetails(view: EditorView, path: string): VimStatu
 
     const state = cm.state.vim;
     if (!state) return;
-    const mode = state.visualMode ? "VISUAL" : state.insertMode ? "INSERT" : "NORMAL";
+    const mode = state.visualMode
+      ? "VISUAL"
+      : state.insertMode
+        ? "INSERT"
+        : "NORMAL";
     const status = editorStatusAt(view, path);
     const leading = document.createElement("div");
     leading.className = "iris-editor-status-group iris-editor-status-leading";
@@ -152,14 +186,22 @@ export function attachVimStatusDetails(view: EditorView, path: string): VimStatu
     observer.disconnect();
     statusbar.replaceChildren(leading, trailing);
     statusbar.dataset.editorStatus = "";
-    observer.observe(statusbar, { childList: true, subtree: true, characterData: true });
+    observer.observe(statusbar, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
     syncing = false;
   };
 
   refresh();
   const statusbar = cm.state.statusbar as HTMLElement | undefined;
   if (statusbar)
-    observer.observe(statusbar, { childList: true, subtree: true, characterData: true });
+    observer.observe(statusbar, {
+      childList: true,
+      subtree: true,
+      characterData: true,
+    });
   return {
     refresh,
     destroy: () => observer.disconnect(),

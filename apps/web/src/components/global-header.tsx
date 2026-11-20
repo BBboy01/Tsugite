@@ -1,4 +1,9 @@
-import { Columns3, PanelLeftClose, PanelLeftOpen, PanelsTopLeft } from "lucide-react";
+import {
+  Columns3,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelsTopLeft,
+} from "lucide-react";
 import { IconButton } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { type CSSProperties } from "react";
@@ -90,7 +95,9 @@ export function GlobalHeader({
           <motion.button
             className={`grid h-9 w-9 shrink-0 place-items-center rounded-[9px] transition-colors duration-150 motion-reduce:transition-none hover:bg-[var(--hover-surface)] hover:text-iris-strong focus-visible:bg-[var(--hover-surface)] focus-visible:text-iris-strong focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[var(--focus-ring)] ${filesOpen ? "text-iris-strong" : "text-iris-muted"}`}
             type="button"
-            onClick={isNarrowScreen ? onToggleMobileFiles : onToggleDesktopFiles}
+            onClick={
+              isNarrowScreen ? onToggleMobileFiles : onToggleDesktopFiles
+            }
             aria-label={filesToggleLabel}
             aria-expanded={filesOpen}
             aria-controls="workspace-files-panel"

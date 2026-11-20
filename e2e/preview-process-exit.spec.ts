@@ -64,11 +64,15 @@ for (const outcome of ["exit", "rejection"] as const) {
     await page.goto(`/room/preview-process-${outcome}-${crypto.randomUUID()}`);
     const preview = page.getByRole("region", { name: "Live preview" });
     const iframe = page.frameLocator('iframe[title^="Preview of "]');
-    await expect(iframe.locator("body")).toContainText("Preview process running");
+    await expect(iframe.locator("body")).toContainText(
+      "Preview process running",
+    );
     await expect(preview.getByRole("alert")).toHaveCount(0);
     await expect(preview.getByRole("status")).toHaveCount(0);
     await page.evaluate(() => {
-      (window as typeof window & { stopPreviewProcess: () => void }).stopPreviewProcess();
+      (
+        window as typeof window & { stopPreviewProcess: () => void }
+      ).stopPreviewProcess();
     });
     const alert = preview.getByRole("alert");
     await expect(alert).toContainText(
@@ -76,23 +80,37 @@ for (const outcome of ["exit", "rejection"] as const) {
         ? "WebContainer is unavailable in this browser."
         : "The preview server stopped. Restart it to continue.",
     );
-    await expect(page.locator('iframe[title^="Preview of "]')).not.toHaveAttribute(
+    await expect(
+      page.locator('iframe[title^="Preview of "]'),
+    ).not.toHaveAttribute(
       "src",
       "http://preview.test/__preview-process-fixture",
     );
-    await page.screenshot({ path: testInfo.outputPath("preview-process-stopped.png") });
+    await page.screenshot({
+      path: testInfo.outputPath("preview-process-stopped.png"),
+    });
     const editor = page.locator(".cm-content");
     await editor.focus();
     await page.keyboard.press("ControlOrMeta+End");
-    await page.keyboard.insertText("\n// Editing remains available after process exit\n");
-    await expect(editor).toContainText("Editing remains available after process exit");
-    await alert.getByRole("button", { name: "Restart preview runtime", exact: true }).click();
+    await page.keyboard.insertText(
+      "\n// Editing remains available after process exit\n",
+    );
+    await expect(editor).toContainText(
+      "Editing remains available after process exit",
+    );
+    await alert
+      .getByRole("button", { name: "Restart preview runtime", exact: true })
+      .click();
     await expect(alert).toHaveCount(0);
-    await expect(iframe.locator("body")).toContainText("Preview process running");
+    await expect(iframe.locator("body")).toContainText(
+      "Preview process running",
+    );
     await expect(preview.getByRole("status")).toHaveCount(0);
     await expect(page.locator("vite-error-overlay")).toHaveCount(0);
     await expect(page).toHaveTitle("Tsugite multiplayer editor");
-    await page.screenshot({ path: testInfo.outputPath("preview-process-restarted.png") });
+    await page.screenshot({
+      path: testInfo.outputPath("preview-process-restarted.png"),
+    });
     expect(errors).toEqual([]);
   });
 }

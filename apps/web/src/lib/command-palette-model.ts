@@ -1,4 +1,8 @@
-import type { PackageManager, ProjectSettings, WorkspaceTheme } from "@iris/shared";
+import type {
+  PackageManager,
+  ProjectSettings,
+  WorkspaceTheme,
+} from "@iris/shared";
 import {
   Dices,
   FileSearch,
@@ -38,7 +42,10 @@ export type RootCommandId =
   | "autoInstall.toggle"
   | "autoStartPreview.toggle"
   | `runtime.${RuntimeAction}`;
-export type ExternalCommandId = Extract<RootCommandId, "file.search" | "settings.open">;
+export type ExternalCommandId = Extract<
+  RootCommandId,
+  "file.search" | "settings.open"
+>;
 export type Submenu = "language" | "theme" | "normalCursor" | "packageManager";
 
 type PaletteCommandBase = {
@@ -49,7 +56,10 @@ type PaletteCommandBase = {
   selected?: boolean;
 };
 
-type RootPaletteCommand = PaletteCommandBase & { scope: "root"; id: RootCommandId };
+type RootPaletteCommand = PaletteCommandBase & {
+  scope: "root";
+  id: RootCommandId;
+};
 export type PaletteCommand =
   | RootPaletteCommand
   | (PaletteCommandBase & { scope: "language"; id: LanguageCode })
@@ -73,7 +83,10 @@ const NORMAL_CURSOR_STYLES = [
 
 const PACKAGE_MANAGERS = ["pnpm", "npm", "yarn"] as const;
 
-const NORMAL_CURSOR_LABEL_KEYS: Record<ProjectSettings["normalCursorStyle"], string> = {
+const NORMAL_CURSOR_LABEL_KEYS: Record<
+  ProjectSettings["normalCursorStyle"],
+  string
+> = {
   block: "settings.cursor.block",
   line: "settings.cursor.line",
   underline: "settings.cursor.underline",
@@ -82,7 +95,11 @@ const NORMAL_CURSOR_LABEL_KEYS: Record<ProjectSettings["normalCursorStyle"], str
   "underline-blink": "settings.cursor.underlineBlink",
 };
 
-function toggleCommand(id: ToggleCommandId, label: string, enabled: boolean): RootPaletteCommand {
+function toggleCommand(
+  id: ToggleCommandId,
+  label: string,
+  enabled: boolean,
+): RootPaletteCommand {
   return {
     scope: "root",
     id,
@@ -99,9 +116,12 @@ export function getRootCommands(
   t: TFunction,
   keymap: readonly KeyBinding[],
 ): PaletteCommand[] {
-  const settingLabel = (id: string) => t(getSettingDefinition(id)?.labelKey ?? id);
+  const settingLabel = (id: string) =>
+    t(getSettingDefinition(id)?.labelKey ?? id);
   const shortcutFor = (action: KeyBinding["action"]) =>
-    formatKeyBinding(keymap.find((binding) => binding.action === action)?.key ?? "");
+    formatKeyBinding(
+      keymap.find((binding) => binding.action === action)?.key ?? "",
+    );
   return [
     {
       scope: "root",
@@ -130,8 +150,18 @@ export function getRootCommands(
       label: settingLabel("language"),
       icon: Languages,
     },
-    { scope: "root", id: "theme.random", label: t("settings.theme.random"), icon: Dices },
-    { scope: "root", id: "theme.choose", label: t("command.chooseTheme"), icon: Palette },
+    {
+      scope: "root",
+      id: "theme.random",
+      label: t("settings.theme.random"),
+      icon: Dices,
+    },
+    {
+      scope: "root",
+      id: "theme.choose",
+      label: t("command.chooseTheme"),
+      icon: Palette,
+    },
     {
       scope: "root",
       id: "cursor.choose",
@@ -145,14 +175,26 @@ export function getRootCommands(
       icon: Package,
     },
     toggleCommand("vim.toggle", settingLabel("vimMode"), vimMode),
-    toggleCommand("systemClipboard.toggle", settingLabel("systemClipboard"), systemClipboard),
-    toggleCommand("wordWrap.toggle", settingLabel("wordWrap"), settings.wordWrap),
+    toggleCommand(
+      "systemClipboard.toggle",
+      settingLabel("systemClipboard"),
+      systemClipboard,
+    ),
+    toggleCommand(
+      "wordWrap.toggle",
+      settingLabel("wordWrap"),
+      settings.wordWrap,
+    ),
     toggleCommand(
       "relativeLineNumbers.toggle",
       settingLabel("relativeLineNumbers"),
       settings.relativeLineNumbers,
     ),
-    toggleCommand("autoInstall.toggle", settingLabel("autoInstall"), settings.autoInstall),
+    toggleCommand(
+      "autoInstall.toggle",
+      settingLabel("autoInstall"),
+      settings.autoInstall,
+    ),
     toggleCommand(
       "autoStartPreview.toggle",
       settingLabel("autoStartPreview"),

@@ -20,7 +20,10 @@ function highlightSearchText(text: string, query: string): ReactNode {
   const parts = text.split(new RegExp(`(${escaped})`, "gi"));
   return parts.map((part, index) =>
     part.toLocaleLowerCase() === value.toLocaleLowerCase() ? (
-      <mark key={`${part}-${index}`} className="bg-transparent text-[var(--accent-deep)]">
+      <mark
+        key={`${part}-${index}`}
+        className="bg-transparent text-[var(--accent-deep)]"
+      >
         {part}
       </mark>
     ) : (
@@ -83,12 +86,17 @@ export function SettingsPopover({
           scaling="100%"
           className={SETTINGS_DIALOG_THEME_CLASS_NAME}
         >
-          <Dialog.Overlay data-dialog-overlay className="fixed inset-0 z-50 bg-black/30" />
+          <Dialog.Overlay
+            data-dialog-overlay
+            className="fixed inset-0 z-50 bg-black/30"
+          />
           <Dialog.Content
             className={`theme-${settings.theme} fixed left-1/2 top-1/2 z-50 grid h-[min(78vh,560px)] w-[min(92vw,760px)] -translate-x-1/2 -translate-y-1/2 grid-cols-[180px_minmax(0,1fr)] overflow-visible rounded-[14px] border border-iris-divider bg-iris-preview text-iris-ink shadow-[0_24px_70px_rgba(38,49,41,0.22)] focus:outline-none max-[760px]:h-[min(86vh,680px)] max-[760px]:w-[min(94vw,560px)] max-[760px]:grid-cols-1 max-[760px]:grid-rows-[auto_minmax(0,1fr)]`}
             onOpenAutoFocus={(event) => {
               event.preventDefault();
-              requestAnimationFrame(() => sidebarEntryRefs.current.get(activeEntryId)?.focus());
+              requestAnimationFrame(() =>
+                sidebarEntryRefs.current.get(activeEntryId)?.focus(),
+              );
             }}
             onCloseAutoFocus={(event) => {
               event.preventDefault();
@@ -116,7 +124,8 @@ export function SettingsPopover({
                 {visibleEntries.map((entry) => {
                   const sectionEntry = entry.kind === "section";
                   const sectionDefinition = sections.find(
-                    (item) => item.id === (sectionEntry ? entry.id : entry.scope),
+                    (item) =>
+                      item.id === (sectionEntry ? entry.id : entry.scope),
                   );
                   const Icon = sectionDefinition?.icon ?? Settings;
                   const entryId = `${entry.kind}:${entry.id}`;
@@ -176,16 +185,26 @@ export function SettingsPopover({
                 className="min-h-0 flex-1 overflow-auto px-5 py-5 max-[760px]:px-4"
                 onKeyDownCapture={(event) => {
                   if (event.key !== "Tab") return;
-                  const focusables = contentRef.current?.querySelectorAll<HTMLElement>(
-                    'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex="0"]',
-                  );
+                  const focusables =
+                    contentRef.current?.querySelectorAll<HTMLElement>(
+                      'button:not([disabled]):not([tabindex="-1"]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]):not([tabindex="-1"]), [tabindex="0"]',
+                    );
                   if (!focusables?.length) return;
-                  const index = Array.from(focusables).indexOf(event.target as HTMLElement);
-                  if (!event.shiftKey && index >= 0 && index < focusables.length - 1) {
+                  const index = Array.from(focusables).indexOf(
+                    event.target as HTMLElement,
+                  );
+                  if (
+                    !event.shiftKey &&
+                    index >= 0 &&
+                    index < focusables.length - 1
+                  ) {
                     const next = focusables[index + 1];
                     event.preventDefault();
                     requestAnimationFrame(() => next.focus());
-                  } else if (!event.shiftKey && (index === focusables.length - 1 || index < 0)) {
+                  } else if (
+                    !event.shiftKey &&
+                    (index === focusables.length - 1 || index < 0)
+                  ) {
                     event.preventDefault();
                     requestAnimationFrame(() =>
                       sidebarEntryRefs.current.get(activeEntryId)?.focus(),
@@ -193,7 +212,9 @@ export function SettingsPopover({
                   } else if (event.shiftKey) {
                     const previous = focusables[index - 1];
                     event.preventDefault();
-                    requestAnimationFrame(() => (previous ?? searchRef.current)?.focus());
+                    requestAnimationFrame(() =>
+                      (previous ?? searchRef.current)?.focus(),
+                    );
                   }
                 }}
               >

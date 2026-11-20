@@ -38,7 +38,10 @@ export function createWorkspaceFileActions({
   activateFile,
   stopFollowing,
 }: FileActionOptions) {
-  const commitNavigation = (nextSelectedPath: string, nextOpenTabPaths: string[]) => {
+  const commitNavigation = (
+    nextSelectedPath: string,
+    nextOpenTabPaths: string[],
+  ) => {
     const tabsUnchanged =
       nextOpenTabPaths.length === openTabPaths.length &&
       nextOpenTabPaths.every((path, index) => path === openTabPaths[index]);
@@ -47,9 +50,14 @@ export function createWorkspaceFileActions({
     }
   };
 
-  const handleAddFile = (_target: FileTreeTarget, nextPath: string): string | undefined => {
+  const handleAddFile = (
+    _target: FileTreeTarget,
+    nextPath: string,
+  ): string | undefined => {
     try {
-      const language = /\.(?:[cm]?js|jsx)$/i.test(nextPath.trim()) ? "javascript" : "typescript";
+      const language = /\.(?:[cm]?js|jsx)$/i.test(nextPath.trim())
+        ? "javascript"
+        : "typescript";
       const file = createFile(doc, nextPath, language);
       activateFile(file.path);
       doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
@@ -59,7 +67,10 @@ export function createWorkspaceFileActions({
     }
   };
 
-  const handleAddFolder = (_target: FileTreeTarget, nextPath: string): string | undefined => {
+  const handleAddFolder = (
+    _target: FileTreeTarget,
+    nextPath: string,
+  ): string | undefined => {
     try {
       stopFollowing();
       createFolder(doc, nextPath);
@@ -82,7 +93,9 @@ export function createWorkspaceFileActions({
       let nextOpenTabPaths: string[];
       if (target.type === "file") {
         renameFile(doc, target.file.id, nextPath);
-        nextOpenTabPaths = openTabPaths.map((path) => (path === currentPath ? nextPath : path));
+        nextOpenTabPaths = openTabPaths.map((path) =>
+          path === currentPath ? nextPath : path,
+        );
         if (selectedPath === currentPath) nextSelectedPath = nextPath;
       } else {
         renameFolder(doc, currentPath, nextPath);
@@ -109,7 +122,9 @@ export function createWorkspaceFileActions({
       doc.commit({ origin: WORKSPACE_CHANGE_ORIGIN });
       activateFile(copied.path);
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Unable to duplicate file");
+      window.alert(
+        error instanceof Error ? error.message : "Unable to duplicate file",
+      );
     }
   };
 
@@ -120,19 +135,30 @@ export function createWorkspaceFileActions({
     const destinationDirectory = requestedDestination.replace(/\/+$/, "");
     const filesBeforeMove = listFiles(doc);
     const foldersBeforeMove = listFolders(doc);
-    const requestedSources = [...new Set(sourcePaths.map((path) => path.replace(/\/+$/, "")))];
-    const selectedFolders = requestedSources.filter((path) => foldersBeforeMove.includes(path));
+    const requestedSources = [
+      ...new Set(sourcePaths.map((path) => path.replace(/\/+$/, ""))),
+    ];
+    const selectedFolders = requestedSources.filter((path) =>
+      foldersBeforeMove.includes(path),
+    );
     const sources = requestedSources.filter(
-      (path) => !selectedFolders.some((folder) => path.startsWith(`${folder}/`)),
+      (path) =>
+        !selectedFolders.some((folder) => path.startsWith(`${folder}/`)),
     );
 
     if (sources.includes("package.json")) return "This item cannot be moved";
-    if (destinationDirectory && !foldersBeforeMove.includes(destinationDirectory)) {
+    if (
+      destinationDirectory &&
+      !foldersBeforeMove.includes(destinationDirectory)
+    ) {
       return "Destination folder does not exist";
     }
     for (const sourcePath of sources) {
       const isFolder = foldersBeforeMove.includes(sourcePath);
-      if (!isFolder && !filesBeforeMove.some((file) => file.path === sourcePath)) {
+      if (
+        !isFolder &&
+        !filesBeforeMove.some((file) => file.path === sourcePath)
+      ) {
         return "The item no longer exists";
       }
       if (isFolder && destinationDirectory.startsWith(`${sourcePath}/`)) {
@@ -192,11 +218,16 @@ export function createWorkspaceFileActions({
       deleteFile(doc, target.file.id);
       if (openTabPaths.includes(path)) {
         const result = closeEditorTab(openTabPaths, path, selectedPath);
-        commitNavigation(selectedPath === path ? result.nextPath : selectedPath, result.paths);
+        commitNavigation(
+          selectedPath === path ? result.nextPath : selectedPath,
+          result.paths,
+        );
       }
     } else {
       deleteFolder(doc, target.path);
-      const removedPaths = openTabPaths.filter((tabPath) => tabPath.startsWith(`${path}/`));
+      const removedPaths = openTabPaths.filter((tabPath) =>
+        tabPath.startsWith(`${path}/`),
+      );
       let nextPaths = openTabPaths;
       let nextSelectedPath = selectedPath;
       for (const removedPath of removedPaths) {
@@ -217,12 +248,21 @@ export function createWorkspaceFileActions({
         if (restored || !restoreDeletedItem(doc, deleted)) return false;
         restored = true;
         stopFollowing();
-        const selectedFile = deleted.files.find((file) => file.path === selectedPath);
+        const selectedFile = deleted.files.find(
+          (file) => file.path === selectedPath,
+        );
         if (selectedFile) activateFile(selectedFile.path);
         return true;
       },
     };
   };
 
-  return { handleAddFile, handleAddFolder, handleRename, handleMove, handleCopy, handleDelete };
+  return {
+    handleAddFile,
+    handleAddFolder,
+    handleRename,
+    handleMove,
+    handleCopy,
+    handleDelete,
+  };
 }

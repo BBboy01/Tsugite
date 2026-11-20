@@ -15,7 +15,11 @@ export function transport() {
     worker,
     sent,
     stopped: () => stopped,
-    reply: (request: WorkerRequest, result: unknown, sourceSnapshots?: Record<string, string>) =>
+    reply: (
+      request: WorkerRequest,
+      result: unknown,
+      sourceSnapshots?: Record<string, string>,
+    ) =>
       worker.onmessage?.({
         data: {
           epoch: request.epoch,

@@ -12,7 +12,9 @@ export type WorkspaceThemeOption = {
   };
 };
 
-function loadHighlightsTheme(theme: WorkspaceTheme): Promise<{ default: Theme }> {
+function loadHighlightsTheme(
+  theme: WorkspaceTheme,
+): Promise<{ default: Theme }> {
   switch (theme) {
     case "paper":
       return import("@pierre/highlights/themes/vitesse-light");
@@ -177,16 +179,22 @@ export function writeRoomTheme(
 }
 
 export function isDarkWorkspaceTheme(theme: WorkspaceTheme): boolean {
-  return WORKSPACE_THEME_OPTIONS.find((option) => option.id === theme)?.dark ?? false;
+  return (
+    WORKSPACE_THEME_OPTIONS.find((option) => option.id === theme)?.dark ?? false
+  );
 }
 
 export function getHighlightsTheme(theme: WorkspaceTheme): Promise<Theme> {
-  const validTheme = WORKSPACE_THEME_OPTIONS.some((option) => option.id === theme)
+  const validTheme = WORKSPACE_THEME_OPTIONS.some(
+    (option) => option.id === theme,
+  )
     ? theme
     : "paper";
   const cached = highlightsThemeCache.get(validTheme);
   if (cached) return cached;
-  const loaded = loadHighlightsTheme(validTheme).then(({ default: loadedTheme }) => loadedTheme);
+  const loaded = loadHighlightsTheme(validTheme).then(
+    ({ default: loadedTheme }) => loadedTheme,
+  );
   highlightsThemeCache.set(validTheme, loaded);
   return loaded;
 }
@@ -195,7 +203,12 @@ export function getRandomWorkspaceTheme(
   currentTheme: WorkspaceTheme,
   random: () => number = Math.random,
 ): WorkspaceTheme {
-  const candidates = WORKSPACE_THEME_OPTIONS.filter((option) => option.id !== currentTheme);
-  const index = Math.min(candidates.length - 1, Math.floor(random() * candidates.length));
+  const candidates = WORKSPACE_THEME_OPTIONS.filter(
+    (option) => option.id !== currentTheme,
+  );
+  const index = Math.min(
+    candidates.length - 1,
+    Math.floor(random() * candidates.length),
+  );
   return candidates[index]?.id ?? currentTheme;
 }

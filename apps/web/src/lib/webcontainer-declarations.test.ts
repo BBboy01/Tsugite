@@ -13,8 +13,16 @@ async function startedRuntime(
   options: { declarationTimeoutMs?: number; spawnTimeoutMs?: number } = {},
 ) {
   const fake = fakeContainer();
-  const runtime = new WebContainerRuntime({ boot: async () => fake.container, ...options });
-  await runtime.start([projectFile("package.json", "{}")], [], () => {}, pausedSettings);
+  const runtime = new WebContainerRuntime({
+    boot: async () => fake.container,
+    ...options,
+  });
+  await runtime.start(
+    [projectFile("package.json", "{}")],
+    [],
+    () => {},
+    pausedSettings,
+  );
   return { fake, runtime };
 }
 
@@ -43,7 +51,12 @@ test("reads declaration scan output from a fixed node process after runtime star
             controller.enqueue(
               JSON.stringify({
                 status: "ok",
-                files: [{ path: "node_modules/@types/react/index.d.ts", text: "export {};" }],
+                files: [
+                  {
+                    path: "node_modules/@types/react/index.d.ts",
+                    text: "export {};",
+                  },
+                ],
               }),
             );
             controller.close();
@@ -64,11 +77,16 @@ test("reads declaration scan output from a fixed node process after runtime star
     };
   };
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
-  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], () => {}, {
-    packageManager: "npm",
-    autoInstall: false,
-    autoStartPreview: false,
-  });
+  await runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    () => {},
+    {
+      packageManager: "npm",
+      autoInstall: false,
+      autoStartPreview: false,
+    },
+  );
 
   await expect(runtime.readTypeScriptDeclarations()).resolves.toEqual([
     { path: "node_modules/@types/react/index.d.ts", text: "export {};" },
@@ -84,19 +102,28 @@ test("does not boot a container solely for a declaration request", async () => {
       return fakeContainer().container;
     },
   });
-  await expect(runtime.readTypeScriptDeclarations()).rejects.toThrow("unavailable");
+  await expect(runtime.readTypeScriptDeclarations()).rejects.toThrow(
+    "unavailable",
+  );
   expect(booted).toBe(false);
 });
 
 test("keeps source content out of the fixed scanner script", async () => {
   const { fake, runtime } = await startedRuntime();
-  const source = { path: "src/App.ts", text: 'import "new-package"; /* unique-source-text */' };
+  const source = {
+    path: "src/App.ts",
+    text: 'import "new-package"; /* unique-source-text */',
+  };
   fake.container.spawn = async (_command, args) => {
     expect(args[1]).not.toContain("unique-source-text");
-    expect(JSON.parse(Buffer.from(args[2]!, "base64").toString("utf8"))).toEqual([source]);
+    expect(
+      JSON.parse(Buffer.from(args[2]!, "base64").toString("utf8")),
+    ).toEqual([source]);
     return outputProcess('{"status":"ok","files":[]}');
   };
-  await expect(runtime.readTypeScriptDeclarations([source])).resolves.toEqual([]);
+  await expect(runtime.readTypeScriptDeclarations([source])).resolves.toEqual(
+    [],
+  );
   runtime.dispose();
 });
 
@@ -251,7 +278,9 @@ test("bounds hung spawn, exit, and output independently and terminates the scan"
             finishSpawn = resolve;
           })
         : Promise.resolve(process);
-    await expect(runtime.readTypeScriptDeclarations()).rejects.toThrow("timed out");
+    await expect(runtime.readTypeScriptDeclarations()).rejects.toThrow(
+      "timed out",
+    );
     finishSpawn?.(process);
     await Bun.sleep(0);
     expect(killed).toBe(true);
@@ -296,7 +325,10 @@ test("restart cancels scan ownership without killing the live preview during a s
   };
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
   const files = [projectFile("package.json", '{"scripts":{"dev":"vite"}}')];
-  await runtime.start(files, [], () => {}, { ...pausedSettings, autoStartPreview: true });
+  await runtime.start(files, [], () => {}, {
+    ...pausedSettings,
+    autoStartPreview: true,
+  });
   await runtime.readTypeScriptDeclarations();
   expect(previewKilled).toBe(false);
   let scanKilled = false;
@@ -322,7 +354,10 @@ test("does not expose malformed or over-budget scan output to the editor worker"
     output: new ReadableStream<string>({
       start(controller) {
         controller.enqueue(
-          JSON.stringify({ status: "ok", files: [{ path: "../x.d.ts", text: "" }] }),
+          JSON.stringify({
+            status: "ok",
+            files: [{ path: "../x.d.ts", text: "" }],
+          }),
         );
         controller.close();
       },
@@ -331,11 +366,16 @@ test("does not expose malformed or over-budget scan output to the editor worker"
     kill() {},
   });
   const runtime = new WebContainerRuntime({ boot: async () => fake.container });
-  await runtime.start([projectFile("package.json", '{"scripts":{"dev":"vite"}}')], [], () => {}, {
-    packageManager: "npm",
-    autoInstall: false,
-    autoStartPreview: false,
-  });
+  await runtime.start(
+    [projectFile("package.json", '{"scripts":{"dev":"vite"}}')],
+    [],
+    () => {},
+    {
+      packageManager: "npm",
+      autoInstall: false,
+      autoStartPreview: false,
+    },
+  );
 
   await expect(runtime.readTypeScriptDeclarations()).rejects.toThrow(
     "Invalid TypeScript declaration path",

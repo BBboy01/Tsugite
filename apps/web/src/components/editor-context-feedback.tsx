@@ -2,7 +2,8 @@ import { useTranslation } from "react-i18next";
 import type { EditorLocation } from "../lib/editor-navigation";
 import { EditorPeek, type PeekResult } from "./editor-peek";
 
-export type EditorContextError = "staleTarget" | "queryFailed" | "clipboardFailed";
+export type EditorContextError =
+  "staleTarget" | "queryFailed" | "clipboardFailed";
 
 type Props = {
   error: EditorContextError | null;
@@ -29,14 +30,21 @@ export function EditorContextFeedback({
           className="m-0 flex items-center justify-between gap-2 border-t border-iris-divider px-3 py-1 font-iris-mono text-xs text-iris-ink"
         >
           {t(`editor.context.${error}`)}
-          <button type="button" className="text-iris-muted" onClick={onDismissError}>
+          <button
+            type="button"
+            className="text-iris-muted"
+            onClick={onDismissError}
+          >
             {t("editor.context.dismiss")}
           </button>
         </p>
       )}
       {peek && (
         <EditorPeek
-          key={peek.title + peek.locations.map((item) => `${item.path}:${item.from}`).join(",")}
+          key={
+            peek.title +
+            peek.locations.map((item) => `${item.path}:${item.from}`).join(",")
+          }
           result={peek}
           onClose={onClosePeek}
           onNavigate={onNavigate}

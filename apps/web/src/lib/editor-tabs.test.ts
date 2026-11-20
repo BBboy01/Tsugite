@@ -1,13 +1,15 @@
 import { expect, test } from "bun:test";
 
-import { closeEditorTab, getEditorTabLabels, openEditorTab } from "./editor-tabs";
+import {
+  closeEditorTab,
+  getEditorTabLabels,
+  openEditorTab,
+} from "./editor-tabs";
 
 test("shows bare file names when every open tab has a unique name", () => {
-  expect(getEditorTabLabels(["src/main.ts", "src/notes.js", "package.json"])).toEqual([
-    "main.ts",
-    "notes.js",
-    "package.json",
-  ]);
+  expect(
+    getEditorTabLabels(["src/main.ts", "src/notes.js", "package.json"]),
+  ).toEqual(["main.ts", "notes.js", "package.json"]);
 });
 
 test("adds only the directory levels needed to disambiguate matching file names", () => {
@@ -18,15 +20,22 @@ test("adds only the directory levels needed to disambiguate matching file names"
       "packages/ui/src/index.ts",
       "src/utils.ts",
     ]),
-  ).toEqual(["src/index.ts", "core/src/index.ts", "ui/src/index.ts", "utils.ts"]);
+  ).toEqual([
+    "src/index.ts",
+    "core/src/index.ts",
+    "ui/src/index.ts",
+    "utils.ts",
+  ]);
 });
 
 test("opens a file once and keeps the existing tab order", () => {
-  expect(openEditorTab(["src/main.ts"], "src/notes.js")).toEqual(["src/main.ts", "src/notes.js"]);
-  expect(openEditorTab(["src/main.ts", "src/notes.js"], "src/main.ts")).toEqual([
+  expect(openEditorTab(["src/main.ts"], "src/notes.js")).toEqual([
     "src/main.ts",
     "src/notes.js",
   ]);
+  expect(openEditorTab(["src/main.ts", "src/notes.js"], "src/main.ts")).toEqual(
+    ["src/main.ts", "src/notes.js"],
+  );
 });
 
 test("closes the active tab and selects the right neighbor first", () => {

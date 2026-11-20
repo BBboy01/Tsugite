@@ -8,9 +8,14 @@ test.beforeEach(async ({ page }) => {
 });
 
 for (const side of ["files", "preview"] as const) {
-  test(`Keyboard resizing keeps the ${side} boundary aligned on every frame`, async ({ page }) => {
+  test(`Keyboard resizing keeps the ${side} boundary aligned on every frame`, async ({
+    page,
+  }) => {
     const separator = page.getByRole("separator", {
-      name: side === "files" ? "Resize files and editor" : "Resize editor and preview",
+      name:
+        side === "files"
+          ? "Resize files and editor"
+          : "Resize editor and preview",
       exact: true,
     });
     const initialWidth = Number(await separator.getAttribute("aria-valuenow"));
@@ -18,15 +23,28 @@ for (const side of ["files", "preview"] as const) {
 
     for (const key of ["ArrowRight", "ArrowLeft"] as const) {
       const expectedWidth =
-        initialWidth + (key === "ArrowRight" ? (side === "files" ? 16 : -16) : 0);
+        initialWidth +
+        (key === "ArrowRight" ? (side === "files" ? 16 : -16) : 0);
       await page.keyboard.down(key);
       const frames = await page.evaluate(async (panel) => {
-        const header = document.querySelector<HTMLElement>("[data-header-files-region]")!;
-        const files = document.querySelector<HTMLElement>('[data-panel="files"]')!;
-        const content = document.querySelector<HTMLElement>(".workspace-files-content")!;
-        const preview = document.querySelector<HTMLElement>('[data-panel="preview"]')!;
-        const editor = document.querySelector<HTMLElement>('[data-panel="editor"]')!;
-        const handle = document.querySelector<HTMLElement>(`[data-resize-side="${panel}"]`)!;
+        const header = document.querySelector<HTMLElement>(
+          "[data-header-files-region]",
+        )!;
+        const files = document.querySelector<HTMLElement>(
+          '[data-panel="files"]',
+        )!;
+        const content = document.querySelector<HTMLElement>(
+          ".workspace-files-content",
+        )!;
+        const preview = document.querySelector<HTMLElement>(
+          '[data-panel="preview"]',
+        )!;
+        const editor = document.querySelector<HTMLElement>(
+          '[data-panel="editor"]',
+        )!;
+        const handle = document.querySelector<HTMLElement>(
+          `[data-resize-side="${panel}"]`,
+        )!;
         const samples: Array<{
           panelWidth: number;
           headerWidth: number;
@@ -35,7 +53,9 @@ for (const side of ["files", "preview"] as const) {
           boundaryError: number;
         }> = [];
         for (let frame = 0; frame < 6; frame += 1) {
-          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+          await new Promise<void>((resolve) =>
+            requestAnimationFrame(() => resolve()),
+          );
           const filesBox = files.getBoundingClientRect();
           const previewBox = preview.getBoundingClientRect();
           const handleBox = handle.getBoundingClientRect();
@@ -66,26 +86,41 @@ for (const side of ["files", "preview"] as const) {
         expect(Math.abs(frame.contentWidth - frame.filesWidth)).toBeLessThan(1);
         expect(frame.boundaryError).toBeLessThan(1);
       }
-      await expect(separator).toHaveAttribute("aria-valuenow", String(expectedWidth));
+      await expect(separator).toHaveAttribute(
+        "aria-valuenow",
+        String(expectedWidth),
+      );
     }
 
-    await page.getByRole("button", { name: "Collapse files panel", exact: true }).click();
+    await page
+      .getByRole("button", { name: "Collapse files panel", exact: true })
+      .click();
     const collapseFrames = await page.evaluate(async () => {
-      const files = document.querySelector<HTMLElement>('[data-panel="files"]')!;
-      const content = document.querySelector<HTMLElement>(".workspace-files-content")!;
+      const files = document.querySelector<HTMLElement>(
+        '[data-panel="files"]',
+      )!;
+      const content = document.querySelector<HTMLElement>(
+        ".workspace-files-content",
+      )!;
       const width = content.getBoundingClientRect().width;
       const frames: number[] = [];
       const start = performance.now();
       while (performance.now() - start < 320) {
         frames.push(files.getBoundingClientRect().width / width);
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
       }
       return frames;
     });
-    expect(collapseFrames.some((ratio) => ratio > 0.05 && ratio < 0.95)).toBe(true);
+    expect(collapseFrames.some((ratio) => ratio > 0.05 && ratio < 0.95)).toBe(
+      true,
+    );
     await expect
       .poll(() =>
-        page.locator('[data-panel="files"]').evaluate((el) => el.getBoundingClientRect().width),
+        page
+          .locator('[data-panel="files"]')
+          .evaluate((el) => el.getBoundingClientRect().width),
       )
       .toBeLessThan(1);
   });
@@ -95,10 +130,18 @@ for (const finalState of ["expanded", "collapsed"] as const) {
   test(`Reversing an active transition preserves tree state and ends ${finalState}`, async ({
     page,
   }) => {
-    const toggle = page.locator('button[aria-controls="workspace-files-panel"]');
+    const toggle = page.locator(
+      'button[aria-controls="workspace-files-panel"]',
+    );
     const files = page.locator('[data-panel="files"]');
-    const folder = page.getByRole("treeitem", { name: "src folder", exact: true });
-    const selectedFile = page.getByRole("treeitem", { name: "index.css", exact: true });
+    const folder = page.getByRole("treeitem", {
+      name: "src folder",
+      exact: true,
+    });
+    const selectedFile = page.getByRole("treeitem", {
+      name: "index.css",
+      exact: true,
+    });
     const initialWidth = (await files.boundingBox())!.width;
     await selectedFile.click();
     await expect(folder).toHaveAttribute("aria-expanded", "true");
@@ -114,13 +157,17 @@ for (const finalState of ["expanded", "collapsed"] as const) {
 
     await toggle.click();
     const interrupted = await page.evaluate(async (width) => {
-      const panel = document.querySelector<HTMLElement>('[data-panel="files"]')!;
+      const panel = document.querySelector<HTMLElement>(
+        '[data-panel="files"]',
+      )!;
       const button = document.querySelector<HTMLButtonElement>(
         'button[aria-controls="workspace-files-panel"]',
       )!;
       const start = performance.now();
       while (performance.now() - start < 1000) {
-        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) =>
+          requestAnimationFrame(() => resolve()),
+        );
         const currentWidth = panel.getBoundingClientRect().width;
         if (currentWidth > width * 0.1 && currentWidth < width * 0.9) {
           const rows = panel.querySelectorAll('[role="treeitem"]').length;
@@ -143,13 +190,21 @@ for (const finalState of ["expanded", "collapsed"] as const) {
     await expect
       .poll(() =>
         page.evaluate(() => {
-          const panel = document.querySelector<HTMLElement>('[data-panel="files"]')!;
-          const content = document.querySelector<HTMLElement>(".workspace-files-content")!;
-          const header = document.querySelector<HTMLElement>("[data-header-files-region]")!;
+          const panel = document.querySelector<HTMLElement>(
+            '[data-panel="files"]',
+          )!;
+          const content = document.querySelector<HTMLElement>(
+            ".workspace-files-content",
+          )!;
+          const header = document.querySelector<HTMLElement>(
+            "[data-header-files-region]",
+          )!;
           return {
             width: panel.getBoundingClientRect().width,
             left: content.getBoundingClientRect().left,
-            headerScale: new DOMMatrixReadOnly(getComputedStyle(header, "::before").transform).a,
+            headerScale: new DOMMatrixReadOnly(
+              getComputedStyle(header, "::before").transform,
+            ).a,
           };
         }),
       )
@@ -158,10 +213,14 @@ for (const finalState of ["expanded", "collapsed"] as const) {
         left: expanded ? 0 : -initialWidth,
         headerScale: expanded ? 1 : 0,
       });
-    await expect(files.locator('[role="treeitem"]')).toHaveCount(initialRowCount);
-    await expect(files.locator('[role="treeitem"][aria-selected="true"]')).toContainText(
-      "index.css",
+    await expect(files.locator('[role="treeitem"]')).toHaveCount(
+      initialRowCount,
     );
-    await expect(files.locator('[role="treeitem"][aria-expanded="true"]')).toContainText("src");
+    await expect(
+      files.locator('[role="treeitem"][aria-selected="true"]'),
+    ).toContainText("index.css");
+    await expect(
+      files.locator('[role="treeitem"][aria-expanded="true"]'),
+    ).toContainText("src");
   });
 }

@@ -30,7 +30,9 @@ export async function runWorkerBenchmarks({
 }: WorkerBenchmarkInput) {
   const modulePath = "/src/lib/typescript-worker-client.ts";
   const imported = (await import(/* @vite-ignore */ modulePath)) as {
-    TypeScriptWorkerClient: new (files: readonly IntelligenceFile[]) => EditorIntelligence & {
+    TypeScriptWorkerClient: new (
+      files: readonly IntelligenceFile[],
+    ) => EditorIntelligence & {
       status: string;
       disabledReason?: string;
       getMetricsSnapshot: () => {
@@ -41,9 +43,7 @@ export async function runWorkerBenchmarks({
       };
     };
   };
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Playwright serializes the callback without its closure.
   const round = (value: number) => Math.round(value * 100) / 100;
-  // oxlint-disable-next-line unicorn/consistent-function-scoping -- Playwright serializes the callback without its closure.
   const measureWorkerHeap = () => {
     const exposedWindow = window as Window & {
       measureTypeScriptWorkerHeap?: () => Promise<{
@@ -82,7 +82,8 @@ export async function runWorkerBenchmarks({
     const observer = new PerformanceObserver((list) => {
       longTasks.push(...list.getEntries().map((entry) => entry.duration));
     });
-    const supportsLongTasks = PerformanceObserver.supportedEntryTypes.includes("longtask");
+    const supportsLongTasks =
+      PerformanceObserver.supportedEntryTypes.includes("longtask");
     if (supportsLongTasks) observer.observe({ type: "longtask" });
     const heartbeats: number[] = [];
     let previous = performance.now();
@@ -146,7 +147,9 @@ export async function runWorkerBenchmarks({
           });
           completionSamples.push(performance.now() - before);
           before = performance.now();
-          const diagnostic = await client.diagnostics({ path: "src/issues.tsx" });
+          const diagnostic = await client.diagnostics({
+            path: "src/issues.tsx",
+          });
           diagnosticSamples.push(performance.now() - before);
           queryStatuses.push(hover.status, candidate.status, diagnostic.status);
         }
@@ -179,9 +182,14 @@ export async function runWorkerBenchmarks({
         sourceCount,
         sourceBytes: files
           .filter((file) => !file.path.startsWith("node_modules/"))
-          .reduce((total, file) => total + new TextEncoder().encode(file.text).byteLength, 0),
+          .reduce(
+            (total, file) =>
+              total + new TextEncoder().encode(file.text).byteLength,
+            0,
+          ),
         declarationBytes: declarations.reduce(
-          (total, file) => total + new TextEncoder().encode(file.text).byteLength,
+          (total, file) =>
+            total + new TextEncoder().encode(file.text).byteLength,
           0,
         ),
         startupMs,
@@ -225,14 +233,18 @@ export async function runWorkerBenchmarks({
   const budgetCompletion = await budgetClient.completion({
     path: "src/presence.ts",
     position:
-      maxBudgetFiles.find((file) => file.path === "src/presence.ts")!.text.lastIndexOf("member.") +
-      "member.".length,
+      maxBudgetFiles
+        .find((file) => file.path === "src/presence.ts")!
+        .text.lastIndexOf("member.") + "member.".length,
   });
-  const budgetDiagnostics = await budgetClient.diagnostics({ path: "src/issues.ts" });
+  const budgetDiagnostics = await budgetClient.diagnostics({
+    path: "src/issues.ts",
+  });
   const budgetStatus = budgetClient.status;
   const budgetMetrics = budgetClient.getMetricsSnapshot();
   const hasSelectedPath = (result: typeof budgetCompletion) =>
-    result.status === "ok" && result.value.some((entry) => entry.name === "selectedPath");
+    result.status === "ok" &&
+    result.value.some((entry) => entry.name === "selectedPath");
   const hasExpectedDiagnostic = (result: typeof budgetDiagnostics) =>
     result.status === "ok" && result.value.some((item) => item.code === 2322);
   const samples = {
@@ -247,7 +259,11 @@ export async function runWorkerBenchmarks({
   };
   let completionMatches = 0;
   let diagnosticMatches = 0;
-  for (let index = 0; index < maxBudgetWorkload.measuredIterationsPerMethod; index++) {
+  for (
+    let index = 0;
+    index < maxBudgetWorkload.measuredIterationsPerMethod;
+    index++
+  ) {
     let before = performance.now();
     const hover = await budgetClient.hover({
       path: "src/editor-tab-model.ts",
@@ -272,7 +288,9 @@ export async function runWorkerBenchmarks({
     if (hasSelectedPath(completionResult)) completionMatches++;
 
     before = performance.now();
-    const diagnostics = await budgetClient.diagnostics({ path: "src/issues.ts" });
+    const diagnostics = await budgetClient.diagnostics({
+      path: "src/issues.ts",
+    });
     samples.diagnostics.push(performance.now() - before);
     statuses.diagnostics.push(diagnostics.status);
     if (hasExpectedDiagnostic(diagnostics)) diagnosticMatches++;

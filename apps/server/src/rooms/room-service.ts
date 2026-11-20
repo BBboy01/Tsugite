@@ -68,21 +68,29 @@ export class RoomService {
     this.persistence = new RoomPersistence(
       options.saveDelayMs ?? 500,
       options.onPersistenceError ??
-        ((roomId, error) => console.error("Room snapshot save failed", { roomId, error })),
+        ((roomId, error) =>
+          console.error("Room snapshot save failed", { roomId, error })),
     );
   }
 
   join(socket: RoomSocket, roomId: string, message: unknown): boolean {
-    if (this.stopped || !isRoomId(roomId) || !isJoinPayload(message)) return false;
+    if (this.stopped || !isRoomId(roomId) || !isJoinPayload(message))
+      return false;
     const boundClient = this.clients.get(socket);
     if (boundClient) {
-      return boundClient.roomId === roomId && boundClient.presence.userId === message.userId;
+      return (
+        boundClient.roomId === roomId &&
+        boundClient.presence.userId === message.userId
+      );
     }
 
     if (this.clients.size >= this.limits.maxClients) return false;
     const room = this.getOrCreate(roomId);
     if (!room) return false;
-    if (room.clients.size >= this.limits.maxMembers && !room.clients.has(message.userId))
+    if (
+      room.clients.size >= this.limits.maxMembers &&
+      !room.clients.has(message.userId)
+    )
       return false;
     clearTimeout(room.evictionTimer);
     room.evictionTimer = undefined;
@@ -120,7 +128,11 @@ export class RoomService {
   }
 
   update(socket: RoomSocket, bytes: Uint8Array): boolean {
-    if (this.stopped || bytes.byteLength === 0 || bytes.byteLength > this.limits.maxUpdateBytes) {
+    if (
+      this.stopped ||
+      bytes.byteLength === 0 ||
+      bytes.byteLength > this.limits.maxUpdateBytes
+    ) {
       return false;
     }
     const client = this.clients.get(socket);
@@ -136,7 +148,10 @@ export class RoomService {
     }
 
     this.persistence.schedule(client.roomId, () =>
-      this.repository.save(client.roomId, room.doc.export({ mode: "snapshot" })),
+      this.repository.save(
+        client.roomId,
+        room.doc.export({ mode: "snapshot" }),
+      ),
     );
     this.broadcast(room, bytes, socket);
     return true;
@@ -235,7 +250,11 @@ export class RoomService {
     return room;
   }
 
-  private broadcast(room: Room, data: string | Uint8Array, excluded?: RoomSocket): void {
+  private broadcast(
+    room: Room,
+    data: string | Uint8Array,
+    excluded?: RoomSocket,
+  ): void {
     for (const client of room.clients.values()) {
       if (client.socket === excluded) continue;
       if (typeof data === "string") client.socket.send(data);

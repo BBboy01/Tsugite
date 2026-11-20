@@ -5,13 +5,25 @@ export type PreviewOutput = {
   message: string;
 };
 
-export type PreviewSyntaxLocation = { line: number; column: number; offset: number };
-export type PreviewSyntaxError = { message: string; location?: PreviewSyntaxLocation };
+export type PreviewSyntaxLocation = {
+  line: number;
+  column: number;
+  offset: number;
+};
+export type PreviewSyntaxError = {
+  message: string;
+  location?: PreviewSyntaxLocation;
+};
 
 function describeSyntaxError(error: unknown): PreviewSyntaxError {
   const message = error instanceof Error ? error.message : String(error);
-  if (!error || typeof error !== "object" || !("loc" in error)) return { message };
-  const loc = error.loc as { line?: unknown; column?: unknown; index?: unknown } | null;
+  if (!error || typeof error !== "object" || !("loc" in error))
+    return { message };
+  const loc = error.loc as {
+    line?: unknown;
+    column?: unknown;
+    index?: unknown;
+  } | null;
   if (
     !loc ||
     typeof loc.line !== "number" ||
@@ -25,10 +37,16 @@ function describeSyntaxError(error: unknown): PreviewSyntaxError {
     loc.index < 0
   )
     return { message };
-  return { message, location: { line: loc.line, column: loc.column + 1, offset: loc.index } };
+  return {
+    message,
+    location: { line: loc.line, column: loc.column + 1, offset: loc.index },
+  };
 }
 
-export function transpileSource(source: string, language: "typescript" | "javascript"): string {
+export function transpileSource(
+  source: string,
+  language: "typescript" | "javascript",
+): string {
   const result = Babel.transform(source, {
     presets: language === "typescript" ? ["typescript"] : [],
     sourceType: "script",

@@ -22,7 +22,9 @@ function createDatabase() {
 
 test("migrates legacy double-encoded snapshots without losing room content", () => {
   const { sqlite, db } = createDatabase();
-  sqlite.exec(readFileSync("drizzle/20260914033752_create_rooms/migration.sql", "utf8"));
+  sqlite.exec(
+    readFileSync("drizzle/20260914033752_create_rooms/migration.sql", "utf8"),
+  );
   const document = createProjectDoc();
   setSharedSetting(document, "theme", "nord");
   const snapshot = document.export({ mode: "snapshot" });
@@ -43,7 +45,11 @@ test("migrates legacy double-encoded snapshots without losing room content", () 
   expect(readSettings(restored).theme).toBe("nord");
 
   repository.save("legacy", snapshot, 300);
-  expect(sqlite.query("SELECT snapshot, typeof(snapshot_blob) AS kind FROM rooms").get()).toEqual({
+  expect(
+    sqlite
+      .query("SELECT snapshot, typeof(snapshot_blob) AS kind FROM rooms")
+      .get(),
+  ).toEqual({
     snapshot: null,
     kind: "blob",
   });
@@ -56,7 +62,9 @@ test("persists binary bytes and preserves creation time across updates", () => {
   migrate(db, { migrationsFolder: "./drizzle" });
   const repository = new RoomRepository(db);
   repository.save("binary", new Uint8Array([0, 127, 128, 255]), 123);
-  expect(sqlite.query("SELECT room_id FROM rooms").get()).toEqual({ room_id: "binary" });
+  expect(sqlite.query("SELECT room_id FROM rooms").get()).toEqual({
+    room_id: "binary",
+  });
   expect(repository.load("binary")).toEqual({
     snapshot: new Uint8Array([0, 127, 128, 255]),
     createdAt: 123,
@@ -75,8 +83,12 @@ test("does not silently coerce corrupt legacy snapshots into bytes", () => {
   const { sqlite, db } = createDatabase();
   migrate(db, { migrationsFolder: "./drizzle" });
   sqlite
-    .query("INSERT INTO rooms (room_id, snapshot, created_at, updated_at) VALUES (?, ?, 0, 0)")
+    .query(
+      "INSERT INTO rooms (room_id, snapshot, created_at, updated_at) VALUES (?, ?, 0, 0)",
+    )
     .run("corrupt", JSON.stringify(JSON.stringify([0, 256, -1])));
   const repository = new RoomRepository(db);
-  expect(() => repository.load("corrupt")).toThrow("Invalid persisted room snapshot");
+  expect(() => repository.load("corrupt")).toThrow(
+    "Invalid persisted room snapshot",
+  );
 });

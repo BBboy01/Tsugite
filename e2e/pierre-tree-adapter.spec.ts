@@ -17,8 +17,14 @@ for (const confirmation of ["Enter", "blur"] as const) {
     await input.fill("adapter/deep/note.ts");
     await input.press("Enter");
 
-    const folder = tree.getByRole("treeitem", { name: "adapter/deep folder", exact: true });
-    const original = tree.getByRole("treeitem", { name: "note.ts", exact: true });
+    const folder = tree.getByRole("treeitem", {
+      name: "adapter/deep folder",
+      exact: true,
+    });
+    const original = tree.getByRole("treeitem", {
+      name: "note.ts",
+      exact: true,
+    });
     await expect(folder).toBeVisible();
     await expect(original).toBeVisible();
     await original.focus();
@@ -26,12 +32,21 @@ for (const confirmation of ["Enter", "blur"] as const) {
     await expect(input).toBeFocused();
     await input.fill("adapter/moved/renamed.ts");
     if (confirmation === "Enter") await input.press("Enter");
-    else await tree.getByRole("treeitem", { name: "App.tsx", exact: true }).click();
+    else
+      await tree
+        .getByRole("treeitem", { name: "App.tsx", exact: true })
+        .click();
 
     await expect(input).toHaveCount(0);
     await expect(original).toHaveCount(0);
-    const renamed = tree.getByRole("treeitem", { name: "renamed.ts", exact: true });
-    const movedFolder = tree.getByRole("treeitem", { name: "adapter/moved folder", exact: true });
+    const renamed = tree.getByRole("treeitem", {
+      name: "renamed.ts",
+      exact: true,
+    });
+    const movedFolder = tree.getByRole("treeitem", {
+      name: "adapter/moved folder",
+      exact: true,
+    });
     await expect(renamed).toBeVisible();
     await expect(movedFolder).toBeVisible();
     await renamed.click();
@@ -48,7 +63,9 @@ for (const confirmation of ["Enter", "blur"] as const) {
     await renamed.click({ button: "right" });
     await page.getByRole("menuitem", { name: "Delete", exact: true }).click();
     const dialog = page.getByRole("alertdialog");
-    await expect(dialog.getByRole("button", { name: "Cancel", exact: true })).toBeFocused();
+    await expect(
+      dialog.getByRole("button", { name: "Cancel", exact: true }),
+    ).toBeFocused();
     await page.keyboard.press("Enter");
     await expect(dialog).toHaveCount(0);
     await expect(renamed).toBeVisible();

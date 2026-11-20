@@ -19,7 +19,8 @@ for (const lineCount of [500, 10_000]) {
       0,
       Array.from(
         { length: lineCount },
-        (_, index) => `export const value${index} = ${index}; // benchmark line ${index + 1}`,
+        (_, index) =>
+          `export const value${index} = ${index}; // benchmark line ${index + 1}`,
       ).join("\n"),
     );
     doc.commit();
@@ -30,7 +31,8 @@ for (const lineCount of [500, 10_000]) {
       const started = performance.now();
       const recordFirstHighlight = () => {
         if (window.firstHighlightMs !== undefined) return;
-        if (!document.querySelector('[data-editor-content-ready="true"]')) return;
+        if (!document.querySelector('[data-editor-content-ready="true"]'))
+          return;
         window.firstHighlightMs = performance.now() - started;
       };
       window.firstHighlightMs = undefined;
@@ -68,20 +70,30 @@ for (const lineCount of [500, 10_000]) {
           socket.send(JSON.stringify({ type: "update:ack" }));
           return;
         }
-        const payload = JSON.parse(message) as { type: string; roomId?: string };
+        const payload = JSON.parse(message) as {
+          type: string;
+          roomId?: string;
+        };
         if (payload.type === "join") {
-          socket.send(JSON.stringify({ type: "ready", roomId: payload.roomId }));
+          socket.send(
+            JSON.stringify({ type: "ready", roomId: payload.roomId }),
+          );
           socket.send(Buffer.from(doc.export({ mode: "snapshot" })));
           socket.send(JSON.stringify({ type: "presence:list", members: [] }));
         }
       }),
     );
     try {
-      await page.goto(`/room/editor-benchmark-${lineCount}-${crypto.randomUUID()}`, {
-        waitUntil: "domcontentloaded",
-      });
+      await page.goto(
+        `/room/editor-benchmark-${lineCount}-${crypto.randomUUID()}`,
+        {
+          waitUntil: "domcontentloaded",
+        },
+      );
       await expect
-        .poll(() => page.evaluate(() => window.workspaceProfile?.commits.length ?? 0))
+        .poll(() =>
+          page.evaluate(() => window.workspaceProfile?.commits.length ?? 0),
+        )
         .toBeGreaterThan(0);
       const editor = page.locator(".cm-content");
       await expect(editor).toBeFocused();
@@ -90,7 +102,9 @@ for (const lineCount of [500, 10_000]) {
         .poll(() => page.evaluate(() => window.firstHighlightMs ?? -1))
         .toBeGreaterThan(0);
       await expect(
-        page.getByRole("region", { name: "Live preview" }).getByText("paused", { exact: true }),
+        page
+          .getByRole("region", { name: "Live preview" })
+          .getByText("paused", { exact: true }),
       ).toBeVisible();
       await page.keyboard.press("Shift+F10");
       await expect(
@@ -100,7 +114,9 @@ for (const lineCount of [500, 10_000]) {
       await expect(editor).toBeFocused();
       await page.keyboard.press("ControlOrMeta+End");
       await expect(editor).toContainText(`benchmark line ${lineCount}`);
-      await expect(editor.locator(".cm-activeLine span[style*='color:']").first()).toBeVisible();
+      await expect(
+        editor.locator(".cm-activeLine span[style*='color:']").first(),
+      ).toBeVisible();
       await page.evaluate(() => {
         window.workspaceProfile = { commits: [], inputFrames: [] };
       });
@@ -109,12 +125,18 @@ for (const lineCount of [500, 10_000]) {
       await profiler.send("Profiler.start");
       const marker = " measured typing";
       await editor.pressSequentially(marker, { delay: 20 });
-      await expect(editor).toContainText(`benchmark line ${lineCount}${marker}`);
+      await expect(editor).toContainText(
+        `benchmark line ${lineCount}${marker}`,
+      );
       await expect
-        .poll(() => getFileByPath(doc, "src/App.tsx")!.text.toString().endsWith(marker))
+        .poll(() =>
+          getFileByPath(doc, "src/App.tsx")!.text.toString().endsWith(marker),
+        )
         .toBe(true);
       await expect
-        .poll(() => page.evaluate(() => window.workspaceProfile.inputFrames.length))
+        .poll(() =>
+          page.evaluate(() => window.workspaceProfile.inputFrames.length),
+        )
         .toBe(marker.length);
       const { profile: cpuProfile } = await profiler.send("Profiler.stop");
       await profiler.detach();
@@ -146,7 +168,10 @@ for (const lineCount of [500, 10_000]) {
             (total, commit) => total + commit.actualDuration,
             0,
           ),
-          reactRenderMaxMs: Math.max(0, ...profile.commits.map((commit) => commit.actualDuration)),
+          reactRenderMaxMs: Math.max(
+            0,
+            ...profile.commits.map((commit) => commit.actualDuration),
+          ),
           renderedLines: document.querySelectorAll(".cm-line").length,
           pageHeight: document.documentElement.scrollHeight,
           viewportHeight: innerHeight,
@@ -162,7 +187,10 @@ for (const lineCount of [500, 10_000]) {
       await expect(page).toHaveTitle("Tsugite multiplayer editor");
       await expect(page.locator("vite-error-overlay")).toHaveCount(0);
       expect(errors).toEqual([]);
-      console.info("EDITOR_BENCHMARK", JSON.stringify({ lineCount, ...metrics }));
+      console.info(
+        "EDITOR_BENCHMARK",
+        JSON.stringify({ lineCount, ...metrics }),
+      );
       await testInfo.attach("editor-benchmark.json", {
         body: JSON.stringify({ lineCount, ...metrics }, null, 2),
         contentType: "application/json",
@@ -173,10 +201,17 @@ for (const lineCount of [500, 10_000]) {
         .getByText(symbol, { exact: true })
         .click({ button: "right" });
       const queryStarted = performance.now();
-      await page.getByRole("menuitem", { name: "Go to definition", exact: true }).click();
-      await expect.poll(() => page.evaluate(() => window.getSelection()?.toString())).toBe(symbol);
+      await page
+        .getByRole("menuitem", { name: "Go to definition", exact: true })
+        .click();
+      await expect
+        .poll(() => page.evaluate(() => window.getSelection()?.toString()))
+        .toBe(symbol);
       const firstDefinitionMs = performance.now() - queryStarted;
-      console.info("EDITOR_FIRST_DEFINITION", JSON.stringify({ lineCount, firstDefinitionMs }));
+      console.info(
+        "EDITOR_FIRST_DEFINITION",
+        JSON.stringify({ lineCount, firstDefinitionMs }),
+      );
       await testInfo.attach("editor-first-definition.json", {
         body: JSON.stringify({ lineCount, firstDefinitionMs }, null, 2),
         contentType: "application/json",
@@ -184,10 +219,16 @@ for (const lineCount of [500, 10_000]) {
       await page.screenshot({ path: testInfo.outputPath("long-editor.png") });
       await page.setViewportSize({ width: 390, height: 844 });
       await expect(editor).toBeVisible();
-      await expect.poll(() => page.evaluate(() => document.documentElement.scrollHeight)).toBe(844);
-      await expect.poll(() => page.locator(".cm-line").count()).toBeLessThan(200);
+      await expect
+        .poll(() => page.evaluate(() => document.documentElement.scrollHeight))
+        .toBe(844);
+      await expect
+        .poll(() => page.locator(".cm-line").count())
+        .toBeLessThan(200);
       await expect(editor.locator(".cm-line").first()).toBeVisible();
-      await page.screenshot({ path: testInfo.outputPath("long-editor-narrow.png") });
+      await page.screenshot({
+        path: testInfo.outputPath("long-editor-narrow.png"),
+      });
     } finally {
       await page.close();
       doc.free();

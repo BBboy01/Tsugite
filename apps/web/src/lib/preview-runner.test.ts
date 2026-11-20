@@ -9,7 +9,10 @@ import {
 } from "./preview-runner";
 
 test("transpiles TypeScript source for the preview", () => {
-  const code = transpileSource("const count: number = 2\nconsole.log(count)", "typescript");
+  const code = transpileSource(
+    "const count: number = 2\nconsole.log(count)",
+    "typescript",
+  );
 
   expect(code).toContain("const count = 2");
   expect(code).not.toContain(": number");
@@ -20,7 +23,9 @@ test("preserves Babel syntax locations without changing string error consumers",
   const result = runPreview(source, "typescript");
   expect(result.error).toContain("Unexpected token");
   expect(result.location).toEqual({ line: 2, column: 16, offset: 35 });
-  expect(validateSourceSyntax(source, "typescript")).toContain("Unexpected token");
+  expect(validateSourceSyntax(source, "typescript")).toContain(
+    "Unexpected token",
+  );
 });
 
 test("creates an iframe document with the console bridge", () => {
@@ -39,17 +44,21 @@ test("returns preview errors without throwing", () => {
 });
 
 test("validates JSX and TypeScript syntax before preview sync", () => {
-  expect(validateSourceSyntax("export const App = () => <main />", "typescript")).toBeUndefined();
-  expect(validateSourceSyntax("export const broken = ;", "typescript")).toContain(
-    "Unexpected token",
-  );
+  expect(
+    validateSourceSyntax("export const App = () => <main />", "typescript"),
+  ).toBeUndefined();
+  expect(
+    validateSourceSyntax("export const broken = ;", "typescript"),
+  ).toContain("Unexpected token");
 });
 
 test("syntax preflight does not generate code or emit generator warnings for large files", () => {
   const warnings = spyOn(console, "error").mockImplementation(() => undefined);
   try {
     const source = `// ${"large source ".repeat(45_000)}\nexport const App = () => <main />;`;
-    expect(validateSourceSyntaxDetails(source, "typescript", "src/App.tsx")).toBeUndefined();
+    expect(
+      validateSourceSyntaxDetails(source, "typescript", "src/App.tsx"),
+    ).toBeUndefined();
     expect(warnings).not.toHaveBeenCalled();
     const error = validateSourceSyntaxDetails(
       "const ready = true;\nconst broken = ;",
@@ -68,9 +77,15 @@ test("project syntax preflight leaves non-script resources to the project compil
     ["package.json", '{"name":"example"}'],
     ["src/index.css", "body { color: red; }"],
   ]) {
-    expect(validateSourceSyntaxDetails(source, "typescript", path)).toBeUndefined();
+    expect(
+      validateSourceSyntaxDetails(source, "typescript", path),
+    ).toBeUndefined();
   }
   expect(
-    validateSourceSyntaxDetails("export const broken = ;", "typescript", "src/App.tsx")?.message,
+    validateSourceSyntaxDetails(
+      "export const broken = ;",
+      "typescript",
+      "src/App.tsx",
+    )?.message,
   ).toContain("Unexpected token");
 });

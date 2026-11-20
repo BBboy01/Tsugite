@@ -20,7 +20,9 @@ const settings: ProjectSettings = {
 
 test("font changes do not invalidate highlighting or wrapping", () => {
   const configuration = new EditorVisualConfiguration("tsx", settings);
-  expect(configuration.reconfigure({ ...settings, fontSize: 18 })).toHaveLength(1);
+  expect(configuration.reconfigure({ ...settings, fontSize: 18 })).toHaveLength(
+    1,
+  );
 });
 
 test("wrapping changes only its compartment and preserves text and selection", () => {
@@ -35,7 +37,9 @@ test("wrapping changes only its compartment and preserves text and selection", (
   const next = state.update({ effects }).state;
   expect(next.doc).toBe(state.doc);
   expect(next.selection.eq(state.selection)).toBe(true);
-  expect(next.facet(EditorView.contentAttributes)).toContainEqual({ class: "cm-lineWrapping" });
+  expect(next.facet(EditorView.contentAttributes)).toContainEqual({
+    class: "cm-lineWrapping",
+  });
 });
 
 for (const [theme, dark] of [
@@ -57,7 +61,9 @@ for (const [theme, dark] of [
   ["kanagawa-wave", true],
 ] as const) {
   test(`initializes the ${theme} editor dark facet as ${dark}`, () => {
-    const state = EditorState.create({ extensions: [editorTheme({ ...settings, theme })] });
+    const state = EditorState.create({
+      extensions: [editorTheme({ ...settings, theme })],
+    });
     expect(state.facet(EditorView.darkTheme)).toBe(dark);
   });
 }
@@ -90,7 +96,9 @@ test("theme changes update the dark facet while preserving text, selection, and 
 test("runtime preferences and unchanged visual settings do not reconfigure the editor", () => {
   const configuration = new EditorVisualConfiguration("tsx", settings);
   expect(configuration.reconfigure({ ...settings })).toEqual([]);
-  expect(configuration.reconfigure({ ...settings, autoInstall: true })).toEqual([]);
+  expect(configuration.reconfigure({ ...settings, autoInstall: true })).toEqual(
+    [],
+  );
   const relative = { ...settings, relativeLineNumbers: true };
   expect(configuration.reconfigure(relative)).toHaveLength(1);
   expect(configuration.reconfigure({ ...relative })).toEqual([]);

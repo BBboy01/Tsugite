@@ -1,4 +1,11 @@
-import { memo, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import {
+  memo,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { EditorState, Transaction } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
@@ -8,7 +15,10 @@ import type { EditorIntelligence } from "../lib/editor-intelligence";
 
 import { buildEditorTabViewModels } from "../lib/editor-tab-model";
 import { useEditorUndoManager } from "../lib/editor-undo";
-import { deferredLoroUndoKeymap, groupedLoroUndo } from "../lib/loro-undo-keymap";
+import {
+  deferredLoroUndoKeymap,
+  groupedLoroUndo,
+} from "../lib/loro-undo-keymap";
 import {
   getEditorLanguage,
   getEditorLanguageSupport,
@@ -19,7 +29,10 @@ import {
   remotePresenceExtension,
   updateRemotePresence,
 } from "../lib/remote-presence";
-import { clampEditorSelection, type EditorSelection } from "../lib/editor-selection";
+import {
+  clampEditorSelection,
+  type EditorSelection,
+} from "../lib/editor-selection";
 import type { EditorPaneProps } from "./editor-pane.types";
 import { EditorFileTabs } from "./editor-file-tabs";
 import { EditorFollowingOutline } from "./editor-following-outline";
@@ -33,7 +46,10 @@ import { editorBasicSetup } from "../lib/editor-basic-setup";
 import { attachEditorTypeScriptServices } from "../lib/editor-typescript-services";
 import { EditorStatusBar } from "./editor-status-bar";
 import { editorStatus, editorStatusAt } from "../lib/editor-status";
-import { attachVimStatusDetails, type VimStatusDetails } from "../lib/vim-status";
+import {
+  attachVimStatusDetails,
+  type VimStatusDetails,
+} from "../lib/vim-status";
 
 type SavedEditorSelection = EditorSelection & { fileId: string };
 
@@ -88,7 +104,9 @@ export const EditorPane = memo(function EditorPane({
   const savedSelectionRef = useRef<SavedEditorSelection | null>(null);
   const undoManager = useEditorUndoManager(doc, file.id);
   const [vimStatus, setVimStatus] = useState("NORMAL");
-  const [statusDetails, setStatusDetails] = useState(() => editorStatus(file.path, 1, 1, 1));
+  const [statusDetails, setStatusDetails] = useState(() =>
+    editorStatus(file.path, 1, 1, 1),
+  );
   const [highlightedFile, setHighlightedFile] = useState<string | null>(null);
   const currentFileKey = `${file.id}:${file.path}`;
   const { navigateToLocation, applyPendingLocation } = useEditorLocation({
@@ -110,7 +128,8 @@ export const EditorPane = memo(function EditorPane({
     typeScriptEnvironment?.fileId === file.id &&
     typeScriptEnvironment.path === file.path;
   const tabViewModels = useMemo(
-    () => buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
+    () =>
+      buildEditorTabViewModels(tabs, file.path, remoteMembers, currentUserId),
     [tabs, file.path, remoteMembers, currentUserId],
   );
   cursorChangeRef.current = onCursorChange;
@@ -128,8 +147,10 @@ export const EditorPane = memo(function EditorPane({
     const currentSettings = settingsRef.current;
     const source = file.text.toString();
 
-    const visualConfiguration = new EditorVisualConfiguration(language, currentSettings, () =>
-      setHighlightedFile(`${file.id}:${file.path}`),
+    const visualConfiguration = new EditorVisualConfiguration(
+      language,
+      currentSettings,
+      () => setHighlightedFile(`${file.id}:${file.path}`),
     );
     visualConfigurationRef.current = visualConfiguration;
     const visualExtensions = visualConfiguration.extensions;
@@ -156,12 +177,18 @@ export const EditorPane = memo(function EditorPane({
             const hasUserEvent = update.transactions.some((transaction) =>
               Boolean(transaction.annotation(Transaction.userEvent)),
             );
-            if ((!hasUserEvent && !update.focusChanged) || !update.view.hasFocus) {
+            if (
+              (!hasUserEvent && !update.focusChanged) ||
+              !update.view.hasFocus
+            ) {
               return;
             }
             if (hasUserEvent) localInteractionRef.current();
             const selection = update.state.selection.main;
-            if (hasUserEvent || (update.focusChanged && !isFollowingRef.current)) {
+            if (
+              hasUserEvent ||
+              (update.focusChanged && !isFollowingRef.current)
+            ) {
               cursorChangeRef.current({
                 anchor: selection.anchor,
                 head: selection.head,
@@ -182,7 +209,9 @@ export const EditorPane = memo(function EditorPane({
       setVimStatus,
     );
     vimBindingsRef.current = vimBindings;
-    const vimStatusDetails = vimMode ? attachVimStatusDetails(view, file.path) : null;
+    const vimStatusDetails = vimMode
+      ? attachVimStatusDetails(view, file.path)
+      : null;
     vimStatusDetailsRef.current = vimStatusDetails;
     setStatusDetails(editorStatusAt(view, file.path));
     onEditorFocusReady?.(() => view.focus());
@@ -201,7 +230,10 @@ export const EditorPane = memo(function EditorPane({
         followedSelectionRef.current ??
         (savedSelection?.fileId === file.id ? savedSelection : undefined);
       if (selection) {
-        const { anchor, head } = clampEditorSelection(selection, view.state.doc.length);
+        const { anchor, head } = clampEditorSelection(
+          selection,
+          view.state.doc.length,
+        );
         view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
       }
     }
@@ -225,7 +257,8 @@ export const EditorPane = memo(function EditorPane({
       onEditorFocusReady?.(undefined);
       vimBindings.destroy();
       vimStatusDetails?.destroy();
-      if (vimStatusDetailsRef.current === vimStatusDetails) vimStatusDetailsRef.current = null;
+      if (vimStatusDetailsRef.current === vimStatusDetails)
+        vimStatusDetailsRef.current = null;
       vimBindingsRef.current = null;
       savedSelectionRef.current = {
         fileId: file.id,
@@ -237,7 +270,15 @@ export const EditorPane = memo(function EditorPane({
       detachTypeScript?.();
       visualConfigurationRef.current = null;
     };
-  }, [doc, file.id, file.path, file.language, vimMode, undoManager, intelligence]);
+  }, [
+    doc,
+    file.id,
+    file.path,
+    file.language,
+    vimMode,
+    undoManager,
+    intelligence,
+  ]);
 
   useEffect(() => {
     vimBindingsRef.current?.update(settings.normalCursorStyle, systemClipboard);
@@ -257,16 +298,25 @@ export const EditorPane = memo(function EditorPane({
     if (!view) return;
     updateRemotePresence(
       view,
-      getRemoteSelections(remoteMembers, currentUserId, file.path, view.state.doc.length),
+      getRemoteSelections(
+        remoteMembers,
+        currentUserId,
+        file.path,
+        view.state.doc.length,
+      ),
     );
   }, [currentUserId, file.path, remoteMembers]);
 
   useEffect(() => {
     const view = viewRef.current;
     if (!view || !followedSelection) return;
-    const { anchor, head } = clampEditorSelection(followedSelection, view.state.doc.length);
+    const { anchor, head } = clampEditorSelection(
+      followedSelection,
+      view.state.doc.length,
+    );
     const currentSelection = view.state.selection.main;
-    if (currentSelection.anchor === anchor && currentSelection.head === head) return;
+    if (currentSelection.anchor === anchor && currentSelection.head === head)
+      return;
     view.dispatch({ selection: { anchor, head }, scrollIntoView: true });
   }, [file.path, followedSelection]);
 
@@ -289,7 +339,8 @@ export const EditorPane = memo(function EditorPane({
         key={file.id + file.path}
         viewRef={viewRef}
         intelligence={
-          typeScriptEnvironment?.fileId === file.id && typeScriptEnvironment.path === file.path
+          typeScriptEnvironment?.fileId === file.id &&
+          typeScriptEnvironment.path === file.path
             ? typeScriptEnvironment.intelligence
             : null
         }

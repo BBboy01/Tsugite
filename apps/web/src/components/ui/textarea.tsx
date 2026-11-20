@@ -1,9 +1,15 @@
 import * as React from "react";
-import { composeRenderProps, TextArea as TextareaPrimitive } from "react-aria-components";
+import {
+  composeRenderProps,
+  TextArea as TextareaPrimitive,
+} from "react-aria-components";
 
 import { cn } from "@/lib/utils";
 
-function Textarea({ className, ...props }: React.ComponentProps<typeof TextareaPrimitive>) {
+function Textarea({
+  className,
+  ...props
+}: React.ComponentProps<typeof TextareaPrimitive>) {
   return (
     <TextareaPrimitive
       data-slot="textarea"

@@ -46,7 +46,9 @@ export type ServerJsonMessage =
   | UpdateAckMessage
   | ServerReadyMessage;
 
-export function encodeJsonMessage(message: ClientJsonMessage | ServerJsonMessage): string {
+export function encodeJsonMessage(
+  message: ClientJsonMessage | ServerJsonMessage,
+): string {
   return JSON.stringify(message);
 }
 
@@ -58,13 +60,17 @@ export function decodeJsonMessage(value: string): unknown {
   }
 }
 
-export function decodeServerJsonMessage(value: string): ServerJsonMessage | undefined {
+export function decodeServerJsonMessage(
+  value: string,
+): ServerJsonMessage | undefined {
   const message = decodeJsonMessage(value);
   return isServerJsonMessage(message) ? message : undefined;
 }
 
 export function isPresenceMessage(value: unknown): value is PresenceMessage {
-  return isRecord(value) && value.type === "presence" && isPresenceMember(value);
+  return (
+    isRecord(value) && value.type === "presence" && isPresenceMember(value)
+  );
 }
 
 function isServerJsonMessage(value: unknown): value is ServerJsonMessage {
@@ -78,7 +84,9 @@ function isServerJsonMessage(value: unknown): value is ServerJsonMessage {
     case "presence":
       return isPresenceMessage(value);
     case "presence:list":
-      return Array.isArray(value.members) && value.members.every(isPresenceMember);
+      return (
+        Array.isArray(value.members) && value.members.every(isPresenceMember)
+      );
     case "presence:removed":
       return typeof value.userId === "string";
     default:
@@ -104,7 +112,9 @@ function isPresenceMember(value: unknown): value is PresenceMember {
     return false;
   }
 
-  return !("cursor" in value) || value.cursor === null || isCursor(value.cursor);
+  return (
+    !("cursor" in value) || value.cursor === null || isCursor(value.cursor)
+  );
 }
 
 function isCursor(value: unknown): value is { anchor: number; head: number } {

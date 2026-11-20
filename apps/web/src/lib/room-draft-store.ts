@@ -27,7 +27,9 @@ export function isRoomDraft(value: unknown): value is RoomDraft {
     draft.snapshot instanceof Uint8Array &&
     Array.isArray(draft.updates) &&
     draft.updates.length > 0 &&
-    draft.updates.every((update) => update instanceof Uint8Array && update.length > 0)
+    draft.updates.every(
+      (update) => update instanceof Uint8Array && update.length > 0,
+    )
   );
 }
 
@@ -38,10 +40,13 @@ function openDatabase(): Promise<IDBDatabase> {
     database = new Promise<IDBDatabase>((resolve, reject) => {
       const request = indexedDB.open("tsugite-drafts", 1);
       request.onupgradeneeded = () => {
-        request.result.createObjectStore("drafts", { keyPath: "id" }).createIndex("scope", "scope");
+        request.result
+          .createObjectStore("drafts", { keyPath: "id" })
+          .createIndex("scope", "scope");
       };
       request.onerror = () => reject(request.error);
-      request.onblocked = () => reject(new Error("Draft database upgrade blocked"));
+      request.onblocked = () =>
+        reject(new Error("Draft database upgrade blocked"));
       request.onsuccess = () => {
         const db = request.result;
         db.onversionchange = () => {
@@ -67,13 +72,15 @@ async function transaction<T>(
     const tx = db.transaction("drafts", mode, { durability: "strict" });
     const request = run(tx.objectStore("drafts"));
     tx.oncomplete = () => resolve(request.result);
-    tx.onabort = () => reject(tx.error ?? new Error("Draft transaction aborted"));
+    tx.onabort = () =>
+      reject(tx.error ?? new Error("Draft transaction aborted"));
     tx.onerror = () => reject(tx.error ?? request.error);
   });
 }
 
 export const browserDraftStore: RoomDraftStore = {
-  list: (scope) => transaction("readonly", (store) => store.index("scope").getAll(scope)),
+  list: (scope) =>
+    transaction("readonly", (store) => store.index("scope").getAll(scope)),
   get: (id) => transaction("readonly", (store) => store.get(id)),
   put: async (draft) => {
     await transaction("readwrite", (store) => store.put(draft));

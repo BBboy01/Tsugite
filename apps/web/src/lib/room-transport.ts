@@ -4,12 +4,14 @@ export type RoomSocket = {
   send: (data: string | Uint8Array) => void;
   close: () => void;
   onopen: (() => void) | null;
-  onmessage: ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null;
+  onmessage:
+    ((event: { data: string | ArrayBuffer | Uint8Array }) => void) | null;
   onclose: (() => void) | null;
   onerror: (() => void) | null;
 };
 
-export type ConnectionStatus = "connecting" | "live" | "reconnecting" | "offline";
+export type ConnectionStatus =
+  "connecting" | "live" | "reconnecting" | "offline";
 
 export type TransportEvent =
   | { type: "status"; status: ConnectionStatus }
@@ -112,7 +114,9 @@ export class RoomTransport {
     if (this.reconnectTimer || this.reconnectDelays.length === 0) return;
     this.setStatus("reconnecting");
     const delay =
-      this.reconnectDelays[Math.min(this.reconnectAttempt, this.reconnectDelays.length - 1)];
+      this.reconnectDelays[
+        Math.min(this.reconnectAttempt, this.reconnectDelays.length - 1)
+      ];
     this.reconnectAttempt += 1;
     this.reconnectTimer = setTimeout(() => {
       this.reconnectTimer = null;

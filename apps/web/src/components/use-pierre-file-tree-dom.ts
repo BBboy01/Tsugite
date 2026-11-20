@@ -42,9 +42,19 @@ export function usePierreFileTreeDom({
       const path = event.composedPath();
       const treeHost = model.getFileTreeContainer();
       if (!treeHost || !path.includes(treeHost)) return;
-      if (path.some((target) => target instanceof Element && target.closest('[role="treeitem"]')))
+      if (
+        path.some(
+          (target) =>
+            target instanceof Element && target.closest('[role="treeitem"]'),
+        )
+      )
         return;
-      if (path.some((target) => target instanceof Element && target.closest('[role="search"]')))
+      if (
+        path.some(
+          (target) =>
+            target instanceof Element && target.closest('[role="search"]'),
+        )
+      )
         return;
       event.preventDefault();
       event.stopImmediatePropagation();
@@ -74,9 +84,13 @@ export function usePierreFileTreeDom({
     const renameRoots: ShadowRoot[] = [];
     const onBlur = (event: Event) => {
       const input = event.target;
-      if (!(input instanceof HTMLInputElement) || !input.hasAttribute("data-item-rename-input"))
+      if (
+        !(input instanceof HTMLInputElement) ||
+        !input.hasAttribute("data-item-rename-input")
+      )
         return;
-      const path = input.closest<HTMLElement>("[data-item-path]")?.dataset.itemPath;
+      const path =
+        input.closest<HTMLElement>("[data-item-path]")?.dataset.itemPath;
       if (!path) return;
       if (!drafts.current.has(path)) {
         if (input.value.includes("/")) {
@@ -86,7 +100,8 @@ export function usePierreFileTreeDom({
         return;
       }
       event.stopImmediatePropagation();
-      if (!commitDraftEdit(input.value, path)) queueMicrotask(() => input.focus());
+      if (!commitDraftEdit(input.value, path))
+        queueMicrotask(() => input.focus());
     };
     const applyLabel = () => {
       const wrapper = wrapperRef.current;
@@ -122,7 +137,8 @@ export function usePierreFileTreeDom({
     return () => {
       observer.disconnect();
       for (const shadowObserver of shadowObservers) shadowObserver.disconnect();
-      for (const root of renameRoots) root.removeEventListener("blur", onBlur, true);
+      for (const root of renameRoots)
+        root.removeEventListener("blur", onBlur, true);
     };
   }, [label, model, t]);
 
@@ -130,8 +146,13 @@ export function usePierreFileTreeDom({
     const eventTarget = wrapperRef.current;
     if (!eventTarget) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      const input = event.composedPath().find((target) => target instanceof HTMLInputElement);
-      if (!(input instanceof HTMLInputElement) || !input.hasAttribute("data-item-rename-input"))
+      const input = event
+        .composedPath()
+        .find((target) => target instanceof HTMLInputElement);
+      if (
+        !(input instanceof HTMLInputElement) ||
+        !input.hasAttribute("data-item-rename-input")
+      )
         return;
       if (event.isComposing || event.keyCode === 229) return;
       const path = model.getFocusedPath();
@@ -153,11 +174,15 @@ export function usePierreFileTreeDom({
         event.preventDefault();
         event.stopImmediatePropagation();
         input.value = draft.defaultName;
-        input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+        input.dispatchEvent(
+          new Event("input", { bubbles: true, composed: true }),
+        );
         commitDraftEdit(input.value, path);
       } else if (event.key === "Enter" && !input.value.trim()) {
         input.value = draft.defaultName;
-        input.dispatchEvent(new Event("input", { bubbles: true, composed: true }));
+        input.dispatchEvent(
+          new Event("input", { bubbles: true, composed: true }),
+        );
       }
     };
     const onPointerDown = (event: PointerEvent) => {
@@ -167,7 +192,10 @@ export function usePierreFileTreeDom({
       if (
         event
           .composedPath()
-          .some((target) => target instanceof Element && target.closest('[role="treeitem"]'))
+          .some(
+            (target) =>
+              target instanceof Element && target.closest('[role="treeitem"]'),
+          )
       ) {
         pendingSearchRestoreRef.current = searchQuery;
       }
@@ -181,7 +209,10 @@ export function usePierreFileTreeDom({
       if (
         event
           .composedPath()
-          .some((target) => target instanceof Element && target.closest('[role="treeitem"]'))
+          .some(
+            (target) =>
+              target instanceof Element && target.closest('[role="treeitem"]'),
+          )
       ) {
         pendingSearchRestoreRef.current = null;
         requestAnimationFrame(() => {
@@ -197,7 +228,11 @@ export function usePierreFileTreeDom({
     return () => {
       eventTarget.removeEventListener("keydown", onKeyDown, true);
       eventTarget.removeEventListener("pointerdown", onPointerDown, true);
-      eventTarget.removeEventListener("pointercancel", clearPendingSearch, true);
+      eventTarget.removeEventListener(
+        "pointercancel",
+        clearPendingSearch,
+        true,
+      );
       eventTarget.removeEventListener("dragstart", clearPendingSearch, true);
       eventTarget.removeEventListener("click", onClick, true);
     };
@@ -209,7 +244,11 @@ export function usePierreFileTreeDom({
     const path =
       input?.closest<HTMLElement>("[data-item-path]")?.dataset.itemPath ??
       [...drafts.current.keys()][0];
-    if (path && drafts.current.has(path) && commitDraftEdit(input?.value ?? null, path))
+    if (
+      path &&
+      drafts.current.has(path) &&
+      commitDraftEdit(input?.value ?? null, path)
+    )
       return true;
     input?.blur();
     return true;
@@ -218,8 +257,12 @@ export function usePierreFileTreeDom({
   return { finishActiveEdit };
 }
 
-function findInlineRenameInput(root: Document | ShadowRoot | Element): HTMLInputElement | null {
-  const input = root.querySelector<HTMLInputElement>("[data-item-rename-input]");
+function findInlineRenameInput(
+  root: Document | ShadowRoot | Element,
+): HTMLInputElement | null {
+  const input = root.querySelector<HTMLInputElement>(
+    "[data-item-rename-input]",
+  );
   if (input) return input;
   for (const element of root.querySelectorAll<HTMLElement>("*")) {
     if (!element.shadowRoot) continue;

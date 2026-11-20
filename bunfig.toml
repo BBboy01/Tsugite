@@ -1,0 +1,10 @@
+[fmt]
+ignorePatterns = [".ryugi/", "drizzle/"]
+
+[lint]
+ignorePatterns = [".ryugi/"]
+
+[lint.rules]
+"no-unused-vars" = "warn"
+"@typescript-eslint/no-explicit-any" = "off"
+"unicorn/prefer-add-event-listener" = "off"

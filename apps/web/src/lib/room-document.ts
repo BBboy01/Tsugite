@@ -29,12 +29,21 @@ export class RoomDocument {
   constructor(private readonly onLocalUpdate: (bytes: Uint8Array) => void) {
     this.subscriptions.push(
       this.doc.subscribe((batch) => {
-        const changes: DocumentChangeFlags = { workspace: false, settings: false, content: false };
+        const changes: DocumentChangeFlags = {
+          workspace: false,
+          settings: false,
+          content: false,
+        };
         for (const event of batch.events) {
           const root = event.path[0];
-          if (typeof root === "string" && root.startsWith("file:")) changes.content = true;
+          if (typeof root === "string" && root.startsWith("file:"))
+            changes.content = true;
           else if (root === "settings") changes.settings = true;
-          else if (root === "files" || root === "filePaths" || root === "folders")
+          else if (
+            root === "files" ||
+            root === "filePaths" ||
+            root === "folders"
+          )
             changes.workspace = true;
           else changes.workspace = changes.settings = changes.content = true;
         }
@@ -77,7 +86,10 @@ export class RoomDocument {
     this.emit({ type: "snapshot" });
   }
 
-  restorePendingDraft(snapshot: Uint8Array, updates: readonly Uint8Array[]): void {
+  restorePendingDraft(
+    snapshot: Uint8Array,
+    updates: readonly Uint8Array[],
+  ): void {
     const validation = new LoroDoc();
     try {
       validation.import(this.doc.export({ mode: "snapshot" }));

@@ -48,9 +48,13 @@ for (const initiallyLive of [false, true]) {
       document.commit();
       const pending = [...client.pendingUpdates];
       const states: Array<{ status: string; error: string | undefined }> = [];
-      client.subscribeStatus(() => states.push({ status: client.status, error: client.syncError }));
+      client.subscribeStatus(() =>
+        states.push({ status: client.status, error: client.syncError }),
+      );
 
-      expect(() => sockets[0]!.onmessage?.({ data: new Uint8Array([1, 2, 3]) })).not.toThrow();
+      expect(() =>
+        sockets[0]!.onmessage?.({ data: new Uint8Array([1, 2, 3]) }),
+      ).not.toThrow();
       expect(client.status).toBe("reconnecting");
       expect(client.syncError).toBeDefined();
       expect(client.hasReceivedSnapshot).toBe(initiallyLive);
@@ -66,7 +70,9 @@ for (const initiallyLive of [false, true]) {
       sockets[1]!.onopen?.();
       expect(client.status).toBe("reconnecting");
       expect(client.syncError).toBe(error);
-      expect(sent[1]!.filter((message) => message instanceof Uint8Array)).toEqual(pending);
+      expect(
+        sent[1]!.filter((message) => message instanceof Uint8Array),
+      ).toEqual(pending);
       sockets[0]!.onmessage?.({ data: '{"type":"update:ack"}' });
       expect(client.pendingUpdates).toEqual(pending);
 
@@ -90,7 +96,9 @@ test("manual disconnect cancels import recovery without dropping local edits", a
   try {
     client.doc.getText("local").insert(0, "kept");
     client.doc.commit();
-    expect(() => sockets[0]!.onmessage?.({ data: new Uint8Array([1, 2, 3]) })).not.toThrow();
+    expect(() =>
+      sockets[0]!.onmessage?.({ data: new Uint8Array([1, 2, 3]) }),
+    ).not.toThrow();
     client.doc.getText("local").insert(4, " while reconnecting");
     client.doc.commit();
     client.disconnect();
@@ -99,7 +107,9 @@ test("manual disconnect cancels import recovery without dropping local edits", a
     expect(client.status).toBe("offline");
     expect(client.hasPendingChanges).toBe(true);
     expect(client.pendingUpdates).toHaveLength(2);
-    expect(client.doc.getText("local").toString()).toBe("kept while reconnecting");
+    expect(client.doc.getText("local").toString()).toBe(
+      "kept while reconnecting",
+    );
   } finally {
     client.disconnect();
   }

@@ -8,7 +8,9 @@ import {
 } from "./workspace-layout-model";
 
 test("reads persisted panel widths and rejects invalid values", () => {
-  expect(readWorkspacePanelWidths(null)).toEqual(DEFAULT_WORKSPACE_PANEL_WIDTHS);
+  expect(readWorkspacePanelWidths(null)).toEqual(
+    DEFAULT_WORKSPACE_PANEL_WIDTHS,
+  );
   expect(readWorkspacePanelWidths({ files: "wide", preview: 300 })).toEqual(
     DEFAULT_WORKSPACE_PANEL_WIDTHS,
   );

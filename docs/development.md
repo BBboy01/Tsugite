@@ -20,7 +20,17 @@ The browser owns editor state, preferences, and WebContainer execution. Unacknow
 
 ## Local workflow
 
-Use the Bun version in [`.bun-version`](../.bun-version) and install from the lockfile with `bun install --frozen-lockfile`. Start the server and web app in separate terminals, from the repository root:
+Use the exact Bun npm build in [`.bun-version`](../.bun-version):
+
+```bash
+npm install --global "bun@$(cat .bun-version)"
+bun --revision
+bun install --frozen-lockfile
+```
+
+The pinned npm package resolves to `bun --revision` output `1.4.6-canary.1+ca7729d01`. A canary is required because native lint is not enabled in stable Bun 1.4.5. CI, releases, and browser tests use the same npm build through the shared [setup action](../.github/actions/setup-bun/action.yml); the upstream setup action cannot resolve these npm-only canary versions. The Dockerfiles pin matching canary images by digest. Update the npm version and both image digests together, and verify their `bun --revision` output when upgrading.
+
+Start the server and web app in separate terminals, from the repository root:
 
 ```bash
 bun run dev:server
@@ -74,23 +84,33 @@ Use the [check selection table](testing.md#choose-checks) to choose coverage, th
 
 ```bash
 bun --no-env-file test apps/server/src/room-reconnect.test.ts
-bun --no-env-file x --no-install oxlint apps/web/src/lib/room-client.ts
-bun --no-env-file x --no-install oxfmt --check apps/web/src/lib/room-client.ts
+bun --no-env-file lint --no-script apps/web/src/lib/room-client.ts
+bun --no-env-file check apps/web/src/lib/room-client.ts
+bun --no-env-file fmt --check apps/web/src/lib/room-client.ts
 ```
 
-Replace the paths with the files you changed. For scoped TypeScript checks, use a temporary config extending the root `tsconfig.json` with those files as its `include` roots, then run `tsc --project <temporary-config> --noEmit`. Resolve include paths relative to the temporary config and remove it afterwards. Imported dependencies are still checked; a file-only `tsc` invocation without the project configuration does not reproduce the application's aliases or compiler options.
+Replace the paths with the files you changed. `bun check` uses the nearest `tsconfig.json` and checks the supplied files and their imports, preserving the application's aliases and compiler options. `--no-script` forces the built-in linter even though this repository also defines a `lint` script.
 
 Repository-wide scripts are available for an explicitly full verification run and CI:
 
 | Command                | Purpose                                      |
 | ---------------------- | -------------------------------------------- |
 | `bun run test`         | Run Bun unit and integration tests           |
-| `bun run lint`         | Run Oxlint and TypeScript checks             |
-| `bun run format:check` | Check configured source and config paths     |
+| `bun run lint`         | Run built-in Bun lint and type checks        |
+| `bun run typecheck`    | Run built-in Bun TypeScript checks           |
+| `bun run format:check` | Check all supported, non-ignored files       |
 | `bun run knip`         | Find unused files, exports, and dependencies |
 | `bun run test:e2e`     | Run the UI project, then WebContainer tests  |
 
-CI also runs `bun run build` and checks migrations against a fresh database. The unused-code audit is currently advisory in CI (`--no-exit-code`). A local documentation edit does not need an application build or a whole-project formatter. The root formatting script and staged-file hooks exclude Markdown; use the explicit [documentation checks](testing.md#documentation-checks).
+CI also runs `bun run build` and checks migrations against a fresh database. The unused-code audit is currently advisory in CI (`--no-exit-code`). A local documentation edit does not need an application build or a whole-project formatter. The root formatting script and staged-file hooks include Markdown; use scoped [documentation checks](testing.md#documentation-checks) while iterating.
+
+### Tooling coverage
+
+Formatting uses Bun defaults without a compatibility configuration. [bunfig.toml](../bunfig.toml) excludes local agent artifacts and generated, shipped database migrations from formatting. Bun embeds the project type checker, so no standalone development compiler is required. Keep `typescript-legacy`: browser language services and their standard-library assets import it at runtime.
+
+Lint uses Bun's recommended defaults with the explicit overrides in [bunfig.toml](../bunfig.toml). Rule and diagnostic parity with the previous linter is not an acceptance gate. Broad correctness/suspicious categories are not enabled: in this build they also enable additional React compiler, accessibility, and type-aware rules that the previous configuration did not run. Type-aware rules and third-party plugins are not enabled. The default React dependency checks currently report existing warnings; review them separately from this migration. Re-run `bun lint --no-script --doctor` and the repository checks on every Bun version update, review newly supported or changed rules, and switch to a stable build once native lint ships there.
+
+The current doctor report enables 96 rules: ESLint, TypeScript, Bun tests, React, and React Hooks. The previous plugin configuration's category-based OXC and Unicorn coverage is not carried over; for example, consistent function scoping and postMessage target-origin checks are no longer enabled. Their obsolete suppressions were removed. Reassess these gaps on the next Bun upgrade rather than treating the migration as rule-for-rule parity.
 
 ## Runtime boundaries
 
@@ -112,7 +132,7 @@ When changing a protocol message or project field, update shared tests and both 
 
 The starter is defined in [default-project-files.ts](../packages/shared/src/default-project-files.ts); changing it affects new rooms only. Its package versions and Rolldown overrides are intentional. [webcontainer-files.ts](../apps/web/src/lib/webcontainer-files.ts) retains a compatibility transform for older Vite rooms without their own override, and only changes the browser-mounted copy. Validate dependency updates in a real preview before removing it.
 
-The Worker imports the `typescript-legacy` package alias for the TypeScript 6 runtime, independently of tooling's TypeScript 7 compiler. Both dependencies in [package.json](../package.json) serve different purposes; a tooling upgrade does not upgrade the browser language service. After one Worker retry, language services become unavailable while editing, Vim, and collaboration remain active. Unsafe or oversized snapshots are rejected. See the [TypeScript intelligence guide](typescript-intelligence.md) for ownership, budgets, and failure behavior.
+The Worker imports the `typescript-legacy` package alias for the TypeScript 6 runtime, independently of Bun's embedded project type checker. The browser compiler remains a runtime dependency in [package.json](../package.json); a tooling upgrade does not upgrade the browser language service. After one Worker retry, language services become unavailable while editing, Vim, and collaboration remain active. Unsafe or oversized snapshots are rejected. See the [TypeScript intelligence guide](typescript-intelligence.md) for ownership, budgets, and failure behavior.
 
 ## Test data and browser tests
 

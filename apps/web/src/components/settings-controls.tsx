@@ -33,9 +33,13 @@ export function RuntimeActions({
 
   return (
     <div className="grid gap-2 border-t border-iris-divider pt-3">
-      {RUNTIME_ACTIONS.filter((action) => !actions || actions.includes(action.id)).map((action) => (
+      {RUNTIME_ACTIONS.filter(
+        (action) => !actions || actions.includes(action.id),
+      ).map((action) => (
         <button
-          data-setting-id={action.id === "restart" ? "runtimeRestart" : "runtimeReinstall"}
+          data-setting-id={
+            action.id === "restart" ? "runtimeRestart" : "runtimeReinstall"
+          }
           className="flex min-h-9 items-center justify-center gap-2 rounded-lg border border-iris-divider bg-iris-canvas px-3 py-2 font-iris-mono text-[10px] text-iris-strong transition-colors hover:bg-[color-mix(in_srgb,var(--accent)_8%,var(--canvas))] disabled:cursor-wait disabled:opacity-55"
           key={action.id}
           type="button"
@@ -51,7 +55,9 @@ export function RuntimeActions({
             height="13"
             className={pending === action.id ? "animate-spin" : undefined}
           />
-          {pending === action.id ? t(action.pendingLabelKey) : t(action.labelKey)}
+          {pending === action.id
+            ? t(action.pendingLabelKey)
+            : t(action.labelKey)}
         </button>
       ))}
     </div>
@@ -125,7 +131,11 @@ export function SettingSwitch({
           {description}
         </p>
       </div>
-      <Switch checked={checked} onCheckedChange={onCheckedChange} aria-label={label} />
+      <Switch
+        checked={checked}
+        onCheckedChange={onCheckedChange}
+        aria-label={label}
+      />
     </div>
   );
 }

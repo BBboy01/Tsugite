@@ -54,10 +54,15 @@ test("an unmounted render cannot start a worker and mount publishes the latest s
   await new Promise((resolve) => setTimeout(resolve, 0));
   expect(workers).toHaveLength(0);
   const unmount = session.mount(() => {});
-  const query = session.typeScript.intelligence.hover({ path: "src/App.tsx", position: 0 });
+  const query = session.typeScript.intelligence.hover({
+    path: "src/App.tsx",
+    position: 0,
+  });
   expect(workers[0].sent[0]).toMatchObject({
     kind: "initialize",
-    files: expect.arrayContaining([expect.objectContaining({ path: "src/App.tsx" })]),
+    files: expect.arrayContaining([
+      expect.objectContaining({ path: "src/App.tsx" }),
+    ]),
   });
   unmount();
   await flushDisposal();
@@ -67,7 +72,10 @@ test("an unmounted render cannot start a worker and mount publishes the latest s
 test("StrictMode setup-cleanup-setup reuses the session and disposes only after the last cleanup", async () => {
   const { session, workers, sockets } = createSession();
   const first = session.mount(() => {});
-  const request = session.typeScript.intelligence.hover({ path: "app.ts", position: 0 });
+  const request = session.typeScript.intelligence.hover({
+    path: "app.ts",
+    position: 0,
+  });
   expect(workers).toHaveLength(1);
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   workers[0].reply(workers[0].sent[1], { status: "empty" });
@@ -96,7 +104,11 @@ test("session document subscriptions detach without disabling collaboration or r
   sockets[0].onopen?.();
   sockets[0].onmessage?.({ data: remote.export({ mode: "snapshot" }) });
   await new Promise((resolve) => setTimeout(resolve, 0));
-  expect(changes).toContainEqual({ workspace: true, settings: true, content: true });
+  expect(changes).toContainEqual({
+    workspace: true,
+    settings: true,
+    content: true,
+  });
   session.client.disconnect();
   session.client.connect();
   expect(sockets).toHaveLength(2);
@@ -114,7 +126,10 @@ test("unmount disposes pending worker queries and ignores late declarations and 
   const unmount = session.mount(() => {});
   const source = createProjectDoc();
   session.client.doc.import(source.export({ mode: "snapshot" }));
-  const query = session.typeScript.intelligence.hover({ path: "src/App.tsx", position: 0 });
+  const query = session.typeScript.intelligence.hover({
+    path: "src/App.tsx",
+    position: 0,
+  });
   workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
   await new Promise((resolve) => setTimeout(resolve, 0));
   const hover = workers[0].sent.find(
@@ -152,10 +167,16 @@ test("worker failure leaves room transport, pending edits and presence usable", 
   const unmount = session.mount(() => {});
   sockets[0].readyState = 1;
   sockets[0].onopen?.();
-  const query = session.typeScript.intelligence.hover({ path: "app.ts", position: 0 });
+  const query = session.typeScript.intelligence.hover({
+    path: "app.ts",
+    position: 0,
+  });
   workers[0].crash();
   workers[1].crash();
-  expect(await query).toEqual({ status: "error", message: "TypeScript worker failed" });
+  expect(await query).toEqual({
+    status: "error",
+    message: "TypeScript worker failed",
+  });
   expect(session.typeScript.getServiceStatus().state).toBe("unavailable");
   session.client.doc.getText("text").insert(0, "still collaborative");
   session.client.doc.commit();

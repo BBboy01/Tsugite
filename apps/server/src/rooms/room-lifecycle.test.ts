@@ -60,7 +60,9 @@ function updateTheme(
   const from = doc.version();
   setSharedSetting(doc, "theme", theme);
   doc.commit();
-  expect(service.update(socket, doc.export({ mode: "update", from }))).toBe(true);
+  expect(service.update(socket, doc.export({ mode: "update", from }))).toBe(
+    true,
+  );
 }
 
 function persistedTheme(store: RecordingStore) {
@@ -80,7 +82,11 @@ async function waitFor(assertion: () => boolean) {
 test("relays updates immediately and coalesces snapshot writes", async () => {
   const { service, store, socket, doc } = setup();
   const received: Array<string | Uint8Array> = [];
-  service.join({ send: (data) => received.push(data) }, "demo", joinMessage("two"));
+  service.join(
+    { send: (data) => received.push(data) },
+    "demo",
+    joinMessage("two"),
+  );
   const writes = store.writes;
   const messages = received.length;
   updateTheme(service, socket, doc, "nord");
@@ -143,7 +149,9 @@ test("shutdown exposes save failure and can retry without losing accepted edits"
   updateTheme(service, socket, doc, "nord");
   store.fail = true;
   expect(service.shutdown()).toBe(false);
-  expect(service.join({ send() {} }, "another", joinMessage("two"))).toBe(false);
+  expect(service.join({ send() {} }, "another", joinMessage("two"))).toBe(
+    false,
+  );
   store.fail = false;
   expect(service.shutdown()).toBe(true);
   expect(persistedTheme(store)).toBe("nord");

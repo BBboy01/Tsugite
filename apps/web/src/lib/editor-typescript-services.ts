@@ -20,12 +20,18 @@ export function attachEditorTypeScriptServices(
       const { typeScriptHover } = await import("./typescript-hover");
       if (disposed) return;
       const activeIntelligence = intelligence;
-      void activeIntelligence.updateFile({ path, text: view.state.doc.toString() });
+      void activeIntelligence.updateFile({
+        path,
+        text: view.state.doc.toString(),
+      });
       view.dispatch({
         effects: StateEffect.appendConfig.of([
           EditorView.updateListener.of((update) => {
             if (update.docChanged)
-              void activeIntelligence.updateFile({ path, text: update.state.doc.toString() });
+              void activeIntelligence.updateFile({
+                path,
+                text: update.state.doc.toString(),
+              });
           }),
           typeScriptHover(activeIntelligence, path, getTheme),
           typeScriptCompletion(activeIntelligence, path),
@@ -36,7 +42,8 @@ export function attachEditorTypeScriptServices(
       });
       onReady(activeIntelligence);
     } catch (error) {
-      if (!disposed) console.warn("TypeScript language services are unavailable.", error);
+      if (!disposed)
+        console.warn("TypeScript language services are unavailable.", error);
     }
   };
   void load();

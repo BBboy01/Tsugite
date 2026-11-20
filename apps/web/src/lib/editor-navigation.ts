@@ -5,7 +5,8 @@ import type {
   IntelligenceResult,
 } from "./editor-intelligence";
 
-export type NavigationKind = "definition" | "type" | "implementation" | "references";
+export type NavigationKind =
+  "definition" | "type" | "implementation" | "references";
 export type NavigationFile = IntelligenceFile;
 export type EditorLocation = IntelligenceLocation;
 
@@ -21,7 +22,9 @@ export async function queryEditorLocations(
     if (synced.status !== "ok") return synced;
   }
   const query = { path, position };
-  return kind === "type" ? intelligence.typeDefinition(query) : intelligence[kind](query);
+  return kind === "type"
+    ? intelligence.typeDefinition(query)
+    : intelligence[kind](query);
 }
 
 /** Capture content rather than object identity: Loro containers can mutate in place. */

@@ -1,4 +1,8 @@
-import type { PresenceMember, ProjectFile, ProjectSettings } from "@iris/shared";
+import type {
+  PresenceMember,
+  ProjectFile,
+  ProjectSettings,
+} from "@iris/shared";
 import type { LoroDoc } from "loro-crdt";
 import type { EditorLocation } from "../lib/editor-navigation";
 import type { EditorIntelligence } from "../lib/editor-intelligence";

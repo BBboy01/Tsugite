@@ -2,10 +2,16 @@ export function openEditorTab(paths: string[], path: string): string[] {
   return paths.includes(path) ? paths : [...paths, path];
 }
 
-export function reorderEditorTabs(paths: string[], nextPaths: readonly string[]): string[] {
+export function reorderEditorTabs(
+  paths: string[],
+  nextPaths: readonly string[],
+): string[] {
   if (nextPaths.length !== paths.length) return paths;
   const reorderedPaths = new Set(nextPaths);
-  if (reorderedPaths.size !== paths.length || paths.some((path) => !reorderedPaths.has(path))) {
+  if (
+    reorderedPaths.size !== paths.length ||
+    paths.some((path) => !reorderedPaths.has(path))
+  ) {
     return paths;
   }
   if (nextPaths.every((path, index) => path === paths[index])) return paths;
@@ -22,10 +28,17 @@ export function closeEditorTabs(
 ): { paths: string[]; nextPath: string } {
   const index = paths.indexOf(path);
   if (mode !== "all" && index === -1) return { paths, nextPath: activePath };
-  const nextPaths = mode === "all" ? [] : mode === "others" ? [path] : paths.slice(0, index + 1);
+  const nextPaths =
+    mode === "all"
+      ? []
+      : mode === "others"
+        ? [path]
+        : paths.slice(0, index + 1);
   return {
     paths: nextPaths,
-    nextPath: nextPaths.includes(activePath) ? activePath : (nextPaths.at(-1) ?? ""),
+    nextPath: nextPaths.includes(activePath)
+      ? activePath
+      : (nextPaths.at(-1) ?? ""),
   };
 }
 

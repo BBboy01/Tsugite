@@ -9,7 +9,9 @@ import {
 
 test("filters editor fonts case-insensitively", () => {
   expect(filterEditorFonts("mono", "JetBrains Mono")).toContain("Geist Mono");
-  expect(filterEditorFonts("CASCADIA", "JetBrains Mono")).toEqual(["Cascadia Code"]);
+  expect(filterEditorFonts("CASCADIA", "JetBrains Mono")).toEqual([
+    "Cascadia Code",
+  ]);
 });
 
 test("keeps a shared custom font available and defines the supported size range", () => {

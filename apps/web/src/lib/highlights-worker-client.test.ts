@@ -15,7 +15,9 @@ const input = {
   viewport: [0, 1] as const,
   lineOffsets: [0] as const,
 };
-const spans: HighlightSpan[] = [{ from: 0, to: 5, color: "#123456", fontStyle: 0 }];
+const spans: HighlightSpan[] = [
+  { from: 0, to: 5, color: "#123456", fontStyle: 0 },
+];
 
 function fakeWorker() {
   const sent: HighlightsRequest[] = [];
@@ -35,7 +37,8 @@ function fakeWorker() {
     worker,
     sent,
     terminated: () => terminated,
-    reply: (id: number) => worker.onmessage?.({ data: { id, spans, ready: true } } as MessageEvent),
+    reply: (id: number) =>
+      worker.onmessage?.({ data: { id, spans, ready: true } } as MessageEvent),
   };
 }
 
@@ -44,18 +47,29 @@ test("resets once, then sends only UTF-16 edits to the live worker session", asy
   const client = new HighlightsWorkerClient(() => fake.worker);
 
   const first = client.highlight(input);
-  expect(fake.sent[0]).toMatchObject({ reset: true, source: input.source, edits: [] });
+  expect(fake.sent[0]).toMatchObject({
+    reset: true,
+    source: input.source,
+    edits: [],
+  });
   fake.reply(fake.sent[0].id);
   expect(await first).toEqual(spans);
 
   const edits: readonly HighlightEdit[] = [
     {
-      range: { start: { line: 0, character: 10 }, end: { line: 0, character: 11 } },
+      range: {
+        start: { line: 0, character: 10 },
+        end: { line: 0, character: 11 },
+      },
       newText: "2",
     },
   ];
   const second = client.highlight({ ...input, source: "", edits });
-  expect(fake.sent[1]).toMatchObject({ reset: false, edits, source: undefined });
+  expect(fake.sent[1]).toMatchObject({
+    reset: false,
+    edits,
+    source: undefined,
+  });
   fake.reply(fake.sent[1].id);
   expect(await second).toEqual(spans);
   client.dispose();
@@ -72,7 +86,11 @@ test("keeps only the newest pending request and discards stale colors", async ()
   fake.reply(fake.sent[0].id);
   expect(await first).toBeUndefined();
   expect(fake.sent).toHaveLength(2);
-  expect(fake.sent[1]).toMatchObject({ reset: true, edits: [], source: "const n = 3" });
+  expect(fake.sent[1]).toMatchObject({
+    reset: true,
+    edits: [],
+    source: "const n = 3",
+  });
   fake.reply(fake.sent[1].id);
   expect(await newest).toEqual(spans);
   client.dispose();
@@ -92,7 +110,10 @@ test("forces a full reset after cancellation before reusing the worker client", 
   expect(firstWorker.terminated()).toBe(1);
 
   const restored = client.highlight(input);
-  expect(replacementWorker.sent[0]).toMatchObject({ reset: true, source: input.source });
+  expect(replacementWorker.sent[0]).toMatchObject({
+    reset: true,
+    source: input.source,
+  });
   replacementWorker.reply(replacementWorker.sent[0].id);
   expect(await restored).toEqual(spans);
   expect(creations).toBe(2);
@@ -107,8 +128,14 @@ test("forces a reset when a completed editor session is replaced", async () => {
   expect(await first).toEqual(spans);
 
   client.cancelInFlight();
-  const replacement = client.highlight({ ...input, source: "const replacement = 1" });
-  expect(fake.sent[1]).toMatchObject({ reset: true, source: "const replacement = 1" });
+  const replacement = client.highlight({
+    ...input,
+    source: "const replacement = 1",
+  });
+  expect(fake.sent[1]).toMatchObject({
+    reset: true,
+    source: "const replacement = 1",
+  });
   fake.reply(fake.sent[1].id);
   expect(await replacement).toEqual(spans);
   client.dispose();
@@ -146,7 +173,10 @@ test("an old scope cannot cancel a replacement scope", async () => {
   expect(await first).toEqual(spans);
 
   const replacementScope = client.createScope();
-  const replacement = client.highlight({ ...input, source: "const next = 1" }, replacementScope);
+  const replacement = client.highlight(
+    { ...input, source: "const next = 1" },
+    replacementScope,
+  );
   client.cancelInFlight(firstScope);
   expect(fake.sent).toHaveLength(2);
   fake.reply(fake.sent[1].id);
@@ -163,7 +193,11 @@ test("coalesces identical reset snapshots after an active request", async () => 
   expect(await skipped).toBeUndefined();
   fake.reply(fake.sent[0].id);
   expect(await first).toBeUndefined();
-  expect(fake.sent[1]).toMatchObject({ reset: false, source: undefined, edits: [] });
+  expect(fake.sent[1]).toMatchObject({
+    reset: false,
+    source: undefined,
+    edits: [],
+  });
   fake.reply(fake.sent[1].id);
   expect(await newest).toEqual(spans);
   client.dispose();
@@ -182,7 +216,8 @@ for (const failure of ["onerror", "onmessageerror"] as const) {
     const fake = fakeWorker();
     const client = new HighlightsWorkerClient(() => fake.worker);
     const first = client.highlight(input);
-    fake.worker[failure]?.({ preventDefault() {} } as ErrorEvent & MessageEvent);
+    fake.worker[failure]?.({ preventDefault() {} } as ErrorEvent &
+      MessageEvent);
     expect(await first).toEqual([]);
     expect(await client.highlight(input)).toEqual([]);
     expect(fake.terminated()).toBe(1);

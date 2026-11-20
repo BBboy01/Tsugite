@@ -1,5 +1,6 @@
 export type SettingScope = "workspace" | "editor" | "keyboard" | "runtime";
-export type SettingKind = "select" | "multi-select" | "toggle" | "custom" | "action" | "keymap";
+export type SettingKind =
+  "select" | "multi-select" | "toggle" | "custom" | "action" | "keymap";
 
 export type SettingDefinition = {
   id: string;

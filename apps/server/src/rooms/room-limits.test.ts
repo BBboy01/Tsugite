@@ -20,7 +20,12 @@ function setup(options: ConstructorParameters<typeof RoomService>[1] = {}) {
   });
   const socket: RoomSocket = { send() {} };
   const join = (roomId: string, client = socket, userId = "one") =>
-    service.join(client, roomId, { type: "join", userId, displayName: userId, color: "#d88961" });
+    service.join(client, roomId, {
+      type: "join",
+      userId,
+      displayName: userId,
+      color: "#d88961",
+    });
   return { service, repository, join, socket };
 }
 
@@ -47,7 +52,10 @@ test("rejects oversized valid CRDT updates without changing the document", () =>
 });
 
 test("enforces resident-room capacity without creating a rejected room", async () => {
-  const { service, repository, join, socket } = setup({ maxRooms: 1, idleTtlMs: 10 });
+  const { service, repository, join, socket } = setup({
+    maxRooms: 1,
+    idleTtlMs: 10,
+  });
   expect(join("first")).toBe(true);
   const second = { send() {} };
   expect(join("second", second)).toBe(false);

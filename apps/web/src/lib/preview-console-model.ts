@@ -22,7 +22,10 @@ export function getPreviewConsoleMaxHeight(previewHeight: number): number {
   return Math.max(MIN_PREVIEW_CONSOLE_HEIGHT, previewHeight / 2);
 }
 
-export function clampPreviewConsoleHeight(height: number, previewHeight: number): number {
+export function clampPreviewConsoleHeight(
+  height: number,
+  previewHeight: number,
+): number {
   return Math.min(
     Math.max(height, MIN_PREVIEW_CONSOLE_HEIGHT),
     getPreviewConsoleMaxHeight(previewHeight),

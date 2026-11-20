@@ -1,5 +1,9 @@
 import type { DraftSyncPort } from "./draft-sync-port";
-import { isRoomDraft, type RoomDraft, type RoomDraftStore } from "./room-draft-store";
+import {
+  isRoomDraft,
+  type RoomDraft,
+  type RoomDraftStore,
+} from "./room-draft-store";
 
 export type DraftState = {
   backup: "idle" | "saving" | "saved" | "error";
@@ -12,7 +16,12 @@ export type DraftState = {
 const CHECKPOINT_DELAY = 250;
 
 export class RoomDrafts {
-  state: DraftState = { backup: "idle", available: [], busy: false, applied: false };
+  state: DraftState = {
+    backup: "idle",
+    available: [],
+    busy: false,
+    applied: false,
+  };
   private readonly id = crypto.randomUUID();
   private readonly releases = new Map<string, () => void>();
   private readonly listeners = new Set<() => void>();
@@ -69,7 +78,9 @@ export class RoomDrafts {
         available.push(current);
       }
       this.ready = true;
-      this.setState({ available: available.toSorted((a, b) => b.updatedAt - a.updatedAt) });
+      this.setState({
+        available: available.toSorted((a, b) => b.updatedAt - a.updatedAt),
+      });
       await this.pruneConfirmed();
       if (this.sync.hasPendingChanges) this.schedule();
     } catch {
@@ -121,7 +132,10 @@ export class RoomDrafts {
           });
         } else await this.store.remove(this.id);
       }
-      this.setState({ backup: this.sync.hasPendingChanges ? "saved" : "idle", error: undefined });
+      this.setState({
+        backup: this.sync.hasPendingChanges ? "saved" : "idle",
+        error: undefined,
+      });
       return true;
     } catch {
       this.dirty = true;
@@ -155,7 +169,10 @@ export class RoomDrafts {
     for (const draft of this.state.available) {
       if (this.restored.has(draft.id)) continue;
       try {
-        if (isRoomDraft(draft) && this.sync.containsDraft(draft.snapshot, draft.updates)) {
+        if (
+          isRoomDraft(draft) &&
+          this.sync.containsDraft(draft.snapshot, draft.updates)
+        ) {
           await this.removeCandidate(draft.id);
         }
       } catch {

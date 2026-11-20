@@ -114,12 +114,18 @@ export function EditorFileTab({
             width="12"
             height="12"
           />
-          <span className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}>{label}</span>
+          <span
+            className={`truncate ${active ? "text-[var(--accent-deep)]" : ""}`}
+          >
+            {label}
+          </span>
           {collaboratorCount > 0 && (
             <span
               className="grid h-[18px] min-w-[18px] shrink-0 place-items-center rounded-full bg-[color-mix(in_srgb,var(--accent)_14%,transparent)] px-1 font-iris-mono text-[9px] leading-none text-[var(--accent-deep)]"
               data-collaborator-badge={file.path}
-              title={t("editor.collaboratorsInFile", { count: collaboratorCount })}
+              title={t("editor.collaboratorsInFile", {
+                count: collaboratorCount,
+              })}
               aria-hidden="true"
             >
               +{collaboratorCount}

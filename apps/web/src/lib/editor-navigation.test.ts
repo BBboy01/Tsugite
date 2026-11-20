@@ -14,7 +14,12 @@ const files = [
 ];
 
 test("navigation synchronizes collaborative edits before its async query", async () => {
-  const engine = createTypeScriptIntelligence("src/App.tsx", source, files, standardLibraries);
+  const engine = createTypeScriptIntelligence(
+    "src/App.tsx",
+    source,
+    files,
+    standardLibraries,
+  );
   try {
     const result = await queryEditorLocations(
       engine,
@@ -36,7 +41,8 @@ test("navigation synchronizes collaborative edits before its async query", async
     );
     expect(
       deleted.status === "empty" ||
-        (deleted.status === "ok" && deleted.value.every((item) => item.path !== "src/value.ts")),
+        (deleted.status === "ok" &&
+          deleted.value.every((item) => item.path !== "src/value.ts")),
     ).toBe(true);
   } finally {
     engine.dispose();
@@ -44,12 +50,25 @@ test("navigation synchronizes collaborative edits before its async query", async
 });
 
 test("navigation preserves empty and disposed results", async () => {
-  const engine = createTypeScriptIntelligence("src/App.tsx", source, files, standardLibraries);
+  const engine = createTypeScriptIntelligence(
+    "src/App.tsx",
+    source,
+    files,
+    standardLibraries,
+  );
   expect(
-    await queryEditorLocations(engine, files, "src/App.tsx", source.length, "definition"),
+    await queryEditorLocations(
+      engine,
+      files,
+      "src/App.tsx",
+      source.length,
+      "definition",
+    ),
   ).toEqual({ status: "empty" });
   engine.dispose();
-  expect(await queryEditorLocations(engine, files, "src/App.tsx", 0, "references")).toEqual({
+  expect(
+    await queryEditorLocations(engine, files, "src/App.tsx", 0, "references"),
+  ).toEqual({
     status: "disposed",
   });
 });
@@ -65,7 +84,9 @@ test("superseded and unmounted requests cannot apply awaited results", () => {
 });
 
 test("content snapshots detect active edits, additions, deletion and renames", () => {
-  expect(matchesIntelligenceSnapshot(files, [...files].toReversed())).toBe(true);
+  expect(matchesIntelligenceSnapshot(files, [...files].toReversed())).toBe(
+    true,
+  );
   expect(
     matchesIntelligenceSnapshot(files, [
       files[0],
@@ -73,8 +94,16 @@ test("content snapshots detect active edits, additions, deletion and renames", (
     ]),
   ).toBe(false);
   expect(matchesIntelligenceSnapshot(files, [files[0]])).toBe(false);
-  expect(matchesIntelligenceSnapshot(files, [...files, { path: "new.ts", text: "" }])).toBe(false);
-  expect(matchesIntelligenceSnapshot(files, [files[0], { ...files[1], path: "renamed.ts" }])).toBe(
-    false,
-  );
+  expect(
+    matchesIntelligenceSnapshot(files, [
+      ...files,
+      { path: "new.ts", text: "" },
+    ]),
+  ).toBe(false);
+  expect(
+    matchesIntelligenceSnapshot(files, [
+      files[0],
+      { ...files[1], path: "renamed.ts" },
+    ]),
+  ).toBe(false);
 });
