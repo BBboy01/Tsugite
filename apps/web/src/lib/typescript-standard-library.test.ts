@@ -1,16 +1,10 @@
 import { expect, test } from "bun:test";
 import { readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
+import { dirname, join } from "node:path";
 import { loadTypeScriptStandardLibrary } from "./typescript-standard-library";
 import { createEditorTypeScriptEnvironment } from "./typescript-environment";
-
-const readInstalled = (name: string) =>
-  readFile(
-    new URL(`../../../../node_modules/${name}`, import.meta.url),
-    "utf8",
-  );
-const readStandardLibrary = (name: string) =>
-  readInstalled(`typescript-legacy/lib/${name}`);
+import { readStandardLibrary } from "./typescript-test-libraries";
 
 test("loads official standard libraries and their transitive dependencies without duplicates", async () => {
   const files = await loadTypeScriptStandardLibrary(readStandardLibrary);
@@ -95,15 +89,17 @@ test("compiler host resolves installed React declarations and checks real JSX pr
     "csstype/index.d.ts",
   ];
   const require = createRequire(import.meta.url);
-  const reactRequire = createRequire(
-    require.resolve("@types/react/package.json"),
-  );
+  const reactManifest = require.resolve("@types/react/package.json");
+  const reactRequire = createRequire(reactManifest);
   const files = await Promise.all(
     paths.map(async (name) => ({
       path: `node_modules/${name}`,
       text: name.startsWith("csstype/")
         ? await readFile(reactRequire.resolve(name), "utf8")
-        : await readInstalled(name),
+        : await readFile(
+            join(dirname(reactManifest), name.slice("@types/react/".length)),
+            "utf8",
+          ),
     })),
   );
   const source =

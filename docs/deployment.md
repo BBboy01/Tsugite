@@ -45,6 +45,23 @@ The host port defaults to `8080` and can be changed with `TSUGITE_PORT`:
 TSUGITE_PORT=9090 docker compose up -d
 ```
 
+### Image dependencies
+
+The server build copies every workspace manifest before its frozen install, then
+installs only the server and shared production dependency closure:
+
+```bash
+bun install --frozen-lockfile --production --ignore-scripts --filter '@iris/server...' --filter '!./'
+```
+
+The explicit `!./` excludes the root tooling and E2E dependencies. Run this in a
+clean deployment directory; filtering is not a cleanup step for an existing full
+development install. The server image copies server/shared sources and checked-in
+`drizzle/` migrations; its `/data` database path and volume remain unchanged. The
+web build installs all workspaces, including build tools, and serves only the
+generated static output through Caddy. Manifest, lockfile, or Bun version changes
+trigger both image checks on PRs.
+
 ## Published images
 
 The [Docker publishing workflow](../.github/workflows/docker-publish.yml) publishes images to GitHub Container Registry on pushes to `main` and version tags:

@@ -2,11 +2,16 @@ FROM oven/bun:canary@sha256:8848bf5f517d1b9df1f35b319626ed2cde16f7602ee75b0aafa2
 
 WORKDIR /app
 COPY package.json bun.lock .bun-version ./
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/server/package.json ./apps/server/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
+
+RUN bun install --frozen-lockfile
+
 COPY apps ./apps
 COPY packages ./packages
 COPY components.json vite.config.ts tsconfig.json ./
 
-RUN bun install --frozen-lockfile
 RUN bun --revision && bun run build
 
 FROM caddy:2.11.9-alpine

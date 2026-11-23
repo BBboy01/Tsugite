@@ -1,6 +1,8 @@
 .git
 .github
 node_modules
+**/node_modules
+apps/web/dist
 playwright-report
 test-results
 *.log

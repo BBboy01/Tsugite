@@ -3,15 +3,16 @@ import { TypeScriptWorkerSession } from "./typescript-worker-session";
 import type { WorkerRequest } from "./typescript-worker-protocol";
 import { loadTypeScriptStandardLibrary } from "./typescript-standard-library";
 
-const assets = import.meta.glob<string>(
-  "../../../../node_modules/typescript-legacy/lib/lib.*.d.ts",
-  {
-    query: "?raw",
-    import: "default",
-  },
+const assets = new Map(
+  Object.entries(
+    import.meta.glob<string>("@typescript-lib/lib.*.d.ts", {
+      query: "?raw",
+      import: "default",
+    }),
+  ).map(([path, load]) => [path.slice(path.lastIndexOf("/") + 1), load]),
 );
 const libraries = loadTypeScriptStandardLibrary((name) => {
-  const load = assets[`../../../../node_modules/typescript-legacy/lib/${name}`];
+  const load = assets.get(name);
   return load
     ? load()
     : Promise.reject(new Error(`Missing TypeScript standard library: ${name}`));
