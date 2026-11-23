@@ -72,6 +72,26 @@ The client appends the room ID to `VITE_WS_URL`. `:memory:` is useful for dispos
 
 `bun run build` writes the static application to `apps/web/dist`. `bun run preview` serves that output for local inspection; it does not start the room server or proxy WebSockets. Production builds default to same-origin `/ws`, so local bundle inspection needs a matching proxy or a `VITE_WS_URL` set when building. Use [Docker Compose](deployment.md#docker-compose) to inspect the packaged web/server setup.
 
+The build script explicitly runs the installed Vite CLI with the pinned Bun
+runtime using `bun --no-env-file run --bun vite build`. A plain `bun run` can
+honor Vite's Node shebang instead. Vite still owns bundling, React, Tailwind,
+WASM, and Worker output. CI and releases call this same script after installing
+the pinned Bun; the web Docker build uses its matching image digest. This does
+not change the runtimes of `dev:web`, `preview`, Playwright's Vite server, or
+projects running inside WebContainer.
+
+To diagnose a Bun compatibility issue, run the same Vite build with Node:
+
+```bash
+node node_modules/vite/bin/vite.js build --config vite.config.ts
+```
+
+Keep inputs, environment, and cache conditions equal when comparing the two
+commands. Vite loads its own environment files in both cases. Output hashes can
+differ because Vite serializes runtime helper functions; verify loaded assets
+and browser behavior instead of requiring byte-identical bundles. Existing
+chunk-size and mixed static/dynamic import warnings are not runtime benchmarks.
+
 ## Database migrations
 
 Edit [the schema](../apps/server/src/db/schema.ts), generate a named migration, and review its SQL and snapshot together:
