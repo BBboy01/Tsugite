@@ -4,21 +4,25 @@
   "workspaces": {
     ".": {
       "entry": [
-        "apps/web/src/styles.css",
-        "apps/**/*.test.ts",
-        "scripts/dev.ts",
         "e2e/**/*.spec.ts",
+        "e2e/**/*harness.tsx",
         "e2e/server.ts",
         "e2e/vite.config.ts",
         "playwright.config.ts"
       ],
       "project": [
-        "apps/**/*.{ts,tsx}",
-        "apps/**/*.css",
         "scripts/**/*.ts",
-        "e2e/**/*.ts",
+        "e2e/**/*.{ts,tsx,css}",
         "*.config.{ts,mjs}"
       ]
+    },
+    "apps/web": {
+      "entry": ["src/styles.css", "src/**/*.test.ts"],
+      "project": ["src/**/*.{ts,tsx,css}"]
+    },
+    "apps/server": {
+      "entry": ["src/**/*.test.ts"],
+      "project": ["src/**/*.ts"]
     },
     "packages/shared": {
       "entry": ["src/**/*.test.ts"],
