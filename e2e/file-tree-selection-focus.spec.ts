@@ -53,5 +53,59 @@ test("a selection cannot consume focus through the previous editor", async ({
   await page.clock.runFor(50);
   await page.clock.resume();
   await expect(page.getByLabel("New editor")).toBeFocused();
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 60_000));
+  for (const [path, control] of [
+    ["src/main.tsx", page.getByLabel("File name")],
+    ["src/index.css", page.getByRole("menu", { name: "File actions" })],
+  ] as const) {
+    await page.evaluate((path) => window.editorFocusHarness.select(path), path);
+    await expect(page.locator("output")).toHaveText(path);
+    await control.focus();
+    await page.evaluate(() => window.editorFocusHarness.ready("old-editor"));
+    await page.clock.runFor(50);
+    await expect(control).toBeFocused();
+  }
+  await page.getByLabel("File name").focus();
+  await page.evaluate(() => window.editorFocusHarness.select("src/App.tsx"));
+  await expect(page.locator("output")).toHaveText("src/App.tsx");
+  await other.focus();
+  await page.getByLabel("File name").focus();
+  await page.evaluate(() => window.editorFocusHarness.ready("new-editor"));
+  await page.clock.runFor(50);
+  await expect(page.getByLabel("File name")).toBeFocused();
+  await page.evaluate(() => window.editorFocusHarness.select("index.html"));
+  await expect(page.locator("output")).toHaveText("index.html");
+  await page.evaluate(() => window.editorFocusHarness.ready("new-editor"));
+  await page.clock.runFor(50);
+  await expect(page.getByLabel("New editor")).toBeFocused();
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+    document.body.append(host);
+    const root = host.attachShadow({ mode: "open" });
+    root.innerHTML =
+      '<input aria-label="Tree search"><button>Tree row</button>';
+    root.querySelector("input")!.focus();
+  });
+  await page.evaluate(() => window.editorFocusHarness.select("src/main.tsx"));
+  await expect(page.locator("output")).toHaveText("src/main.tsx");
+  await page.getByRole("button", { name: "Tree row" }).focus();
+  await page.getByLabel("Tree search").focus();
+  await page.evaluate(() => window.editorFocusHarness.ready("new-editor"));
+  await page.clock.runFor(50);
+  await expect(page.getByLabel("Tree search")).toBeFocused();
+  await page.getByLabel("Tree search").evaluate((input) => {
+    const container = document.createElement("div");
+    container.setAttribute("data-file-tree-search-container", "true");
+    container.setAttribute("data-open", "true");
+    input.replaceWith(container);
+    container.append(input);
+    (input as HTMLInputElement).focus();
+  });
+  await page.evaluate(() => window.editorFocusHarness.select("src/index.css"));
+  await expect(page.locator("output")).toHaveText("src/index.css");
+  await page.evaluate(() => window.editorFocusHarness.ready("new-editor"));
+  await page.clock.runFor(50);
+  await expect(page.getByLabel("Tree search")).toBeFocused();
+  await page.clock.resume();
   expect(errors).toEqual([]);
 });

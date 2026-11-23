@@ -43,6 +43,12 @@ function FocusHarness() {
       <textarea id="old-editor" aria-label="Old editor" />
       <textarea id="new-editor" aria-label="New editor" />
       <button type="button">Other control</button>
+      <input aria-label="File name" />
+      <div role="menu" aria-label="File actions" tabIndex={-1}>
+        <button type="button" role="menuitem">
+          Action
+        </button>
+      </div>
     </>
   );
 }

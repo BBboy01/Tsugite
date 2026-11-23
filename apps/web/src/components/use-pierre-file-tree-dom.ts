@@ -32,7 +32,7 @@ export function usePierreFileTreeDom({
   commitPathRename,
   onRootContext,
 }: Props) {
-  const pendingSearchRestoreRef = useRef<string | null>(null);
+  const pendingSearchRestoreRef = useRef<{ query: string } | null>(null);
 
   useEffect(() => {
     const wrapper = wrapperRef.current;
@@ -146,6 +146,7 @@ export function usePierreFileTreeDom({
     const eventTarget = wrapperRef.current;
     if (!eventTarget) return;
     const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") pendingSearchRestoreRef.current = null;
       const input = event
         .composedPath()
         .find((target) => target instanceof HTMLInputElement);
@@ -197,15 +198,15 @@ export function usePierreFileTreeDom({
               target instanceof Element && target.closest('[role="treeitem"]'),
           )
       ) {
-        pendingSearchRestoreRef.current = searchQuery;
+        pendingSearchRestoreRef.current = { query: searchQuery };
       }
     };
     const clearPendingSearch = () => {
       pendingSearchRestoreRef.current = null;
     };
     const onClick = (event: MouseEvent) => {
-      const searchQuery = pendingSearchRestoreRef.current;
-      if (!searchQuery) return;
+      const restore = pendingSearchRestoreRef.current;
+      if (!restore) return;
       if (
         event
           .composedPath()
@@ -214,9 +215,12 @@ export function usePierreFileTreeDom({
               target instanceof Element && target.closest('[role="treeitem"]'),
           )
       ) {
-        pendingSearchRestoreRef.current = null;
         requestAnimationFrame(() => {
-          requestAnimationFrame(() => model.openSearch(searchQuery));
+          requestAnimationFrame(() => {
+            if (pendingSearchRestoreRef.current !== restore) return;
+            pendingSearchRestoreRef.current = null;
+            model.openSearch(restore.query);
+          });
         });
       }
     };
@@ -226,6 +230,7 @@ export function usePierreFileTreeDom({
     eventTarget.addEventListener("dragstart", clearPendingSearch, true);
     eventTarget.addEventListener("click", onClick, true);
     return () => {
+      pendingSearchRestoreRef.current = null;
       eventTarget.removeEventListener("keydown", onKeyDown, true);
       eventTarget.removeEventListener("pointerdown", onPointerDown, true);
       eventTarget.removeEventListener(
