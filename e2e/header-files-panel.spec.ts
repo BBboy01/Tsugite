@@ -18,6 +18,9 @@ test("Header file control keeps width, appearance, and tree state across collaps
   const editorPanel = page.locator('[data-panel="editor"]');
   const workspaceGrid = page.locator(".workspace-layout-grid");
   const tree = page.locator('[role="tree"][aria-label="Project files"]');
+  const treeScroller = tree.locator(
+    '[data-file-tree-virtualized-scroll="true"]',
+  );
   const toggle = page.getByRole("button", {
     name: "Collapse files panel",
     exact: true,
@@ -214,13 +217,12 @@ test("Header file control keeps width, appearance, and tree state across collaps
       flex: "none",
     });
   });
-  await tree.hover();
+  await treeScroller.hover();
   await page.mouse.wheel(0, 64);
-  await page.evaluate(
-    () =>
-      new Promise<void>((resolve) => requestAnimationFrame(() => resolve())),
-  );
-  const treeScrollTop = await tree.evaluate(
+  await expect
+    .poll(() => treeScroller.evaluate((element) => element.scrollTop))
+    .toBeGreaterThan(0);
+  const treeScrollTop = await treeScroller.evaluate(
     (element) => (element as HTMLElement).scrollTop,
   );
   const toggleBox = await toggle.boundingBox();
@@ -344,11 +346,12 @@ test("Header file control keeps width, appearance, and tree state across collaps
     "true",
   );
   await expect.poll(headerSurfaceScale).toBe(1);
+  await expect
+    .poll(() => treeScroller.evaluate((element) => element.scrollTop))
+    .toBe(treeScrollTop);
+  await treeScroller.evaluate((element) => element.scrollTo(0, 0));
   await expect(folder).toHaveAttribute("aria-expanded", "true");
   await expect(stylesheet).toHaveAttribute("aria-selected", "true");
-  await expect
-    .poll(() => tree.evaluate((element) => (element as HTMLElement).scrollTop))
-    .toBe(treeScrollTop);
   await expect
     .poll(async () =>
       Math.abs((await headerFiles.boundingBox())!.width - expandedWidth),
@@ -437,6 +440,7 @@ test("File panel contents slide out in sync without an overshoot", async ({
     const slot = document.querySelector<HTMLElement>('[data-panel="files"]');
     const surface = slot?.firstElementChild as HTMLElement | null;
     if (!slot || !surface) return [];
+    const tree = slot.querySelector("file-tree-container")!.shadowRoot!;
 
     const frames: Array<{
       elapsed: number;
@@ -451,7 +455,7 @@ test("File panel contents slide out in sync without an overshoot", async ({
     const start = performance.now();
     while (performance.now() - start < 440) {
       const { left, width } = surface.getBoundingClientRect();
-      const row = slot.querySelector<HTMLElement>("[role='treeitem']");
+      const row = tree.querySelector<HTMLElement>("[role='treeitem']");
       const grid = slot.closest<HTMLElement>(".workspace-layout-grid");
       const editor = grid?.querySelector<HTMLElement>('[data-panel="editor"]');
       const region = document.querySelector<HTMLElement>(
@@ -466,7 +470,7 @@ test("File panel contents slide out in sync without an overshoot", async ({
         elapsed: performance.now() - start,
         left,
         width,
-        rows: slot.querySelectorAll<HTMLElement>("[role='treeitem']").length,
+        rows: tree.querySelectorAll<HTMLElement>("[role='treeitem']").length,
         visibleRatio: rowBox
           ? Math.max(0, rightEdge - leftEdge) / rowBox.width
           : 0,

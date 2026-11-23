@@ -1,54 +1,132 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useStore } from "jotai";
-import { fileSearchOpenAtom, settingsOpenAtom } from "./workspace-atoms";
+import {
+  fileSearchOpenAtom,
+  selectedPathAtom,
+  settingsOpenAtom,
+} from "./workspace-atoms";
 
-export function useEditorFocus() {
+function getControlFocus() {
+  let active = document.activeElement;
+  while (active?.shadowRoot?.activeElement) {
+    active = active.shadowRoot.activeElement;
+  }
+  const popup = active?.closest('[role="menu"], [role="dialog"]');
+  const popupClosed = popup?.getAttribute("data-state") === "closed";
+  return {
+    treeSearch: Boolean(
+      active?.closest('[data-file-tree-search-container][data-open="true"]'),
+    ),
+    input: Boolean(
+      active &&
+      !popupClosed &&
+      !active.closest(".cm-editor") &&
+      active.matches("input, textarea, select, [contenteditable='true']"),
+    ),
+    popup: Boolean(
+      (popup && !popupClosed) ||
+      document.querySelector(
+        '[role="menu"][data-state="open"], [role="dialog"][data-state="open"]',
+      ),
+    ),
+  };
+}
+
+export function useEditorFocus(selectedPath: string) {
   const store = useStore();
   const editorFocusRef = useRef<(() => void) | undefined>(undefined);
+  const editorPathRef = useRef<string | undefined>(undefined);
   const focusEditorWhenReadyRef = useRef(false);
   const focusInitialEditorRef = useRef(true);
-  const focusEditorAfterSelectionRef = useRef(false);
+  const focusVersionRef = useRef(0);
+  const pendingSelectionFocusRef = useRef<{ focusVersion: number } | null>(
+    null,
+  );
 
   const focusEditorIfRequested = useCallback(() => {
     const focus = editorFocusRef.current;
     if (
       focus &&
+      editorPathRef.current === store.get(selectedPathAtom) &&
       (focusEditorWhenReadyRef.current || focusInitialEditorRef.current)
     ) {
       focusEditorWhenReadyRef.current = false;
       focusInitialEditorRef.current = false;
-      focus();
+      const control = getControlFocus();
+      if (!control.input && !control.popup) focus();
     }
-  }, []);
+  }, [store]);
 
-  const requestSelectionFocus = useCallback(() => {
-    focusEditorAfterSelectionRef.current = true;
+  const scheduleSelectionFocus = useCallback(() => {
+    const pending = pendingSelectionFocusRef.current;
+    if (!pending) return;
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (!focusEditorAfterSelectionRef.current) return;
+        if (pendingSelectionFocusRef.current !== pending) return;
         const focus = editorFocusRef.current;
-        if (!focus) return;
-        focusEditorAfterSelectionRef.current = false;
+        if (!focus || editorPathRef.current !== store.get(selectedPathAtom))
+          return;
+        pendingSelectionFocusRef.current = null;
+        const control = getControlFocus();
+        if (
+          control.popup ||
+          control.treeSearch ||
+          (control.input && focusVersionRef.current !== pending.focusVersion)
+        )
+          return;
         focus();
       }),
     );
-  }, []);
+  }, [store]);
+
+  const requestSelectionFocus = useCallback(() => {
+    pendingSelectionFocusRef.current = {
+      focusVersion: focusVersionRef.current,
+    };
+    scheduleSelectionFocus();
+  }, [scheduleSelectionFocus]);
 
   const handleEditorFocusReady = useCallback(
     (focus: (() => void) | undefined) => {
       editorFocusRef.current = focus;
+      editorPathRef.current = focus ? selectedPath : undefined;
       // StrictMode can replace a synchronously mounted view before effects settle.
       queueMicrotask(() => {
         if (!focus || editorFocusRef.current !== focus) return;
         focusEditorIfRequested();
-        if (focusEditorAfterSelectionRef.current) {
-          focusEditorAfterSelectionRef.current = false;
-          focus();
+        if (pendingSelectionFocusRef.current) {
+          scheduleSelectionFocus();
         }
       });
     },
-    [focusEditorIfRequested],
+    [focusEditorIfRequested, scheduleSelectionFocus, selectedPath],
   );
+
+  useEffect(() => {
+    const roots = new Set<ShadowRoot>();
+    const observeShadowFocus = () => {
+      let active = document.activeElement;
+      while (active?.shadowRoot) {
+        const root = active.shadowRoot;
+        if (!roots.has(root)) {
+          roots.add(root);
+          root.addEventListener("focusin", handleFocus, true);
+        }
+        active = root.activeElement;
+      }
+    };
+    const handleFocus = () => {
+      focusVersionRef.current += 1;
+      observeShadowFocus();
+    };
+    document.addEventListener("focusin", handleFocus, true);
+    observeShadowFocus();
+    return () => {
+      document.removeEventListener("focusin", handleFocus, true);
+      for (const root of roots)
+        root.removeEventListener("focusin", handleFocus, true);
+    };
+  }, []);
 
   useEffect(() => {
     let previousSettingsOpen = store.get(settingsOpenAtom);

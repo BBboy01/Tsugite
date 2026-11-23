@@ -65,13 +65,25 @@ test("submitting a search path does not rename the focused file", async ({
   page,
 }) => {
   const tree = page.getByRole("tree", { name: "Project files" });
-  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const toggle = page.getByRole("button", { name: "Search", exact: true });
+  await toggle.click();
   const search = tree.getByPlaceholder("Search...");
   await search.fill("src/");
   await search.press("Enter");
   await expect(page.getByRole("alert")).toHaveCount(0);
+  await expect(search).toBeHidden();
+  await expect(page.locator(".cm-content")).toBeFocused();
+  await toggle.click();
   await search.fill("");
   await expect(
     tree.getByRole("treeitem", { name: "App.tsx", exact: true }),
   ).toBeVisible();
+  await page.reload();
+  await expect(
+    page.getByRole("region", { name: "Editing src/App.tsx", exact: true }),
+  ).toBeVisible();
+  await expect(page.locator(".cm-content")).toContainText(
+    "export function App",
+  );
+  await expect(page.getByRole("alert")).toHaveCount(0);
 });

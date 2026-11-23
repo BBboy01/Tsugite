@@ -77,6 +77,12 @@ bun install --frozen-lockfile
 bun --no-env-file run build
 ```
 
+The build script explicitly executes Vite with Bun. CI, release archives, and
+the build stage of [Dockerfile.web](../Dockerfile.web) use that same script;
+the Docker build pins a matching Bun image digest. Keep the npm build in
+`.bun-version` and the image digest aligned when upgrading. For a Node
+compatibility comparison, use the [build fallback command](development.md#build-output).
+
 Serve `apps/web/dist` with a static web server that provides SPA fallback to `index.html`, the two isolation headers below, and a WebSocket proxy from `/ws/*` to the Bun server. The bundled [Caddyfile](../Caddyfile) is the reference; outside Compose, change its document root and `server:3001` upstream to match your host layout.
 
 Start the room server from the repository root, choosing a writable persistent database path:

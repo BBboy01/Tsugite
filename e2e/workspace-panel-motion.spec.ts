@@ -170,7 +170,9 @@ for (const finalState of ["expanded", "collapsed"] as const) {
         );
         const currentWidth = panel.getBoundingClientRect().width;
         if (currentWidth > width * 0.1 && currentWidth < width * 0.9) {
-          const rows = panel.querySelectorAll('[role="treeitem"]').length;
+          const rows = panel
+            .querySelector("file-tree-container")!
+            .shadowRoot!.querySelectorAll('[role="treeitem"]').length;
           button.click();
           return { width: currentWidth, rows };
         }
@@ -218,9 +220,9 @@ for (const finalState of ["expanded", "collapsed"] as const) {
     );
     await expect(
       files.locator('[role="treeitem"][aria-selected="true"]'),
-    ).toContainText("index.css");
+    ).toHaveAttribute("aria-label", "index.css");
     await expect(
       files.locator('[role="treeitem"][aria-expanded="true"]'),
-    ).toContainText("src");
+    ).toHaveAttribute("aria-label", "src folder");
   });
 }

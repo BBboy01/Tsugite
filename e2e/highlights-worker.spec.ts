@@ -45,6 +45,9 @@ test("highlights edited and scrolled code in a worker without replacing the edit
   await expect(
     firstLine.locator("span[style*='color:']").first(),
   ).toBeVisible();
+  // End the fixture replacement's undo group before testing the next edit.
+  await editor.blur();
+  await editor.focus();
   await page.keyboard.insertText("// rapid\n");
   await page.keyboard.press("ControlOrMeta+z");
   await expect(

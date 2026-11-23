@@ -277,6 +277,7 @@ export function usePierreFileTreeController({
     commitDraftEdit,
     commitPathRename,
     onRootContext: setRootContext,
+    callbacks,
   });
 
   const startDraftCreation = (
