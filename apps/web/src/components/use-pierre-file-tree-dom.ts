@@ -20,6 +20,7 @@ type Props = {
   commitDraftEdit: (value: string | null, path: string) => boolean;
   commitPathRename: (value: string, path: string) => void;
   onRootContext: (context: ContextMenuOpenContext | null) => void;
+  callbacks: RefObject<{ onSelect: (path: string) => void }>;
 };
 
 export function usePierreFileTreeDom({
@@ -31,6 +32,7 @@ export function usePierreFileTreeDom({
   commitDraftEdit,
   commitPathRename,
   onRootContext,
+  callbacks,
 }: Props) {
   const pendingSearchRestoreRef = useRef<{ query: string } | null>(null);
 
@@ -151,6 +153,23 @@ export function usePierreFileTreeDom({
         .composedPath()
         .find((target) => target instanceof HTMLInputElement);
       if (
+        event.key === "Enter" &&
+        !event.isComposing &&
+        event.keyCode !== 229 &&
+        input instanceof HTMLInputElement &&
+        input.hasAttribute("data-file-tree-search-input")
+      ) {
+        const path = model.getFocusedPath();
+        if (path && !path.endsWith("/")) {
+          event.preventDefault();
+          event.stopImmediatePropagation();
+          pendingSearchRestoreRef.current = null;
+          model.closeSearch();
+          callbacks.current.onSelect(path);
+          return;
+        }
+      }
+      if (
         !(input instanceof HTMLInputElement) ||
         !input.hasAttribute("data-item-rename-input")
       )
@@ -241,7 +260,7 @@ export function usePierreFileTreeDom({
       eventTarget.removeEventListener("dragstart", clearPendingSearch, true);
       eventTarget.removeEventListener("click", onClick, true);
     };
-  }, [model]);
+  }, [callbacks, model]);
 
   const finishActiveEdit = () => {
     const container = model.getFileTreeContainer();

@@ -47,3 +47,20 @@ test("closing tree search cancels an earlier result-click restore", async ({
   await page.clock.resume();
   await expect(search).toBeHidden();
 });
+
+test("Enter on the selected tree search result closes search and focuses the editor", async ({
+  page,
+}) => {
+  await page.addInitScript(() => localStorage.setItem("iris.language", "en"));
+  await page.goto(`/room/tree-search-commit-${crypto.randomUUID()}`);
+  const editor = page.locator(".cm-content");
+  await expect(editor).toBeFocused();
+  await page.getByRole("button", { name: "Search", exact: true }).click();
+  const search = page.getByPlaceholder("Search...");
+  await search.fill("App.tsx");
+  await search.press("Enter");
+  await expect(search).toBeHidden();
+  await expect(editor).toBeFocused();
+  await page.keyboard.insertText("// tree-search-commit\n");
+  await expect(editor).toContainText("tree-search-commit");
+});
