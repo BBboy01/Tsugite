@@ -80,6 +80,11 @@ export function PierreFileTreeContextActions({
           className={`theme-${theme} z-50 min-w-32 space-y-px overflow-hidden overscroll-contain rounded-lg border border-iris-divider bg-clip-padding p-1 font-sans text-sm leading-5 text-iris-ink shadow-lg motion-safe:data-[state=open]:animate-in motion-safe:data-[state=closed]:animate-out motion-safe:data-[state=open]:fade-in-0 motion-safe:data-[state=closed]:fade-out-0 motion-safe:data-[state=open]:zoom-in-95 motion-safe:data-[state=closed]:zoom-out-95 motion-safe:data-[side=bottom]:slide-in-from-top-2 motion-safe:data-[side=top]:slide-in-from-bottom-2`}
           onCloseAutoFocus={(event) => {
             event.preventDefault();
+            // A new menu can mount before this deferred close callback runs.
+            const nextMenu = document.querySelector(
+              '[data-file-tree-context-menu-root][data-state="open"]',
+            );
+            if (nextMenu && nextMenu !== event.target) return;
             context.restoreFocus();
           }}
         >
