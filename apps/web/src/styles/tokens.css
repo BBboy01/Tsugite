@@ -45,3 +45,10 @@
 [class*=" theme-"] .mobile-panel-trigger:is(:hover, :focus-visible) {
   background-color: var(--hover-surface);
 }
+
+@media (max-width: 760px) {
+  [data-header-files-region]
+    button[aria-expanded="false"]:is(:hover, :focus-visible) {
+    background-color: var(--hover-surface);
+  }
+}

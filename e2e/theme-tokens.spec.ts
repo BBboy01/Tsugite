@@ -19,11 +19,11 @@ test("theme-derived colors follow nested boundaries and portal dialogs", async (
 
   const folderLabel = page
     .getByRole("treeitem", { name: "src folder", exact: true })
-    .locator("span.truncate");
+    .locator('[data-truncate-content="visible"]');
   const gutter = page.locator(".cm-gutters");
   await expect(folderLabel).toHaveCSS(
     "color",
-    await literalColor(page, "color-mix(in srgb, #6e6e73 45%, transparent)"),
+    await literalColor(page, "#6e6e73"),
   );
   await expect(gutter).toHaveCSS(
     "color",
@@ -31,25 +31,28 @@ test("theme-derived colors follow nested boundaries and portal dialogs", async (
   );
 
   const nestedColors = await folderLabel.evaluate((label) => {
+    const host = (label.getRootNode() as ShadowRoot).host;
+    const parent = host.parentNode!;
+    const next = host.nextSibling;
     const dark = document.createElement("div");
     dark.className = "theme-dracula";
     const light = document.createElement("div");
     light.className = "theme-github-light";
-    const darkLabel = label.cloneNode(true) as HTMLElement;
-    const lightLabel = label.cloneNode(true) as HTMLElement;
-    dark.append(darkLabel, light);
-    light.append(lightLabel);
+    dark.append(light);
     document.querySelector("main")?.append(dark);
-    const result = [
-      getComputedStyle(darkLabel).color,
-      getComputedStyle(lightLabel).color,
-    ];
-    dark.remove();
-    return result;
+    try {
+      dark.append(host);
+      const darkColor = getComputedStyle(label).color;
+      light.append(host);
+      return [darkColor, getComputedStyle(label).color];
+    } finally {
+      parent.insertBefore(host, next);
+      dark.remove();
+    }
   });
   expect(nestedColors).toEqual([
-    await literalColor(page, "color-mix(in srgb, #a7a9b5 45%, transparent)"),
-    await literalColor(page, "color-mix(in srgb, #59636e 45%, transparent)"),
+    await literalColor(page, "#a7a9b5"),
+    await literalColor(page, "#59636e"),
   ]);
 
   await page.locator(".cm-content").focus();
@@ -76,7 +79,7 @@ test("theme-derived colors follow nested boundaries and portal dialogs", async (
 
   await expect(folderLabel).toHaveCSS(
     "color",
-    await literalColor(page, "color-mix(in srgb, #a7a9b5 45%, transparent)"),
+    await literalColor(page, "#a7a9b5"),
   );
   await expect(gutter).toHaveCSS(
     "color",
