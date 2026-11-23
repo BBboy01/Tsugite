@@ -92,7 +92,7 @@ export function useWorkspaceController(roomId: string) {
     focusInitialEditorRef,
     requestSelectionFocus,
     handleEditorFocusReady,
-  } = useEditorFocus();
+  } = useEditorFocus(selectedPath);
 
   useEffect(() => {
     clearPresenceTimer();

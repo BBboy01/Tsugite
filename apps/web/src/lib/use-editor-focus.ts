@@ -1,10 +1,15 @@
 import { useCallback, useEffect, useRef } from "react";
 import { useStore } from "jotai";
-import { fileSearchOpenAtom, settingsOpenAtom } from "./workspace-atoms";
+import {
+  fileSearchOpenAtom,
+  selectedPathAtom,
+  settingsOpenAtom,
+} from "./workspace-atoms";
 
-export function useEditorFocus() {
+export function useEditorFocus(selectedPath: string) {
   const store = useStore();
   const editorFocusRef = useRef<(() => void) | undefined>(undefined);
+  const editorPathRef = useRef<string | undefined>(undefined);
   const focusEditorWhenReadyRef = useRef(false);
   const focusInitialEditorRef = useRef(true);
   const focusEditorAfterSelectionRef = useRef(false);
@@ -13,13 +18,14 @@ export function useEditorFocus() {
     const focus = editorFocusRef.current;
     if (
       focus &&
+      editorPathRef.current === store.get(selectedPathAtom) &&
       (focusEditorWhenReadyRef.current || focusInitialEditorRef.current)
     ) {
       focusEditorWhenReadyRef.current = false;
       focusInitialEditorRef.current = false;
       focus();
     }
-  }, []);
+  }, [store]);
 
   const requestSelectionFocus = useCallback(() => {
     focusEditorAfterSelectionRef.current = true;
@@ -27,27 +33,28 @@ export function useEditorFocus() {
       requestAnimationFrame(() => {
         if (!focusEditorAfterSelectionRef.current) return;
         const focus = editorFocusRef.current;
-        if (!focus) return;
+        if (!focus || editorPathRef.current !== store.get(selectedPathAtom))
+          return;
         focusEditorAfterSelectionRef.current = false;
         focus();
       }),
     );
-  }, []);
+  }, [store]);
 
   const handleEditorFocusReady = useCallback(
     (focus: (() => void) | undefined) => {
       editorFocusRef.current = focus;
+      editorPathRef.current = focus ? selectedPath : undefined;
       // StrictMode can replace a synchronously mounted view before effects settle.
       queueMicrotask(() => {
         if (!focus || editorFocusRef.current !== focus) return;
         focusEditorIfRequested();
         if (focusEditorAfterSelectionRef.current) {
-          focusEditorAfterSelectionRef.current = false;
-          focus();
+          requestSelectionFocus();
         }
       });
     },
-    [focusEditorIfRequested],
+    [focusEditorIfRequested, requestSelectionFocus, selectedPath],
   );
 
   useEffect(() => {

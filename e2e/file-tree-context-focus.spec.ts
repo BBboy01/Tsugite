@@ -14,7 +14,7 @@ test("closing a row menu cannot steal focus from a new root menu", async ({
   await expect(page.getByRole("menu")).toBeVisible();
 
   // Let the next menu open before the old menu's deferred focus restoration.
-  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 100));
+  await page.clock.pauseAt(await page.evaluate(() => Date.now() + 60_000));
   await page.keyboard.press("Escape");
   await expect(page.getByRole("menu")).toHaveCount(0);
   const tree = page.getByRole("group", { name: "Project files", exact: true });
