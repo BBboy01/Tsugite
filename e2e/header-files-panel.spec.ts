@@ -1,4 +1,8 @@
 import { expect, test } from "playwright/test";
+import {
+  captureWorkspaceTransition,
+  waitForWorkspaceTransition,
+} from "./helpers/workspace-transition";
 
 test.use({ video: "on" });
 
@@ -399,7 +403,12 @@ test("File panel contents slide out in sync without an overshoot", async ({
     .boundingBox())!.width;
   expect(initialBox).not.toBeNull();
 
-  const capture = await page.evaluateHandle(() => {
+  const capture = await captureWorkspaceTransition(page);
+  await page
+    .getByRole("button", { name: "Collapse files panel", exact: true })
+    .click();
+  await waitForWorkspaceTransition(capture);
+  const samples = await capture.evaluate(({ animations }) => {
     const slot = document.querySelector<HTMLElement>('[data-panel="files"]');
     const surface = slot?.firstElementChild as HTMLElement | null;
     if (!slot || !surface) throw new Error("Files panel is missing");
@@ -415,61 +424,38 @@ test("File panel contents slide out in sync without an overshoot", async ({
       editorWidth: number;
       headerScale: number;
     }> = [];
-    const sample = async () => {
-      const start = performance.now();
-      while (performance.now() - start < 440) {
-        const { left, width } = surface.getBoundingClientRect();
-        const row = tree.querySelector<HTMLElement>("[role='treeitem']");
-        const grid = slot.closest<HTMLElement>(".workspace-layout-grid");
-        const editor = grid?.querySelector<HTMLElement>(
-          '[data-panel="editor"]',
-        );
-        const region = document.querySelector<HTMLElement>(
-          "[data-header-files-region]",
-        );
-        const rowBox = row?.getBoundingClientRect();
-        const gridBox = grid?.getBoundingClientRect();
-        const regionStyle = region
-          ? getComputedStyle(region, "::before")
-          : null;
-        const leftEdge = Math.max(rowBox?.left ?? 0, gridBox?.left ?? 0);
-        const rightEdge = Math.min(rowBox?.right ?? 0, gridBox?.right ?? 0);
-        frames.push({
-          elapsed: performance.now() - start,
-          left,
-          width,
-          rows: tree.querySelectorAll<HTMLElement>("[role='treeitem']").length,
-          visibleRatio: rowBox
-            ? Math.max(0, rightEdge - leftEdge) / rowBox.width
-            : 0,
-          slotWidth: slot.getBoundingClientRect().width,
-          editorWidth: editor?.getBoundingClientRect().width ?? 0,
-          headerScale: regionStyle
-            ? new DOMMatrixReadOnly(regionStyle.transform).a
-            : 0,
-        });
-        await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => resolve()),
-        );
-      }
-      return frames;
-    };
-    const toggle = document.querySelector<HTMLButtonElement>(
-      'button[aria-controls="workspace-files-panel"]',
-    )!;
-    return {
-      samples: new Promise<typeof frames>((resolve) => {
-        toggle.addEventListener("click", () => void sample().then(resolve), {
-          once: true,
-        });
-      }),
-    };
+    for (let elapsed = 0; elapsed <= 440; elapsed += 16) {
+      for (const animation of animations) animation.currentTime = elapsed;
+      const { left, width } = surface.getBoundingClientRect();
+      const row = tree.querySelector<HTMLElement>("[role='treeitem']");
+      const grid = slot.closest<HTMLElement>(".workspace-layout-grid");
+      const editor = grid?.querySelector<HTMLElement>('[data-panel="editor"]');
+      const region = document.querySelector<HTMLElement>(
+        "[data-header-files-region]",
+      );
+      const rowBox = row?.getBoundingClientRect();
+      const gridBox = grid?.getBoundingClientRect();
+      const regionStyle = region ? getComputedStyle(region, "::before") : null;
+      const leftEdge = Math.max(rowBox?.left ?? 0, gridBox?.left ?? 0);
+      const rightEdge = Math.min(rowBox?.right ?? 0, gridBox?.right ?? 0);
+      frames.push({
+        elapsed,
+        left,
+        width,
+        rows: tree.querySelectorAll<HTMLElement>("[role='treeitem']").length,
+        visibleRatio: rowBox
+          ? Math.max(0, rightEdge - leftEdge) / rowBox.width
+          : 0,
+        slotWidth: slot.getBoundingClientRect().width,
+        editorWidth: editor?.getBoundingClientRect().width ?? 0,
+        headerScale: regionStyle
+          ? new DOMMatrixReadOnly(regionStyle.transform).a
+          : 0,
+      });
+    }
+    for (const animation of animations) animation.finish();
+    return frames;
   });
-
-  await page
-    .getByRole("button", { name: "Collapse files panel", exact: true })
-    .click();
-  const samples = await capture.evaluate(async (capture) => capture.samples);
   await capture.dispose();
   await expect
     .poll(() =>
