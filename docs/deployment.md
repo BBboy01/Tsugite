@@ -4,11 +4,12 @@
 
 Run one room-server process with a persistent data volume. There is no authentication or multi-server coordination. Treat room URLs as shareable access to the project, keep deployments private when needed, and avoid putting secrets in shared files or project code.
 
-| Deployment                            | Use when                                          | Requirements                                                                       |
-| ------------------------------------- | ------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| [Build with Compose](#docker-compose) | Deploying a checkout, including native ARM builds | Docker daemon, Compose, repository checkout                                        |
-| [Published images](#published-images) | Deploying matching prebuilt web/server versions   | Docker, Compose configuration, registry access; published images are AMD64         |
-| [Without Docker](#without-docker)     | Managing Bun and a static web server directly     | Pinned Bun, checkout, persistent database directory, HTTPS/WebSocket reverse proxy |
+| Deployment                                      | Use when                                          | Requirements                                                                            |
+| ----------------------------------------------- | ------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| [Build with Compose](#docker-compose)           | Deploying a checkout, including native ARM builds | Docker daemon, Compose, repository checkout                                             |
+| [Published images](#published-images)           | Deploying matching prebuilt web/server versions   | Docker, Compose configuration, registry access; published images are AMD64              |
+| [Without Docker](#without-docker)               | Managing Bun and a static web server directly     | Pinned Bun, checkout, persistent database directory, HTTPS/WebSocket reverse proxy      |
+| [Standalone executable](#standalone-executable) | Running the room server without installing Bun    | Linux AMD64/glibc, executable plus `drizzle/`, persistent database, separate web server |
 
 ## Docker Compose
 
@@ -110,7 +111,64 @@ DATABASE_PATH=./data/tsugite.sqlite PORT=3001 bun --no-env-file apps/server/src/
 
 Keep `drizzle/` available in that working directory; startup applies its migrations. Run Bun under your process supervisor, allow graceful SIGTERM shutdown, and configure HTTPS for remote use. The server listens independently of the static web server; restrict direct backend access through your host/network configuration.
 
-`bun run preview` serves a build for local inspection and does not proxy room WebSockets. The GitHub Release archive contains only static web output, so it still needs a matching server checkout/runtime and persistent database.
+`bun run preview` serves a build for local inspection and does not proxy room WebSockets. The `tsugite-v*.tar.gz` GitHub Release archive contains only static web output; pair it with a matching source server or the separate server archive below.
+
+## Standalone executable
+
+The optional `tsugite-server-v*-linux-amd64.tar.gz` release asset contains
+`tsugite-server` and the external `drizzle/` migration directory. Its checksum
+and build provenance accompany the archive. Release publication requires the
+isolated server regression suite to pass, independently of browser checks.
+
+Only Linux AMD64 with glibc is supported by this distribution. CI runs it on
+Debian Bookworm; Alpine/musl, ARM and macOS executables are not supported. The
+existing source and container deployment methods remain available, including
+the source-based Alpine server image.
+
+For reference, the Linux AMD64 executable built with the current pinned Bun
+revision `ca7729d01` and Loro 1.18.0 is 162,691,816 bytes (about 155 MiB), before
+archive compression. It includes the Bun runtime and Loro resources; `drizzle/`
+is external. This is an executable measurement, not a container-size comparison.
+
+To build from a checkout, use Linux AMD64 and install the exact Bun npm build
+from `.bun-version`, then run:
+
+```bash
+bun install --frozen-lockfile
+bun --no-env-file run build:server
+SERVER_TEST_DOCKER_IMAGE=debian:bookworm-slim bun --no-env-file run test:server:standalone
+```
+
+The output is `dist/server/bun-linux-x64/`. The build uses the current Bun
+executable directly, avoiding canary cross-compilation downloads. It bundles
+the Loro helper and embeds its WASM without modifying installed dependencies.
+Unexpected Loro versions or resource layouts stop the build; after an upgrade,
+review the adapter and rerun both resource and executable regressions.
+
+Extract a matching release into a new version directory, then start from that
+directory, where `./drizzle` must resolve:
+
+```bash
+tar -xzf tsugite-server-v1.1.0-linux-amd64.tar.gz -C /opt/tsugite/server-v1.1.0
+cd /opt/tsugite/server-v1.1.0
+DATABASE_PATH=/var/lib/tsugite/tsugite.sqlite PORT=3001 ./tsugite-server
+```
+
+Create the extraction directory first and substitute the chosen release version.
+The destination needs no Bun installation, application `node_modules`, source
+files or loose WASM/helper files. Configuration comes from process environment
+variables; the executable does not auto-load dotenv or Bun configuration files.
+The default database is `./data/tsugite.sqlite`; use an absolute persistent path
+outside the version directory for upgrades. Serve the matching web archive and
+proxy WebSockets as described above: this executable serves only the backend.
+
+Run one process under a supervisor, without `--watch`, and allow at least ten
+seconds for SIGINT/SIGTERM shutdown. Fresh databases migrate at startup; existing
+databases use the same migration records and snapshot format as source/container
+servers. Follow the stopped-process backup procedure below before switching
+versions. To return to the source/container delivery of the same application
+version, stop the binary cleanly and reuse the database and migrations; this
+packaging change requires no schema conversion or data-volume changes.
 
 ## Configuration
 
@@ -123,7 +181,7 @@ Keep `drizzle/` available in that working directory; startup applies its migrati
 | `TSUGITE_WEB_IMAGE`    | Compose                | Web image, default `tsugite-web:local`                                                                                              |
 | `TSUGITE_SERVER_IMAGE` | Compose                | Server image, default `tsugite-server:local`                                                                                        |
 
-Run standalone server and migration commands from the repository root so `./drizzle` resolves correctly. Setting `DATABASE_PATH` on the host does not override Compose's explicit container path. A runtime environment variable on the Caddy container cannot change an already-built `VITE_WS_URL`; the bundled image uses same-origin proxying and normally needs no override.
+Run source server and migration commands from the repository root, or the compiled server from its extracted distribution directory, so `./drizzle` resolves correctly. Setting `DATABASE_PATH` on the host does not override Compose's explicit container path. A runtime environment variable on the Caddy container cannot change an already-built `VITE_WS_URL`; the bundled image uses same-origin proxying and normally needs no override.
 
 ## Caddy and WebContainer
 

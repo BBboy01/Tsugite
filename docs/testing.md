@@ -90,6 +90,48 @@ Quality CI runs on main pushes, PRs, and merge groups. Knip is advisory (`--no-e
 
 Inspect Playwright's retained trace, screenshot, and video on failure. Report the failing step and distinguish application regressions from unavailable browser capabilities or dependency downloads. Keep diagnostic artifacts out of source control, and do not replace failing assertions with retries or skips without a cause.
 
+## Standalone server checks
+
+Build on Linux AMD64 with the exact npm Bun build in `.bun-version`:
+
+```bash
+bun --no-env-file test apps/server/src/standalone-build.test.ts
+bun --no-env-file run build:server
+SERVER_TEST_DOCKER_IMAGE=debian:bookworm-slim bun --no-env-file run test:server:standalone
+```
+
+The resource test compiles the installed Loro implementation and exercises its
+helper and WASM with an empty executable search path. It also rejects changes
+to the expected dependency glue. The standalone suite copies only the executable
+and its packaged `drizzle/` into disposable directories. With the Docker setting,
+it starts Linux AMD64 Debian containers containing no Bun installation, source
+or application dependencies. The test driver retains its own Bun/dependencies
+outside those containers. Without Docker it runs the binary directly with an
+empty executable search path; this alone does not prove the host lacks Bun.
+
+The suite checks health, JSON join, binary snapshot/edit, ACK, two-client
+collaboration, reconnect, fresh migrations, restart recovery and unchanged
+migration records. Both SIGINT and SIGTERM run with no database lock, a lock
+released during shutdown and a persistent lock. Successful shutdown must persist
+the last accepted edit; persistent lock failure must exit nonzero, report the
+save failure and preserve the previous durable state. Linux runners should run
+the suite natively so SQLite's writer and lock holder share the same kernel.
+
+The suite pulls its Docker image before starting server processes, keeping image
+download diagnostics separate from server stderr. Target containers run with the
+test driver's UID/GID so a non-root driver can write the shared SQLite database
+and sidecars. Lock cases perform an actual write inside the transaction before
+sending the final edit; a read-only connection must not masquerade as a writer
+lock.
+
+`SERVER_EXECUTABLE` overrides the executable path and expects `drizzle/` beside
+it. A containerized Linux test driver can set `SERVER_TEST_DOCKER_NETWORK` to
+an existing Docker network it shares with the server containers; its temporary
+directory must also be bind-mountable at the same path by the Docker daemon.
+Quality CI runs build and runtime checks; release publication repeats them
+before packaging the server archive, checksum and provenance. Compilation alone
+is not runtime evidence, and these server checks do not validate browser preview.
+
 ## Editor performance checks
 
 Run the editor and file-tree benchmarks with one worker to avoid competing browser workloads:

@@ -64,3 +64,11 @@ jobs:
 
       - name: Build application
         run: bun run build
+
+      - name: Build standalone Linux AMD64 server
+        run: bun run build:server
+
+      - name: Verify isolated standalone server
+        run: bun run test:server:standalone
+        env:
+          SERVER_TEST_DOCKER_IMAGE: debian:bookworm-slim
