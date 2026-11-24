@@ -1,4 +1,4 @@
-import { expect, test } from "bun:test";
+import { beforeAll, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 import { cp, mkdtemp, readdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,6 +34,11 @@ async function docker(...args: string[]) {
   return output.trim();
 }
 
+beforeAll(async () => {
+  if (dockerImage)
+    await docker("pull", "--platform", "linux/amd64", dockerImage);
+}, 120_000);
+
 async function waitFor(assertion: () => boolean, description: string) {
   const deadline = Date.now() + 10_000;
   while (!assertion()) {
@@ -49,11 +54,14 @@ async function start(directory: string) {
       ? [
           "docker",
           "run",
+          "--pull=never",
           "--rm",
           "--name",
           name,
           "--platform",
           "linux/amd64",
+          "--user",
+          `${process.getuid!()}:${process.getgid!()}`,
           ...(dockerNetwork
             ? ["--network", dockerNetwork]
             : ["-p", "127.0.0.1::3001"]),
@@ -217,7 +225,17 @@ for (const signal of ["SIGTERM", "SIGINT"] as const) {
           saved.import(row.snapshot_blob);
           return readSettings(saved).theme === "nord";
         }, "baseline persistence");
-        if (lock !== "none") sqlite.run("BEGIN IMMEDIATE");
+        if (lock !== "none") {
+          sqlite.run("BEGIN IMMEDIATE");
+          // BEGIN can succeed on a read-only connection without taking a writer lock.
+          expect(
+            sqlite
+              .query(
+                "UPDATE rooms SET updated_at = updated_at WHERE room_id = 'standalone'",
+              )
+              .run().changes,
+          ).toBe(1);
+        }
         const next = reconnected.doc.version();
         setSharedSetting(reconnected.doc, "theme", "dracula");
         reconnected.ws.send(

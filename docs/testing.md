@@ -117,6 +117,13 @@ the last accepted edit; persistent lock failure must exit nonzero, report the
 save failure and preserve the previous durable state. Linux runners should run
 the suite natively so SQLite's writer and lock holder share the same kernel.
 
+The suite pulls its Docker image before starting server processes, keeping image
+download diagnostics separate from server stderr. Target containers run with the
+test driver's UID/GID so a non-root driver can write the shared SQLite database
+and sidecars. Lock cases perform an actual write inside the transaction before
+sending the final edit; a read-only connection must not masquerade as a writer
+lock.
+
 `SERVER_EXECUTABLE` overrides the executable path and expects `drizzle/` beside
 it. A containerized Linux test driver can set `SERVER_TEST_DOCKER_NETWORK` to
 an existing Docker network it shares with the server containers; its temporary
