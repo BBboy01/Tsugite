@@ -50,6 +50,14 @@ jobs:
       - name: Build application
         run: bun run build
 
+      - name: Build standalone Linux AMD64 server
+        run: bun run build:server
+
+      - name: Verify isolated standalone server
+        run: bun run test:server:standalone
+        env:
+          SERVER_TEST_DOCKER_IMAGE: debian:bookworm-slim
+
       - name: Package build output
         env:
           RELEASE_TAG: ${{ github.ref_name }}
@@ -57,11 +65,13 @@ jobs:
           mkdir -p release-artifacts
           tar -czf "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" -C apps/web/dist .
           shasum -a 256 "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" > "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz.sha256"
+          tar -czf "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz" -C dist/server/bun-linux-x64 tsugite-server drizzle
+          shasum -a 256 "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz" > "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz.sha256"
 
       - name: Attest build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4
         with:
-          subject-path: release-artifacts/tsugite-${{ github.ref_name }}.tar.gz
+          subject-path: release-artifacts/*.tar.gz
 
       - name: Generate release notes
         id: git-cliff
@@ -84,5 +94,7 @@ jobs:
           files: |
             release-artifacts/tsugite-${{ github.ref_name }}.tar.gz
             release-artifacts/tsugite-${{ github.ref_name }}.tar.gz.sha256
+            release-artifacts/tsugite-server-${{ github.ref_name }}-linux-amd64.tar.gz
+            release-artifacts/tsugite-server-${{ github.ref_name }}-linux-amd64.tar.gz.sha256
           draft: false
           prerelease: ${{ contains(github.ref_name, '-') }}
