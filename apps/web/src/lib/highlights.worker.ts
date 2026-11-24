@@ -1,7 +1,4 @@
-import {
-  createHighlightsSession,
-  type HighlightsTokenizerSession,
-} from "./highlights-engine";
+import type { HighlightsTokenizerSession } from "./highlights-engine";
 import type {
   HighlightsReply,
   HighlightsRequest,
@@ -10,10 +7,14 @@ import type {
 let session: HighlightsTokenizerSession | undefined;
 let sessionLanguage: HighlightsRequest["language"] | undefined;
 let sessionTheme: HighlightsRequest["theme"] | undefined;
+let engine: Promise<typeof import("./highlights-engine")> | undefined;
 
 self.onmessage = async ({ data }: MessageEvent<HighlightsRequest>) => {
   let spans: HighlightsReply["spans"] = [];
   try {
+    // Register the listener before dependencies can yield during module startup.
+    const { createHighlightsSession } = await (engine ??=
+      import("./highlights-engine"));
     if (
       data.reset ||
       !session ||

@@ -18,6 +18,18 @@ Start with the [documentation index](../README.md#documentation) or the [archite
 
 The browser owns editor state, preferences, and WebContainer execution. Unacknowledged edits remain in the in-memory outbox and are checkpointed to IndexedDB for explicit draft recovery. Local backup requires IndexedDB and Web Locks; storage eviction or an unfinished checkpoint can still lose edits. A local checkpoint and a server acknowledgement are separate from SQLite persistence. See [local draft recovery](architecture.md#local-draft-recovery). The server owns room membership, presence relay, the in-memory Loro document, and SQLite snapshots. Shared types and transformations belong in `packages/shared`.
 
+## Workspace dependencies
+
+Runtime dependencies belong to their workspace: `apps/web/package.json` owns the
+browser application, `apps/server/package.json` owns the room server, and
+`packages/shared/package.json` owns shared runtime dependencies. Declare a package
+in every workspace that imports it directly. The root manifest owns development
+tools and root-level E2E fixtures; root scripts keep their existing commands.
+
+Run `bun install --frozen-lockfile` from the repository root to install all
+workspaces. After changing a workspace manifest, run `bun install` with the pinned
+Bun and commit the updated `bun.lock`. Knip checks each workspace separately.
+
 ## Local workflow
 
 Use the exact Bun npm build in [`.bun-version`](../.bun-version):

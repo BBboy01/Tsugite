@@ -11,6 +11,11 @@ on:
       - "Caddyfile"
       - "docker-compose.yml"
       - ".dockerignore"
+      - "package.json"
+      - "bun.lock"
+      - ".bun-version"
+      - "apps/*/package.json"
+      - "packages/*/package.json"
       - ".github/workflows/docker-publish.yml"
 
 permissions:

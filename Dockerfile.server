@@ -2,12 +2,15 @@ FROM oven/bun:canary-alpine@sha256:de06817cbc8af2d42238f21852963e5af662f757661c9
 
 WORKDIR /app
 COPY package.json bun.lock .bun-version ./
-COPY apps ./apps
-COPY packages ./packages
-COPY drizzle ./drizzle
-COPY drizzle.config.ts ./drizzle.config.ts
+COPY apps/web/package.json ./apps/web/package.json
+COPY apps/server/package.json ./apps/server/package.json
+COPY packages/shared/package.json ./packages/shared/package.json
 
-RUN bun install --frozen-lockfile --production --ignore-scripts
+RUN bun install --frozen-lockfile --production --ignore-scripts --filter '@iris/server...' --filter '!./'
+
+COPY apps/server ./apps/server
+COPY packages/shared ./packages/shared
+COPY drizzle ./drizzle
 
 ENV PORT=3001
 ENV DATABASE_PATH=/data/tsugite.sqlite

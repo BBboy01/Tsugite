@@ -1,4 +1,8 @@
 import { expect, test } from "playwright/test";
+import {
+  captureWorkspaceTransition,
+  waitForWorkspaceTransition,
+} from "./helpers/workspace-transition";
 
 test.beforeEach(async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 900 });
@@ -155,30 +159,26 @@ for (const finalState of ["expanded", "collapsed"] as const) {
         .toBeLessThan(1);
     }
 
+    const capture = await captureWorkspaceTransition(page);
     await toggle.click();
-    const interrupted = await page.evaluate(async (width) => {
+    await waitForWorkspaceTransition(capture);
+    const interrupted = await capture.evaluate(({ animations }) => {
       const panel = document.querySelector<HTMLElement>(
         '[data-panel="files"]',
       )!;
       const button = document.querySelector<HTMLButtonElement>(
         'button[aria-controls="workspace-files-panel"]',
       )!;
-      const start = performance.now();
-      while (performance.now() - start < 1000) {
-        await new Promise<void>((resolve) =>
-          requestAnimationFrame(() => resolve()),
-        );
-        const currentWidth = panel.getBoundingClientRect().width;
-        if (currentWidth > width * 0.1 && currentWidth < width * 0.9) {
-          const rows = panel
-            .querySelector("file-tree-container")!
-            .shadowRoot!.querySelectorAll('[role="treeitem"]').length;
-          button.click();
-          return { width: currentWidth, rows };
-        }
-      }
-      return null;
-    }, initialWidth);
+      for (const animation of animations) animation.currentTime = 130;
+      const currentWidth = panel.getBoundingClientRect().width;
+      const rows = panel
+        .querySelector("file-tree-container")!
+        .shadowRoot!.querySelectorAll('[role="treeitem"]').length;
+      for (const animation of animations) animation.play();
+      button.click();
+      return { width: currentWidth, rows };
+    });
+    await capture.dispose();
     expect(interrupted).not.toBeNull();
     expect(interrupted!.width).toBeGreaterThan(0);
     expect(interrupted!.width).toBeLessThan(initialWidth);
