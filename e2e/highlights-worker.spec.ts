@@ -6,6 +6,83 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
+test("receives the first highlight request while engine dependencies initialize", async ({
+  page,
+}) => {
+  await page.route("**/highlight-worker-boot", (route) =>
+    route.fulfill({
+      contentType: "text/html",
+      body: "<title>Worker startup</title>",
+      headers: {
+        "Cross-Origin-Opener-Policy": "same-origin",
+        "Cross-Origin-Embedder-Policy": "require-corp",
+      },
+    }),
+  );
+  await page.route(
+    /\/src\/lib\/highlights-engine\.ts(?:\?.*)?$/,
+    async (route) => {
+      const response = await route.fetch();
+      await route.fulfill({
+        response,
+        body: `await new Promise(resolve => setTimeout(resolve, 100));\n${await response.text()}`,
+      });
+    },
+  );
+  await page.goto("/highlight-worker-boot");
+  const reply = await page.evaluate(async () => {
+    const worker = new Worker(
+      "/src/lib/highlights.worker.ts?worker_file&type=module",
+      {
+        type: "module",
+      },
+    );
+    try {
+      return await new Promise<{
+        id: number;
+        spans: { from: number; to: number; color: string }[];
+      }>((resolve, reject) => {
+        const timeout = setTimeout(
+          () =>
+            reject(
+              new Error(
+                "First highlight request was lost during initialization",
+              ),
+            ),
+          2000,
+        );
+        worker.onmessage = ({ data }) => {
+          clearTimeout(timeout);
+          resolve(data);
+        };
+        worker.onerror = (event) => {
+          clearTimeout(timeout);
+          reject(new Error(event.message));
+        };
+        worker.postMessage({
+          id: 1,
+          reset: true,
+          source: "const value = 42;",
+          edits: [],
+          language: "typescript",
+          theme: "paper",
+          viewport: [0, 1],
+          lineOffsets: [0],
+        });
+      });
+    } finally {
+      worker.terminate();
+    }
+  });
+  expect(reply.id).toBe(1);
+  expect(reply.spans).toContainEqual(
+    expect.objectContaining({ from: 0, color: "#ab5959" }),
+  );
+  expect(reply.spans).toContainEqual(
+    expect.objectContaining({ from: 14, to: 16, color: "#2f798a" }),
+  );
+});
+
 test("highlights edited and scrolled code in a worker without replacing the editor", async ({
   page,
 }) => {
