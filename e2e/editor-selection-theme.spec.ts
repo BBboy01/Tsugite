@@ -1,4 +1,5 @@
 import { expect, test } from "playwright/test";
+import { usePausedPreview } from "./helpers/paused-preview";
 
 const themes = [
   { name: "Paper Light", id: "paper", accent: "#007aff", width: 1280 },
@@ -12,6 +13,7 @@ for (const theme of themes) {
   test(`keeps selection and completion themed in ${theme.name} at ${theme.width}px`, async ({
     page,
   }, testInfo) => {
+    await usePausedPreview(page);
     const errors: string[] = [];
     page.on("pageerror", (error) => errors.push(error.message));
     page.on("console", (message) => {
@@ -31,7 +33,15 @@ for (const theme of themes) {
     await page
       .getByRole("button", { name: "Choose theme", exact: true })
       .click();
-    await page.getByRole("button", { name: theme.name, exact: true }).click();
+    const themeOption = page.getByRole("button", {
+      name: theme.name,
+      exact: true,
+    });
+    await themeOption.hover();
+    await expect(page.locator("main")).toHaveClass(
+      new RegExp(`theme-${theme.id}`),
+    );
+    await themeOption.click();
     await expect(page.getByRole("dialog")).toBeHidden();
     await expect(page.locator("main")).toHaveClass(
       new RegExp(`theme-${theme.id}`),

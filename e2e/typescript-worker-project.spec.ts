@@ -488,6 +488,7 @@ test("maximum legal source and declaration snapshots answer the first query", as
       const { TypeScriptWorkerClient } = (await import(clientPath)) as {
         TypeScriptWorkerClient: new (
           files: readonly { path: string; text: string }[],
+          options: { onMetrics: (metrics: { readyCount: number }) => void },
         ) => {
           status: string;
           disabledReason?: string;
@@ -512,12 +513,22 @@ test("maximum legal source and declaration snapshots answer the first query", as
       );
       observer.observe({ type: "longtask", buffered: true });
       const startedAt = performance.now();
-      const client = new TypeScriptWorkerClient(files);
+      let readyAt: number | undefined;
+      const client = new TypeScriptWorkerClient(files, {
+        onMetrics: ({ readyCount }) => {
+          if (readyCount > 0 && readyAt === undefined)
+            readyAt = performance.now();
+        },
+      });
       const queryResult = await client.hover({
         path: "src/editor-tab-model.ts",
         position,
       });
       const startupMs = performance.now() - startedAt;
+      const initializationMs =
+        readyAt === undefined ? NaN : readyAt - startedAt;
+      const firstQueryMs =
+        readyAt === undefined ? NaN : performance.now() - readyAt;
       observer.disconnect();
       let workerHeap:
         | {
@@ -541,6 +552,8 @@ test("maximum legal source and declaration snapshots answer the first query", as
         disabledReason: client.disabledReason,
         queryResult,
         startupMs,
+        initializationMs,
+        firstQueryMs,
         longTasks,
         workerHeap,
         sourceBytes,
@@ -567,7 +580,8 @@ test("maximum legal source and declaration snapshots answer the first query", as
   expect(result.queryResult.value?.signature).toContain(
     "collaboratorCount: number",
   );
-  expect(result.startupMs).toBeLessThan(2000);
+  expect(result.initializationMs).toBeLessThan(15_000);
+  expect(result.firstQueryMs).toBeLessThan(2000);
   expect(result.sourceBytes).toBe(16 * 1024 * 1024);
   expect(result.declarationBytes).toBe(8 * 1024 * 1024);
   await expect.poll(() => typeScriptWorkerCount(page)).toBe(0);

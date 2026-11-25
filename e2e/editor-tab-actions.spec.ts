@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "playwright/test";
+import { usePausedPreview } from "./helpers/paused-preview";
 
 const tabPaths = (page: Page) =>
   page.getByRole("tablist", { name: "Open files" }).getByRole("tab");
@@ -116,12 +117,14 @@ test("restoring filters remotely deleted files and falls back to the first survi
   page,
   browser,
 }) => {
+  await usePausedPreview(page);
   const room = `/room/tab-remote-delete-${crypto.randomUUID()}`;
   await page.goto(room);
   await openTabs(page);
   await page.goto("about:blank");
   const collaborator = await browser.newPage();
   try {
+    await usePausedPreview(collaborator);
     await collaborator.addInitScript(() =>
       localStorage.setItem("iris.language", "en"),
     );

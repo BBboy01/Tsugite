@@ -35,6 +35,8 @@ Playwright starts its own in-memory server on `3003` and Vite on `5175`. It does
 
 Use unique, valid room IDs. Create separate browser contexts for collaborators so they do not share local-storage identities. Keep real WebContainer startup and recovery scenarios in `e2e/preview.spec.ts`: the `preview` project runs with one worker. The ordinary `ui` project uses two workers locally; main-branch CI runs the smaller one-worker `smoke` project plus the tagged preview smoke test, while release candidates, version tags, and manual runs execute the complete suite with one worker because the CI runner is resource constrained.
 
+Tab restoration, follow-tab closure, and selection-theme checks use a paused preview runtime to avoid coupling editor assertions and browser cleanup to unrelated dependency installation. These checks keep the actual editor, TypeScript Worker, room server, and collaboration transport; the real preview suite validates WebContainer startup and recovery.
+
 | Project   | Scope                                                                                           | Dependencies                               |
 | --------- | ----------------------------------------------------------------------------------------------- | ------------------------------------------ |
 | `ui`      | All specs except `preview.spec.ts`, including controlled preview fixtures and Worker benchmarks | None                                       |
