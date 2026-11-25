@@ -178,7 +178,7 @@ When changing a protocol message or project field, update shared tests and both 
 
 The starter is defined in [default-project-files.ts](../packages/shared/src/default-project-files.ts); changing it affects new rooms only. Its package versions and Rolldown overrides are intentional. [webcontainer-files.ts](../apps/web/src/lib/webcontainer-files.ts) retains a compatibility transform for older Vite rooms without their own override, and only changes the browser-mounted copy. Validate dependency updates in a real preview before removing it.
 
-The Worker imports the `typescript-legacy` package alias for the TypeScript 6 runtime, independently of Bun's embedded project type checker. The browser compiler remains a runtime dependency in [package.json](../package.json); a tooling upgrade does not upgrade the browser language service. After one Worker retry, language services become unavailable while editing, Vim, and collaboration remain active. Unsafe or oversized snapshots are rejected. See the [TypeScript intelligence guide](typescript-intelligence.md) for ownership, budgets, and failure behavior.
+The Worker imports the `typescript-legacy` package alias for the TypeScript 6 runtime, independently of Bun's embedded project type checker. The browser compiler remains a runtime dependency in [apps/web/package.json](../apps/web/package.json); a tooling upgrade does not upgrade the browser language service. After one Worker retry, language services become unavailable while editing, Vim, and collaboration remain active. Unsafe or oversized snapshots are rejected. See the [TypeScript intelligence guide](typescript-intelligence.md) for ownership, budgets, and failure behavior.
 
 ## Test data and browser tests
 

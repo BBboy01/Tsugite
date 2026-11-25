@@ -1,4 +1,5 @@
 import { expect, test } from "playwright/test";
+import { usePausedPreview } from "./helpers/paused-preview";
 
 test("follows the leader's replacement tab and empty selection after closing tabs", async ({
   browser,
@@ -6,6 +7,10 @@ test("follows the leader's replacement tab and empty selection after closing tab
   const leaderContext = await browser.newContext();
   const followerContext = await browser.newContext();
   try {
+    await Promise.all([
+      usePausedPreview(leaderContext),
+      usePausedPreview(followerContext),
+    ]);
     for (const [context, userId] of [
       [leaderContext, "leader"],
       [followerContext, "follower"],
@@ -78,7 +83,6 @@ test("follows the leader's replacement tab and empty selection after closing tab
       follower.locator("[data-editor-following='true']"),
     ).toBeVisible();
   } finally {
-    await leaderContext.close();
-    await followerContext.close();
+    await Promise.all([leaderContext.close(), followerContext.close()]);
   }
 });

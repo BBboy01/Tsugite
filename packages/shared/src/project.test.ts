@@ -1,5 +1,5 @@
 import { expect, test } from "bun:test";
-import { LoroDoc } from "loro-crdt";
+import { LoroDoc, LoroMap } from "loro-crdt";
 
 import {
   copyFile,
@@ -9,6 +9,8 @@ import {
   deleteFile,
   deleteFolder,
   getFileByPath,
+  getFileById,
+  listFiles,
   listFolders,
   readWorkspaceSnapshot,
   readSettings,
@@ -276,4 +278,106 @@ test("rejects renaming a folder that no longer exists", () => {
     "Folder does not exist",
   );
   expect(listFolders(doc)).toEqual([]);
+});
+
+test("concurrent renames leave only the merged path occupied", () => {
+  const first = new LoroDoc();
+  const file = createFile(first, "entry.ts", "typescript", "shared source");
+  const second = new LoroDoc();
+  second.import(first.export({ mode: "snapshot" }));
+
+  renameFile(first, file.id, "left.ts");
+  renameFile(second, file.id, "right.ts");
+  first.import(second.export({ mode: "update" }));
+  second.import(first.export({ mode: "update" }));
+
+  const mergedPath = listFiles(first)[0].path;
+  const unusedPath = mergedPath === "left.ts" ? "right.ts" : "left.ts";
+  expect(listFiles(second).map((entry) => entry.path)).toEqual([mergedPath]);
+  for (const doc of [first, second]) {
+    expect(getFileByPath(doc, unusedPath)).toBeUndefined();
+    expect(createFile(doc, unusedPath, "typescript").path).toBe(unusedPath);
+    deleteFile(doc, file.id);
+    expect(getFileByPath(doc, mergedPath)).toBeUndefined();
+    expect(getFileById(doc, file.id)).toBeUndefined();
+    expect(createFile(doc, mergedPath, "typescript").path).toBe(mergedPath);
+  }
+});
+
+test("concurrent same-path files keep distinct deterministic paths and contents", () => {
+  const first = new LoroDoc();
+  const second = new LoroDoc();
+  const left = createFile(first, "same.ts", "typescript", "left source");
+  const right = createFile(second, "same.ts", "typescript", "right source");
+  first.import(second.export({ mode: "update" }));
+  second.import(first.export({ mode: "update" }));
+
+  const snapshot = (doc: LoroDoc) =>
+    listFiles(doc).map((file) => ({
+      id: file.id,
+      path: file.path,
+      source: file.text.toString(),
+    }));
+  expect(snapshot(first)).toEqual(snapshot(second));
+  expect(new Set(snapshot(first).map((file) => file.path)).size).toBe(2);
+  expect(
+    snapshot(first)
+      .map((file) => file.source)
+      .toSorted(),
+  ).toEqual(["left source", "right source"]);
+  const beforeRead = first.version();
+  for (const file of listFiles(first)) {
+    expect(getFileByPath(first, file.path)?.id).toBe(file.id);
+    expect(getFileById(first, file.id)?.path).toBe(file.path);
+  }
+  expect(first.version().compare(beforeRead)).toBe(0);
+  const reloaded = new LoroDoc();
+  reloaded.import(first.export({ mode: "snapshot" }));
+  expect(snapshot(reloaded)).toEqual(snapshot(first));
+
+  renameFile(first, left.id, "left.ts");
+  first.commit();
+  second.import(first.export({ mode: "update" }));
+  expect(snapshot(first)).toEqual(snapshot(second));
+  expect(getFileByPath(first, "same.ts")?.id).toBe(right.id);
+  deleteFile(first, left.id);
+  expect(getFileByPath(first, "same.ts")?.text.toString()).toBe("right source");
+});
+
+test("concurrent file and directory claims preserve mountable distinct paths", () => {
+  const first = new LoroDoc();
+  const second = new LoroDoc();
+  const file = createFile(first, "src", "typescript", "file source");
+  createFile(second, "src/main.ts", "typescript", "nested source");
+  first.import(second.export({ mode: "update" }));
+  second.import(first.export({ mode: "update" }));
+
+  for (const doc of [first, second]) {
+    expect(getFileById(doc, file.id)?.path).not.toBe("src");
+    expect(getFileById(doc, file.id)?.text.toString()).toBe("file source");
+    expect(getFileByPath(doc, "src/main.ts")?.text.toString()).toBe(
+      "nested source",
+    );
+    expect(listFolders(doc)).toEqual(["src"]);
+    expect(
+      listFiles(doc).some((entry) => listFolders(doc).includes(entry.path)),
+    ).toBe(false);
+  }
+});
+
+test("reads uncommitted metadata edits and checked-out paths", () => {
+  const doc = new LoroDoc();
+  const file = createFile(doc, "before.ts", "typescript", "source");
+  doc.commit();
+  const before = doc.frontiers();
+  expect(getFileById(doc, file.id)?.path).toBe("before.ts");
+  const metadata = doc.getMap("files").get(file.id) as LoroMap;
+  metadata.set("path", "after.ts");
+  expect(getFileById(doc, file.id)?.path).toBe("after.ts");
+  expect(getFileByPath(doc, "before.ts")).toBeUndefined();
+  doc.commit();
+  doc.checkout(before);
+  expect(getFileById(doc, file.id)?.path).toBe("before.ts");
+  doc.attach();
+  expect(getFileById(doc, file.id)?.path).toBe("after.ts");
 });

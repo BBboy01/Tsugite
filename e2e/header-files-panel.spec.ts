@@ -1,4 +1,5 @@
 import { expect, test } from "playwright/test";
+import packageJson from "../package.json" with { type: "json" };
 import {
   captureWorkspaceTransition,
   waitForWorkspaceTransition,
@@ -54,7 +55,9 @@ test("Header file control keeps width, appearance, and tree state across collaps
   await expect(
     page.getByRole("heading", { name: "Tsugite", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("v0.1.0", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`v${packageJson.version}`, { exact: true }),
+  ).toBeVisible();
   const identity = page.getByRole("heading", { name: "Tsugite", exact: true });
   const initialRegionBox = await headerFiles.boundingBox();
   const initialToggleBox = await toggle.boundingBox();
@@ -311,7 +314,9 @@ test("Header file control keeps width, appearance, and tree state across collaps
   await expect(
     page.getByRole("heading", { name: "Tsugite", exact: true }),
   ).toBeVisible();
-  await expect(page.getByText("v0.1.0", { exact: true })).toBeVisible();
+  await expect(
+    page.getByText(`v${packageJson.version}`, { exact: true }),
+  ).toBeVisible();
   await expect
     .poll(async () =>
       Math.abs((await headerFiles.boundingBox())!.width - expandedWidth),

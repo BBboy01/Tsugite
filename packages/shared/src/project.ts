@@ -50,6 +50,13 @@ export type ProjectFile = {
   text: LoroText;
 };
 
+type ProjectFileMetadata = Omit<ProjectFile, "text">;
+
+const fileMetadataCache = new WeakMap<
+  LoroDoc,
+  { version: string; files: ProjectFileMetadata[] }
+>();
+
 export type WorkspaceSnapshot = {
   files: ProjectFile[];
   folders: string[];
@@ -120,6 +127,17 @@ export function createFile(
     text.insert(0, source);
   }
 
+  const cached = fileMetadataCache.get(doc);
+  if (cached) {
+    cached.files.push({
+      id: fileId,
+      path: normalizedPath,
+      language,
+      kind: "file",
+    });
+    cached.version = JSON.stringify(doc.frontiers());
+  }
+
   return {
     id: fileId,
     path: normalizedPath,
@@ -145,7 +163,11 @@ export function renameFile(
 
   assertPathAvailable(doc, normalizedPath, fileId);
 
-  if (previousPath && previousPath !== normalizedPath) {
+  if (
+    previousPath &&
+    previousPath !== normalizedPath &&
+    filePaths.get(previousPath) === fileId
+  ) {
     filePaths.delete(previousPath);
   }
 
@@ -223,8 +245,11 @@ export function copyFile(doc: LoroDoc, fileId: string): ProjectFile {
 export function deleteFile(doc: LoroDoc, fileId: string): void {
   const file = getFileById(doc, fileId);
   if (!file) return;
+  const metadata = doc.getMap("files").get(fileId) as LoroMap;
+  const path = metadata.get("path") as string;
   doc.getMap("files").delete(fileId);
-  doc.getMap("filePaths").delete(file.path);
+  const filePaths = doc.getMap("filePaths");
+  if (filePaths.get(path) === fileId) filePaths.delete(path);
   const text = doc.getText(`file:${fileId}`);
   if (text.length > 0) text.delete(0, text.length);
 }
@@ -246,7 +271,7 @@ export function deleteFolder(doc: LoroDoc, path: string): void {
 }
 
 export function listFolders(doc: LoroDoc): string[] {
-  return listFoldersFromFiles(doc, listFiles(doc));
+  return listFoldersFromFiles(doc, listFileMetadata(doc));
 }
 
 export function readWorkspaceSnapshot(doc: LoroDoc): WorkspaceSnapshot {
@@ -258,7 +283,10 @@ export function readWorkspaceSnapshot(doc: LoroDoc): WorkspaceSnapshot {
   };
 }
 
-function listFoldersFromFiles(doc: LoroDoc, files: ProjectFile[]): string[] {
+function listFoldersFromFiles(
+  doc: LoroDoc,
+  files: readonly ProjectFileMetadata[],
+): string[] {
   const folderPaths = new Set<string>();
   const folders = doc.getMap("folders");
   for (const folderPath of folders.keys()) folderPaths.add(folderPath);
@@ -268,28 +296,84 @@ function listFoldersFromFiles(doc: LoroDoc, files: ProjectFile[]): string[] {
 }
 
 export function listFiles(doc: LoroDoc): ProjectFile[] {
-  const files = doc.getMap("files");
-  return files
-    .keys()
-    .map((fileId) => readFile(doc, String(fileId)))
-    .toSorted((left, right) => left.path.localeCompare(right.path));
+  return listFileMetadata(doc)
+    .map((file) => ({
+      ...file,
+      text: doc.getText(`file:${file.id}`),
+    }))
+    .sort((left, right) => left.path.localeCompare(right.path));
+}
+
+function listFileMetadata(doc: LoroDoc): ProjectFileMetadata[] {
+  // Frontiers include uncommitted edits, imports and checkout changes.
+  const version = JSON.stringify(doc.frontiers());
+  const cached = fileMetadataCache.get(doc);
+  if (cached?.version === version) return cached.files;
+  const files = doc.getMap("files").toJSON() as Record<
+    string,
+    { path?: string; language?: string }
+  >;
+  const entries = Object.entries(files).map(
+    ([id, metadata]): ProjectFileMetadata => ({
+      id,
+      path: String(metadata.path ?? id),
+      language:
+        metadata.language === "javascript" ? "javascript" : "typescript",
+      kind: "file",
+    }),
+  );
+  const reservedPaths = new Set(entries.map((file) => file.path));
+  const folderPaths = new Set(listFoldersFromFiles(doc, entries));
+  if (
+    reservedPaths.size === entries.length &&
+    !entries.some((file) => folderPaths.has(file.path))
+  ) {
+    fileMetadataCache.set(doc, { version, files: entries });
+    return entries;
+  }
+  entries.sort((left, right) => (left.id < right.id ? -1 : 1));
+  const usedPaths = new Set(folderPaths);
+  // Concurrent path claims resolve on read without writing repair operations.
+  for (const file of entries) {
+    if (usedPaths.has(file.path)) {
+      const extensionIndex = file.path.lastIndexOf(".");
+      const splitIndex =
+        extensionIndex > file.path.lastIndexOf("/") + 1
+          ? extensionIndex
+          : file.path.length;
+      const stem = file.path.slice(0, splitIndex);
+      const extension = file.path.slice(splitIndex);
+      let index = 1;
+      let candidate = `${stem} conflict ${file.id}${extension}`;
+      while (usedPaths.has(candidate) || reservedPaths.has(candidate)) {
+        index += 1;
+        candidate = `${stem} conflict ${file.id} ${index}${extension}`;
+      }
+      file.path = candidate;
+    }
+    usedPaths.add(file.path);
+  }
+  fileMetadataCache.set(doc, { version, files: entries });
+  return entries;
 }
 
 export function getFileByPath(
   doc: LoroDoc,
   path: string,
 ): ProjectFile | undefined {
-  const fileId = doc.getMap("filePaths").get(normalizePath(path)) as
-    string | undefined;
-  return fileId ? readFile(doc, fileId) : undefined;
+  const normalizedPath = normalizePath(path);
+  const file = listFileMetadata(doc).find(
+    (file) => file.path === normalizedPath,
+  );
+  return file ? { ...file, text: doc.getText(`file:${file.id}`) } : undefined;
 }
 
 export function getFileById(
   doc: LoroDoc,
   fileId: string,
 ): ProjectFile | undefined {
-  const files = doc.getMap("files");
-  return files.get(fileId) ? readFile(doc, fileId) : undefined;
+  const file = listFileMetadata(doc).find((file) => file.id === fileId);
+  return file ? { ...file, text: doc.getText(`file:${file.id}`) } : undefined;
 }
 
 export function readSettings(doc: LoroDoc): ProjectSettings {
@@ -347,7 +431,7 @@ export function setSharedSetting(
 }
 
 function readFile(doc: LoroDoc, fileId: string): ProjectFile {
-  const metadata = doc.getMap("files").ensureMergeableMap(fileId);
+  const metadata = doc.getMap("files").get(fileId) as LoroMap;
   const path = String(metadata.get("path") ?? fileId);
   const language =
     metadata.get("language") === "javascript" ? "javascript" : "typescript";
@@ -366,20 +450,19 @@ function assertPathAvailable(
   path: string,
   allowedFileId?: string,
 ): void {
-  const filePaths = doc.getMap("filePaths");
-  const existingFileId = filePaths.get(path) as string | undefined;
-  if (existingFileId && existingFileId !== allowedFileId) {
+  const files = listFileMetadata(doc);
+  if (files.some((file) => file.path === path && file.id !== allowedFileId)) {
     throw new Error(`A file already exists at ${path}`);
   }
 
-  if (hasFolderPath(doc, path)) {
+  if (hasFolderPath(doc, path, files)) {
     throw new Error(`A folder already exists at ${path}`);
   }
 
   const segments = path.split("/");
   for (let index = 1; index < segments.length; index += 1) {
     const parentPath = segments.slice(0, index).join("/");
-    if (filePaths.get(parentPath)) {
+    if (files.some((file) => file.path === parentPath)) {
       throw new Error(`A file already exists at ${parentPath}`);
     }
   }
@@ -438,21 +521,23 @@ function getCopyPath(doc: LoroDoc, path: string): string {
   const extension = extensionIndex > 0 ? filename.slice(extensionIndex) : "";
   let copyIndex = 1;
   let candidate = `${directory}${stem} copy${extension}`;
-  while (
-    doc.getMap("filePaths").get(candidate) ||
-    hasFolderPath(doc, candidate)
-  ) {
+  const files = listFileMetadata(doc);
+  const filePaths = new Set(files.map((file) => file.path));
+  while (filePaths.has(candidate) || hasFolderPath(doc, candidate, files)) {
     copyIndex += 1;
     candidate = `${directory}${stem} copy ${copyIndex}${extension}`;
   }
   return candidate;
 }
 
-function hasFolderPath(doc: LoroDoc, path: string): boolean {
-  const filePaths = doc.getMap("filePaths");
+function hasFolderPath(
+  doc: LoroDoc,
+  path: string,
+  files = listFileMetadata(doc),
+): boolean {
   return Boolean(
     doc.getMap("folders").get(path) ||
-    filePaths.keys().some((filePath) => filePath.startsWith(`${path}/`)),
+    files.some((file) => file.path.startsWith(`${path}/`)),
   );
 }
 

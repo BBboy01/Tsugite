@@ -45,6 +45,15 @@ The server never runs a user's project commands. Dependency installation and pre
 
 `@iris/shared` defines project containers, settings, and protocol messages for both processes. Room state and presence are coordinated by one server process; SQLite persistence alone does not make multiple replicas consistent. See [deployment boundaries](deployment.md#operational-boundaries).
 
+File metadata in the `files` container owns file identity and requested paths.
+The legacy `filePaths` container remains in snapshots for compatibility, but
+readers do not trust it after concurrent renames. Concurrent claims on the same
+path preserve every file: a stable file-ID ordering gives conflicting files a
+derived ` conflict <file-id>` suffix before the extension. Directory paths take
+precedence over file claims. These paths are derived without CRDT repair writes;
+renaming a conflict file to a free path resolves its claim. Deploy matching web
+and server versions so every consumer applies the same projection.
+
 ### Source map
 
 | Responsibility                                       | Entry points                                                                                                                                                                                                                                             |

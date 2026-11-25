@@ -58,6 +58,11 @@ Click another member in the presence list to follow their active file, cursor, a
 
 Open files from the tree or file search. Drag a tab horizontally to reorder it, or focus it and press `Alt-Shift-ArrowLeft` / `Alt-Shift-ArrowRight`. The tab context menu offers Close, Close others, Close to the right, Close all, and Copy relative path. Closing a tab leaves its shared file intact; deleting from the file tree removes the shared file for everyone.
 
+If collaborators create or rename files to the same path concurrently, both
+contents survive. Conflicting files appear with a ` conflict <file-id>` suffix;
+rename them to distinct paths to resolve the conflict. A directory keeps its
+path when it conflicts with a file.
+
 Tab order and the active file are saved locally for each room in your browser profile. Reloading restores surviving files after the room snapshot arrives; renames are tracked by file identity, deleted files disappear, and a deliberately empty tab strip stays empty. Storage restrictions can prevent restoration. Collaborators keep their own tabs and ordering.
 
 ## Keyboard workflow

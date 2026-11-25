@@ -64,9 +64,10 @@ jobs:
         run: |
           mkdir -p release-artifacts
           tar -czf "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" -C apps/web/dist .
-          shasum -a 256 "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz" > "release-artifacts/tsugite-${RELEASE_TAG}.tar.gz.sha256"
           tar -czf "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz" -C dist/server/bun-linux-x64 tsugite-server drizzle
-          shasum -a 256 "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz" > "release-artifacts/tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz.sha256"
+          cd release-artifacts
+          shasum -a 256 "tsugite-${RELEASE_TAG}.tar.gz" > "tsugite-${RELEASE_TAG}.tar.gz.sha256"
+          shasum -a 256 "tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz" > "tsugite-server-${RELEASE_TAG}-linux-amd64.tar.gz.sha256"
 
       - name: Attest build provenance
         uses: actions/attest@1e69f48acb82d1966a394da916b4c1698aa569d6 # v4

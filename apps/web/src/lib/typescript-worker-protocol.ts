@@ -13,6 +13,7 @@ export const SOURCE_LIMITS = {
 };
 export const WORKER_QUEUE_LIMIT = 32;
 export const QUERY_TIMEOUT_MS = 2000;
+export const INITIALIZATION_TIMEOUT_MS = 15_000;
 export const NAVIGATION_LIMITS = {
   locations: 10_000,
   sourceBytes: 24 * 1024 * 1024,

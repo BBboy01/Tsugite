@@ -51,7 +51,14 @@ Verify facts against the implementation: scripts in `package.json`, test project
 
 ## Releases and dependencies
 
-Release tags must match the version in `package.json`. The [release workflow](.github/workflows/release.yml) checks that match, runs quality checks, and attaches a static web archive and its checksum to the GitHub Release. It also records a GitHub build provenance attestation for the archive; this is not a separate Release attachment. The archive is not a complete deployment: it does not contain the room server or database. The [Docker workflow](.github/workflows/docker-publish.yml) publishes web and server images separately; verify both jobs before deploying a tag. [Browser CI](docs/testing.md#browser-ci) runs separately and is not a dependency of the release job.
+The root `package.json` owns the application release version and the version
+displayed in the header. Private workspace package versions are independent.
+
+The root `minimatch` override fixes GHSA-g3hv-75wg-m249 in the shadcn development
+toolchain. Remove it once shadcn's transitive dependency range selects a patched
+version; verify the CLI and TypeScript project file matching when changing it.
+
+Release tags must match the version in `package.json`. The [release workflow](.github/workflows/release.yml) checks that match, runs quality checks and the isolated Linux AMD64 standalone server suite, and attaches two archives with individual checksums: static web output and the standalone room server with its `drizzle/` migrations. It records GitHub build provenance attestations for both archives; these are not separate Release attachments. The web archive needs a matching server, and neither archive contains a database. See [standalone deployment](docs/deployment.md#standalone-executable) for platform requirements. The [Docker workflow](.github/workflows/docker-publish.yml) publishes web and server images separately; verify both jobs before deploying a tag. [Browser CI](docs/testing.md#browser-ci) runs separately and is not a dependency of the release job.
 
 Keep operational examples version-neutral. A release should not rewrite the deployment guide merely to replace sample version numbers. Use [the deployment guide](docs/deployment.md) for upgrade and rollback requirements, not as a release checklist.
 

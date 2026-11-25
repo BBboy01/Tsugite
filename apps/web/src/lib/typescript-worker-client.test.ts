@@ -141,6 +141,39 @@ test("timeout only discards that query and does not restart the worker", async (
   client.dispose();
 });
 
+test("initialization preserves queued edits and gives queries their own deadline", async () => {
+  const workers = [transport(), transport()];
+  let created = 0;
+  const client = new TypeScriptWorkerClient(files, {
+    createWorker: () => workers[created++].worker,
+  });
+  try {
+    await client.updateFile({ path: "app.ts", text: "const value = 2;" });
+    const query = client.hover({ path: "app.ts", position: 6, timeoutMs: 100 });
+    await Bun.sleep(2100);
+    expect(created).toBe(1);
+    workers[0].reply(workers[0].sent[0], { status: "ok", value: null });
+    workers[0].reply(workers[0].sent[1], { status: "ok", value: null });
+    workers[0].reply(workers[0].sent[2], {
+      status: "ok",
+      value: {
+        from: 6,
+        to: 11,
+        signature: "const value: 2",
+        documentation: "",
+      },
+    });
+    expect(await query).toMatchObject({ status: "ok" });
+    expect(client.getStatusSnapshot().state).toBe("ready");
+    expect(
+      await client.hover({ path: "app.ts", position: 6, timeoutMs: 1 }),
+    ).toEqual({ status: "timeout" });
+    expect(created).toBe(1);
+  } finally {
+    client.dispose();
+  }
+});
+
 test("ignores a late query error after its timeout without restarting the worker", async () => {
   const workers = [transport(), transport()];
   let created = 0;

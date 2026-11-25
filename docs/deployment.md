@@ -63,6 +63,12 @@ web build installs all workspaces, including build tools, and serves only the
 generated static output through Caddy. Manifest, lockfile, or Bun version changes
 trigger both image checks on PRs.
 
+The web build stage uses the builder's native architecture (`BUILDPLATFORM`)
+because it produces architecture-independent static assets. The final Caddy
+stage still targets the requested image platform; building an AMD64 web image
+on ARM therefore does not run Bun through QEMU. The server runs Bun in the
+target architecture.
+
 ## Published images
 
 The [Docker publishing workflow](../.github/workflows/docker-publish.yml) publishes images to GitHub Container Registry on pushes to `main` and version tags:
@@ -149,12 +155,14 @@ Extract a matching release into a new version directory, then start from that
 directory, where `./drizzle` must resolve:
 
 ```bash
-tar -xzf tsugite-server-v1.1.0-linux-amd64.tar.gz -C /opt/tsugite/server-v1.1.0
-cd /opt/tsugite/server-v1.1.0
+RELEASE_VERSION=vX.Y.Z
+mkdir -p "/opt/tsugite/server-${RELEASE_VERSION}"
+tar -xzf "tsugite-server-${RELEASE_VERSION}-linux-amd64.tar.gz" -C "/opt/tsugite/server-${RELEASE_VERSION}"
+cd "/opt/tsugite/server-${RELEASE_VERSION}"
 DATABASE_PATH=/var/lib/tsugite/tsugite.sqlite PORT=3001 ./tsugite-server
 ```
 
-Create the extraction directory first and substitute the chosen release version.
+Replace `vX.Y.Z` with a release tag that includes the standalone server asset.
 The destination needs no Bun installation, application `node_modules`, source
 files or loose WASM/helper files. Configuration comes from process environment
 variables; the executable does not auto-load dotenv or Bun configuration files.
