@@ -1,7 +1,6 @@
 export const japaneseTranslations = {
   "app.name": "Tsugite",
   "app.workspace": "ワークスペース",
-  "app.version": "v0.1.0",
   "app.waitingSnapshot": "ルームのスナップショットを待っています…",
   "app.waitingPreview": "プレビューを待っています…",
   "status.live": "オンライン",

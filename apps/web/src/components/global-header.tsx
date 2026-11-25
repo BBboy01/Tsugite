@@ -8,6 +8,7 @@ import { IconButton } from "@radix-ui/themes";
 import { motion } from "motion/react";
 import { type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
+import packageJson from "../../../../package.json" with { type: "json" };
 
 import type { PresenceMember } from "@iris/shared";
 import type { ConnectionStatus } from "../lib/room-client";
@@ -86,7 +87,7 @@ export function GlobalHeader({
               {t("app.name")}
             </h1>
             <span className="mt-1 whitespace-nowrap font-iris-mono text-[9px] leading-none tracking-[0.08em] text-iris-muted">
-              {t("app.version")}
+              v{packageJson.version}
             </span>
           </div>
         </div>

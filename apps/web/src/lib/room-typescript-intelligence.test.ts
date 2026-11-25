@@ -1,8 +1,11 @@
 import { expect, spyOn, test } from "bun:test";
 import {
   createFile,
+  createFolder,
   createProjectDoc,
   deleteFile,
+  deleteFolder,
+  getFileById,
   getFileByPath,
   renameFile,
 } from "@iris/shared";
@@ -183,6 +186,39 @@ test("room owner publishes Loro edits, creates, renames and deletes to one intel
   });
   owner.dispose();
   expect(await query()).toEqual({ status: "disposed" });
+});
+
+test("remote directory claims update conflict paths in the language service", async () => {
+  const { doc, owner } = createOwner();
+  const remote = new LoroDoc();
+  remote.import(doc.export({ mode: "snapshot" }));
+  const path = "src/claim.ts";
+  const file = createFile(doc, path, "typescript", "export const value = 1;");
+  doc.commit();
+  const hover = (sourcePath: string) =>
+    owner.intelligence.hover({ path: sourcePath, position: 13 });
+  try {
+    expect(await hover(path)).toMatchObject({ status: "ok" });
+    createFolder(remote, path);
+    remote.commit();
+    doc.import(remote.export({ mode: "update" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const conflictPath = getFileById(doc, file.id)!.path;
+    expect(conflictPath).not.toBe(path);
+    expect(await hover(path)).toEqual({ status: "empty" });
+    expect(await hover(conflictPath)).toMatchObject({ status: "ok" });
+
+    deleteFolder(remote, path);
+    remote.commit();
+    doc.import(remote.export({ mode: "update" }));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(getFileById(doc, file.id)!.path).toBe(path);
+    expect(await hover(conflictPath)).toEqual({ status: "empty" });
+    expect(await hover(path)).toMatchObject({ status: "ok" });
+  } finally {
+    owner.dispose();
+    remote.free();
+  }
 });
 
 test("third-party declarations resolve in the worker and failed reads remove stale types", async () => {

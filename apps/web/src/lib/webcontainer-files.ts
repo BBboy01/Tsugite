@@ -22,7 +22,7 @@ export function buildFileSystemTree(
   files: ProjectFile[],
   folders: string[],
 ): FileSystemTree {
-  const tree: FileSystemTree = {};
+  const tree: FileSystemTree = Object.create(null);
 
   for (const folder of folders) {
     ensureDirectory(tree, normalizeRelativePath(folder));
@@ -133,7 +133,7 @@ function ensureDirectory(tree: FileSystemTree, path: string): FileSystemTree {
     if (existing && "file" in existing) {
       throw new Error(`Directory path conflicts with file: ${path}`);
     }
-    if (!existing) current[segment] = { directory: {} };
+    if (!existing) current[segment] = { directory: Object.create(null) };
     current = (current[segment] as { directory: FileSystemTree }).directory;
   }
   return current;

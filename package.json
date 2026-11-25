@@ -1,6 +1,6 @@
 {
   "name": "tsugite-multiplayer-editor",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "private": true,
   "license": "MIT",
   "workspaces": [
@@ -8,6 +8,9 @@
     "packages/*"
   ],
   "type": "module",
+  "overrides": {
+    "minimatch": "11.0.1"
+  },
   "scripts": {
     "dev": "bun --no-env-file scripts/dev.ts",
     "dev:web": "vite --config vite.config.ts",

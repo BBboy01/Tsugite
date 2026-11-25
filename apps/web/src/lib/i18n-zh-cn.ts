@@ -1,7 +1,6 @@
 export const simplifiedChineseTranslations = {
   "app.name": "Tsugite",
   "app.workspace": "工作区",
-  "app.version": "v0.1.0",
   "app.waitingSnapshot": "正在等待房间快照…",
   "app.waitingPreview": "正在等待预览…",
   "status.live": "在线",

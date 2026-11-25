@@ -35,6 +35,53 @@ test("builds a nested WebContainer file tree from project files and folders", ()
   });
 });
 
+test.each(["constructor", "toString", "__proto__"])(
+  "preserves %s directories at every level of the WebContainer file tree",
+  (name) => {
+    const tree = buildFileSystemTree(
+      [
+        projectFile(`${name}/main.ts`, "export const root = true"),
+        projectFile(`src/${name}/main.ts`, "export const nested = true"),
+      ],
+      [name, `src/${name}`],
+    );
+
+    expect(JSON.parse(JSON.stringify(tree))).toEqual({
+      [name]: {
+        directory: {
+          "main.ts": { file: { contents: "export const root = true" } },
+        },
+      },
+      src: {
+        directory: {
+          [name]: {
+            directory: {
+              "main.ts": { file: { contents: "export const nested = true" } },
+            },
+          },
+        },
+      },
+    });
+  },
+);
+
+test("preserves __proto__ files when serializing root and nested directories", () => {
+  const tree = buildFileSystemTree(
+    [
+      projectFile("__proto__", "root file"),
+      projectFile("src/__proto__", "nested file"),
+    ],
+    [],
+  );
+
+  expect(JSON.parse(JSON.stringify(tree))).toEqual({
+    ["__proto__"]: { file: { contents: "root file" } },
+    src: {
+      directory: { ["__proto__"]: { file: { contents: "nested file" } } },
+    },
+  });
+});
+
 test("prefers the dev script and falls back to start", () => {
   expect(
     selectPreviewScript('{"scripts":{"start":"vite preview","dev":"vite"}}'),

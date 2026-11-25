@@ -1,7 +1,6 @@
 export const englishTranslations = {
   "app.name": "Tsugite",
   "app.workspace": "Workspace",
-  "app.version": "v0.1.0",
   "app.waitingSnapshot": "Waiting for the room snapshot…",
   "app.waitingPreview": "Waiting for preview…",
   "status.live": "live",

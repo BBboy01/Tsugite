@@ -36,7 +36,8 @@ export function createRoomTypeScriptSource(doc: LoroDoc): RoomTypeScriptSource {
           .map((event) => event.path[0])
           .filter((root): root is string => typeof root === "string");
         const workspace = roots.some(
-          (root) => root === "files" || root === "filePaths",
+          (root) =>
+            root === "files" || root === "filePaths" || root === "folders",
         );
         const fileIds = [
           ...new Set(roots.filter((root) => root.startsWith("file:"))),
