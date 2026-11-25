@@ -173,6 +173,7 @@ test("keeps editing while the worker loads and enables language navigation", asy
   await page.route("**/src/lib/typescript.worker.ts*", async (route) => {
     requested.resolve();
     await release.promise;
+    await new Promise((resolve) => setTimeout(resolve, 2500));
     await route.continue();
   });
   try {

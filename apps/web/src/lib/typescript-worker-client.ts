@@ -14,6 +14,7 @@ import {
   validateQueryPath,
   validateWorkspaceFiles,
   QUERY_TIMEOUT_MS,
+  INITIALIZATION_TIMEOUT_MS,
   WORKER_QUEUE_LIMIT,
   type QueryMethod,
   type VersionedFile,
@@ -41,7 +42,8 @@ export type TypeScriptWorkerOptions = {
 };
 type Pending = WorkerEnvelope & {
   resolve: (result: IntelligenceResult<unknown>) => void;
-  timer: ReturnType<typeof setTimeout>;
+  timer?: ReturnType<typeof setTimeout>;
+  timeoutMs?: number;
   callerId?: string;
   kind: WorkerRequest["kind"];
   method?: QueryMethod;
@@ -129,12 +131,13 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
         if (this.pending.size >= WORKER_QUEUE_LIMIT) this.fail();
         else {
           const envelope = this.envelope();
-          this.pending.set(envelope.requestId, {
+          const pending: Pending = {
             ...envelope,
             kind: "update",
-            timer: setTimeout(() => this.fail(), QUERY_TIMEOUT_MS),
             resolve() {},
-          });
+          };
+          this.pending.set(envelope.requestId, pending);
+          this.startTimer(pending);
           this.post({ ...envelope, kind: "update", changes, deleted });
         }
       }
@@ -238,29 +241,19 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
       } as R);
     const envelope = this.envelope();
     return new Promise<IntelligenceResult<unknown>>((resolve) => {
-      const timer = setTimeout(
-        () => {
-          this.pending.delete(envelope.requestId);
-          resolve({ status: "timeout" });
-          this.post({
-            ...this.envelope(),
-            kind: "cancel",
-            target: envelope.requestId,
-          });
-        },
-        Math.min(
+      const pending: Pending = {
+        ...envelope,
+        resolve,
+        timeoutMs: Math.min(
           QUERY_TIMEOUT_MS,
           Math.max(0, query.timeoutMs ?? QUERY_TIMEOUT_MS),
         ),
-      );
-      this.pending.set(envelope.requestId, {
-        ...envelope,
-        resolve,
-        timer,
         callerId: query.requestId,
         kind: "query",
         method,
-      });
+      };
+      this.pending.set(envelope.requestId, pending);
+      this.startTimer(pending);
       this.post({ ...envelope, kind: "query", method, query });
     }) as Promise<R>;
   }
@@ -342,6 +335,8 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
           if (pending.kind === "initialize") {
             if (data.result.status === "ok") {
               this.lifecycle.setStatus("ready");
+              for (const request of this.pending.values())
+                if (!request.timer) this.startTimer(request);
               this.notifyWorkspace();
             } else this.fail();
           } else if (pending.kind === "update" && data.result.status !== "ok")
@@ -354,7 +349,7 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
       };
       worker.onmessageerror = () => this.fail();
       const envelope = this.envelope();
-      const timer = setTimeout(() => this.fail(), QUERY_TIMEOUT_MS);
+      const timer = setTimeout(() => this.fail(), INITIALIZATION_TIMEOUT_MS);
       this.pending.set(envelope.requestId, {
         ...envelope,
         kind: "initialize",
@@ -376,6 +371,21 @@ export class TypeScriptWorkerClient implements EditorIntelligence {
     } catch {
       this.fail();
     }
+  }
+  private startTimer(pending: Pending): void {
+    if (this.lifecycle.getStatusSnapshot().state === "loading") return;
+    pending.timer = setTimeout(() => {
+      if (pending.kind !== "query") {
+        this.fail();
+        return;
+      }
+      this.finish(pending, { status: "timeout" });
+      this.post({
+        ...this.envelope(),
+        kind: "cancel",
+        target: pending.requestId,
+      });
+    }, pending.timeoutMs ?? QUERY_TIMEOUT_MS);
   }
   private fail(): void {
     if (this.disposed || this.disabled) return;

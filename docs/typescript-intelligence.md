@@ -49,14 +49,14 @@ references do not duplicate whole files across the RPC boundary.
 
 ## Resource limits
 
-| Resource                                  | Limit                                                                           |
-| ----------------------------------------- | ------------------------------------------------------------------------------- |
-| Project source                            | 512 files, 1 MiB per file, 16 MiB total UTF-8 text                              |
-| Project declarations and package metadata | 1,024 files, 1 MiB per declaration, 64 KiB per metadata file, 8 MiB total       |
-| Declaration scan                          | 8,192 traversed entries, 16 MiB serialized output, two-second deadline          |
-| Worker requests                           | Queue of 32; two-second query and initialization deadlines                      |
-| Navigation result                         | 10,000 locations; 24 MiB of unique source snapshots per reply                   |
-| Worker recovery                           | One retry per room session; a valid replacement can recover a rejected snapshot |
+| Resource                                  | Limit                                                                             |
+| ----------------------------------------- | --------------------------------------------------------------------------------- |
+| Project source                            | 512 files, 1 MiB per file, 16 MiB total UTF-8 text                                |
+| Project declarations and package metadata | 1,024 files, 1 MiB per declaration, 64 KiB per metadata file, 8 MiB total         |
+| Declaration scan                          | 8,192 traversed entries, 16 MiB serialized output, two-second deadline            |
+| Worker requests                           | Queue of 32; 15-second initialization, then two-second query and update deadlines |
+| Navigation result                         | 10,000 locations; 24 MiB of unique source snapshots per reply                     |
+| Worker recovery                           | One retry per room session; a valid replacement can recover a rejected snapshot   |
 
 These are language-service budgets, not project storage or transport quotas.
 The server separately limits each encoded CRDT update to 1 MiB; a project
